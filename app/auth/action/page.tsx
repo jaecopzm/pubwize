@@ -146,7 +146,7 @@ function AuthActionContent() {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
             <Link href="/" className="inline-flex items-center gap-2 mb-6 group transition-transform hover:scale-105">
-              <img src="/PubWize.png" alt="Pubwize" className="h-20 sm:h-24" />
+              <img src="/PubWize.png" alt="Pubwize" className="h-10 sm:h-12" />
             </Link>
             <div className="flex justify-center mb-4">
               <div className="p-4 rounded-full bg-red-500/10 border border-red-500/20">
@@ -179,7 +179,7 @@ function AuthActionContent() {
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
             <Link href="/" className="inline-flex items-center gap-2 mb-6 group transition-transform hover:scale-105">
-              <img src="/PubWize.png" alt="Pubwize" className="h-20 sm:h-24" />
+              <img src="/PubWize.png" alt="Pubwize" className="h-10 sm:h-12" />
             </Link>
             <h1 className="text-3xl font-extrabold text-text-1 mb-2">Reset Your Password</h1>
             <p className="text-text-3 mb-6">Enter your new password below</p>
@@ -235,7 +235,7 @@ function AuthActionContent() {
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-6 group transition-transform hover:scale-105">
-            <img src="/PubWize.png" alt="Pubwize" className="h-20 sm:h-24" />
+            <img src="/PubWize.png" alt="Pubwize" className="h-10 sm:h-12" />
           </Link>
           <div className="flex justify-center mb-4">
             <div className="p-4 rounded-full bg-teal/10 border border-teal/20">

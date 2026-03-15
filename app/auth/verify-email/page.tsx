@@ -96,7 +96,7 @@ export default function VerifyEmailPage() {
         {/* Header */}
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-4 sm:mb-6 group transition-transform hover:scale-105">
-            <img src="/PubWize.png" alt="Pubwize" className="h-24 sm:h-28" />
+            <img src="/PubWize.png" alt="Pubwize" className="h-10 sm:h-12" />
           </Link>
           <div className="flex justify-center mb-4">
             <div className="p-4 rounded-full bg-gold/10 border border-gold/20">

@@ -35,7 +35,7 @@ export default function ResetPasswordPage() {
         {/* Header */}
         <div className="text-center">
           <Link href="/" className="inline-flex items-center gap-2 mb-4 sm:mb-6 group transition-transform hover:scale-105">
-            <img src="/PubWize.png" alt="Pubwize" className="h-24 sm:h-28" />
+            <img src="/PubWize.png" alt="Pubwize" className="h-10 sm:h-12" />
           </Link>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-text-1 mb-2">Reset password</h1>
           <p className="text-sm sm:text-base text-text-3">

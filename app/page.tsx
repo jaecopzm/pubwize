@@ -131,24 +131,24 @@ export default function LandingPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
               {/* Logo */}
               <Link href="/" className="flex items-center gap-2.5 group transition-transform hover:scale-[1.02]">
-                <img src="/PubWize.png" alt="Pubwize" className="h-16 sm:h-20" />
+                <img src="/PubWize.png" alt="Pubwize" className="h-10 sm:h-12" />
               </Link>
 
               {/* Desktop nav */}
               <div className="flex items-center gap-3 sm:gap-5">
-                <div className="hidden md:flex items-center gap-6 mr-4">
+                <div className="hidden lg:flex items-center gap-6 mr-4">
                   <Link href="#how-it-works" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">How It Works</Link>
                   <Link href="#features" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Features</Link>
                   <Link href="#pricing" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Pricing</Link>
                   <Link href="/auth/signin" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Sign In</Link>
                 </div>
-                <div className="hidden md:block">
+                <div className="hidden lg:block">
                   <ThemeToggle />
                 </div>
-                <Link href="/auth/signup" className="btn-gold hidden md:inline-flex text-xs px-4 py-2 shadow-lg shadow-[var(--gold)]/20 hover:shadow-[var(--gold)]/40 transition-shadow">Get Started Free</Link>
+                <Link href="/auth/signup" className="btn-gold hidden lg:inline-flex text-xs px-4 py-2 shadow-lg shadow-[var(--gold)]/20 hover:shadow-[var(--gold)]/40 transition-shadow">Get Started Free</Link>
 
                 {/* Mobile menu button */}
-                <div className="flex items-center gap-2 md:hidden">
+                <div className="flex items-center gap-2 lg:hidden">
                   <ThemeToggle />
                   <button
                     onClick={() => setMenuOpen(!menuOpen)}
@@ -163,7 +163,7 @@ export default function LandingPage() {
 
             {/* Mobile menu */}
             <div className={cn(
-              "md:hidden overflow-hidden transition-all duration-300 ease-in-out bg-background/95 backdrop-blur-xl border-b border-border/40 absolute w-full",
+              "lg:hidden overflow-hidden transition-all duration-300 ease-in-out bg-background/95 backdrop-blur-xl border-b border-border/40 absolute w-full",
               menuOpen ? "max-h-96 opacity-100 py-4" : "max-h-0 opacity-0 py-0"
             )}>
               <div className="flex flex-col gap-4 px-4">
@@ -392,7 +392,7 @@ export default function LandingPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-8 sm:gap-10 lg:gap-12 mb-10 sm:mb-12">
                 <div className="lg:col-span-2">
                   <Link href="/" className="flex items-center gap-2.5 mb-4 sm:mb-5">
-                    <img src="/PubWize.png" alt="Pubwize" className="h-20 sm:h-24" />
+                    <img src="/PubWize.png" alt="Pubwize" className="h-10 sm:h-12" />
                   </Link>
                   <p className="text-xs sm:text-sm text-[var(--text-3)] leading-relaxed max-w-sm">
                     AI-powered SEO content platform. From keyword to published post in minutes. Build authority and grow traffic on autopilot.

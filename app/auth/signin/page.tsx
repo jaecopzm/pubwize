@@ -78,7 +78,7 @@ export default function SignInPage() {
           {/* Header */}
           <div className="text-center mb-5 sm:mb-6">
             <Link href="/" className="inline-flex items-center gap-2 mb-3 sm:mb-4 group transition-transform hover:scale-105">
-              <img src="/PubWize.png" alt="Pubwize" className="h-20 sm:h-24" />
+              <img src="/PubWize.png" alt="Pubwize" className="h-10 sm:h-12" />
             </Link>
             <h1 className="text-xl sm:text-2xl font-bold text-text-1 mb-1">Welcome back</h1>
             <p className="text-xs sm:text-sm text-text-3">Sign in to your account</p>
