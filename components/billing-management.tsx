@@ -183,9 +183,9 @@ export function BillingManagement({
 
         {invoices.length > 0 ? (
           <div className="space-y-2">
-            {invoices.slice(0, 5).map((invoice) => (
+            {invoices.slice(0, 5).map((invoice, index) => (
               <div
-                key={invoice.id}
+                key={invoice.id || `invoice-${index}`}
                 className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:border-gold/20 transition-colors"
               >
                 <div>
@@ -193,7 +193,7 @@ export function BillingManagement({
                     ${(invoice.amount_total / 100).toFixed(2)}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {format(new Date(invoice.created * 1000), 'MMM d, yyyy')}
+                    {invoice.created ? format(new Date(invoice.created * 1000), 'MMM d, yyyy') : 'N/A'}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
