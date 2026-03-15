@@ -58,8 +58,8 @@ export function BaseEmailTemplate({ content, previewText, unsubscribeUrl }: Base
           
           <!-- Header -->
           <tr>
-            <td style="background: linear-gradient(135deg, #D4AF37 0%, #008080 100%); padding: 24px 20px; text-align: center;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 24px; font-weight: 700; letter-spacing: -0.5px;">Pubwize</h1>
+            <td style="background: linear-gradient(135deg, #D4AF37 0%, #14B8A6 100%); padding: 24px 20px; text-align: center;">
+              <img src="https://pubwize.com/PubWize.png" alt="Pubwize" style="height: 36px; width: auto; display: inline-block; vertical-align: middle;" />
             </td>
           </tr>
           

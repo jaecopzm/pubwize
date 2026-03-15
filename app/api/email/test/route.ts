@@ -13,6 +13,97 @@ import {
   sendSubscriptionCancelledEmail
 } from '@/lib/email/email-service';
 
+export async function GET(request: NextRequest) {
+  // Only allow in development
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json(
+      { error: 'This endpoint is only available in development' },
+      { status: 403 }
+    );
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const email = searchParams.get('email');
+    const type = searchParams.get('type') || 'welcome';
+
+    if (!email) {
+      return NextResponse.json(
+        { error: 'Email parameter is required. Usage: /api/email/test?email=test@example.com&type=welcome' },
+        { status: 400 }
+      );
+    }
+
+    switch (type) {
+      case 'welcome':
+        await sendWelcomeEmail(email, 'Test User');
+        break;
+
+      case 'article_published':
+        await sendArticlePublishedEmail({
+          userEmail: email,
+          userName: 'Test User',
+          articleId: 'test-123',
+          articleTitle: 'How to Create SEO Content with AI',
+          wordPressUrl: 'https://example.com/article',
+        });
+        break;
+
+      case 'quota_warning':
+        await sendQuotaWarningEmail({
+          userEmail: email,
+          userName: 'Test User',
+          currentUsage: 4,
+          limit: 5,
+          percentage: 80,
+        });
+        break;
+
+      case 'payment_success':
+        await sendPaymentSuccessEmail({
+          userEmail: email,
+          userName: 'Test User',
+          plan: 'Pro',
+          amount: '29',
+          billingCycle: 'monthly',
+          nextBillingDate: 'February 1, 2025',
+        });
+        break;
+
+      case 'payment_failed':
+        await sendPaymentFailedEmail({
+          userEmail: email,
+          userName: 'Test User',
+          plan: 'Pro',
+          amount: '29',
+          reason: 'Card declined',
+        });
+        break;
+
+      default:
+        return NextResponse.json(
+          { error: `Invalid email type: ${type}. Valid types: welcome, article_published, quota_warning, payment_success, payment_failed` },
+          { status: 400 }
+        );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: `${type} email sent to ${email}`,
+      note: 'Check your email inbox (and spam folder) and Resend dashboard logs',
+    });
+  } catch (error: any) {
+    console.error('Failed to send test email:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to send email',
+        details: error?.message || 'Unknown error',
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   // Only allow in development
   if (process.env.NODE_ENV !== 'development') {

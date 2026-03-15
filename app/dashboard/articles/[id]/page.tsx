@@ -687,6 +687,28 @@ export default function ArticleDetailPage() {
       finally { setLoading(false); }
     };
     fetchArticle();
+    
+    // Track view (only once per session)
+    const trackView = async () => {
+      try {
+        const auth = getFirebaseAuth();
+        const idToken = await auth.currentUser?.getIdToken();
+        if (!idToken) return;
+
+        await fetch('/api/articles/track-view', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ articleId }),
+        });
+      } catch (error) {
+        // Silent fail - view tracking is not critical
+      }
+    };
+    
+    trackView();
   }, [articleId]);
 
   // Update currentView when article loads

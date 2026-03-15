@@ -58,7 +58,7 @@ export async function createDodoCheckoutSession(params: {
         Object.keys(metadata).length > 0 ? metadata : undefined,
 
       return_url: returnUrl,
-      cancel_url: `${appUrl}/dashboard/settings?tab=billing&canceled=true`,
+      // Don't set cancel_url - let Dodo handle payment failures and retries
       feature_flags: {
         redirect_immediately: true,
       },

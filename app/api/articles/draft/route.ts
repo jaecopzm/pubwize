@@ -100,9 +100,23 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
       // Save the complete draft to Firestore
       const draft = { content: fullContent, format: "markdown" };
+      
+      // Calculate word count
+      const wordCount = fullContent
+        .replace(/```[\s\S]*?```/g, '') // Remove code blocks
+        .replace(/`[^`]*`/g, '') // Remove inline code
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to text
+        .replace(/[#*_~\[\](){}]/g, '') // Remove markdown chars
+        .replace(/<[^>]+>/g, '') // Remove HTML tags
+        .replace(/\s+/g, ' ') // Normalize whitespace
+        .trim()
+        .split(/\s+/)
+        .filter(w => w.length > 0).length;
+      
       const now = new Date();
       await articleRef.update({
         draft,
+        wordCount,
         status: "draft_generated",
         settings: {
           ...articleData.settings,

@@ -46,6 +46,27 @@ export async function sendEmail({
   text?: string;
   type: EmailType;
 }) {
+  // Check if Resend is configured
+  if (!process.env.RESEND_API_KEY) {
+    console.warn(`[Email] RESEND_API_KEY not configured. Email not sent:`, {
+      to,
+      subject,
+      type,
+    });
+    
+    // In development, log the email content
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Email Preview]', {
+        to,
+        subject,
+        type,
+        htmlPreview: html.substring(0, 200) + '...',
+      });
+    }
+    
+    return { success: false, error: 'Email service not configured' };
+  }
+
   try {
     const { data, error } = await resend.emails.send({
       from: EMAIL_CONFIG.from,
@@ -61,14 +82,14 @@ export async function sendEmail({
     });
 
     if (error) {
-      console.error('Resend error:', error);
+      console.error('[Email] Resend error:', error);
       throw new Error(`Failed to send email: ${error.message}`);
     }
 
-    console.log('Email sent successfully:', { id: data?.id, to, type });
+    console.log('[Email] Sent successfully:', { id: data?.id, to, type });
     return { success: true, id: data?.id };
   } catch (error) {
-    console.error('Failed to send email:', error);
+    console.error('[Email] Failed to send:', error);
     throw error;
   }
 }

@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { WordPressConnectionDialog, WordPressSitesList } from "@/components/wordpress";
 import { PricingCards } from "@/components/pricing";
+import { BillingManagement } from "@/components/billing-management";
 import { getDodoPriceId } from "@/lib/dodo";
 import { createDodoCheckoutSession, createDodoCustomerPortalSession } from "@/app/actions/dodo";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ interface CurrentUser {
   articleCountThisPeriod?: number;
   createdAt?: string;
   dodoCustomerId?: string;
+  dodoSubscriptionId?: string;
   status?: string;
   currentPeriodEnd?: string;
 }
@@ -97,13 +99,19 @@ function SettingsContent() {
     // Show success message after returning from portal/checkout
     if (success === 'true') {
       toast.success('Subscription updated successfully');
-      fetchUserPlan(); // Refresh data
-      router.replace('/dashboard/settings?tab=billing');
-      return;
-    }
-
-    if (canceled === 'true') {
-      toast.error('Payment was canceled or failed. Please try again.');
+      
+      // Poll for subscription data (webhook might take a few seconds)
+      let attempts = 0;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        await fetchUserPlan();
+        
+        // Stop polling after 10 attempts (30 seconds) or when customerId is set
+        if (attempts >= 10 || user?.dodoCustomerId) {
+          clearInterval(pollInterval);
+        }
+      }, 3000);
+      
       router.replace('/dashboard/settings?tab=billing');
       return;
     }
@@ -153,6 +161,7 @@ function SettingsContent() {
           planStatus: "active",
           articleCountThisPeriod: data.usage?.articlesUsed || data.articleCountThisPeriod || 0,
           dodoCustomerId: data.dodoCustomerId,
+          dodoSubscriptionId: data.dodoSubscriptionId,
           status: data.status,
           currentPeriodEnd: data.currentPeriodEnd,
         } : null);
@@ -541,53 +550,24 @@ function SettingsContent() {
                       {isPending ? 'Loading...' : 'Manage Subscription'}
                     </button>
                   ) : (
-                    <div className="p-3 rounded-lg bg-muted/30 border border-border">
-                      <p className="text-[10px] lg:text-xs text-muted-foreground">
-                        Your subscription is being set up. Refresh in a few moments.
+                    <div className="p-4 rounded-lg bg-teal/5 border border-teal/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="h-2 w-2 rounded-full bg-teal animate-pulse" />
+                        <p className="text-sm font-medium text-foreground">Processing your subscription...</p>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        This usually takes 10-30 seconds. The page will update automatically.
                       </p>
                     </div>
                   )}
                 </div>
                 {user?.dodoCustomerId && (
-                  <>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 lg:gap-4 p-3 lg:p-4 rounded-lg bg-muted/30">
-                      <div>
-                        <p className="font-mono-dm text-[9px] lg:text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Status</p>
-                        <span className={cn(
-                          "text-xs lg:text-sm font-semibold flex items-center gap-1",
-                          user.status === 'active' && "text-teal",
-                          user.status === 'on_hold' && "text-destructive",
-                          user.status === 'cancelled' && "text-muted-foreground"
-                        )}>
-                          <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                          {user.status === 'active' && 'Active'}
-                          {user.status === 'on_hold' && 'On Hold'}
-                          {user.status === 'cancelled' && 'Cancelled'}
-                          {user.status === 'paused' && 'Paused'}
-                          {!user.status && 'Pending'}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="font-mono-dm text-[9px] lg:text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Plan</p>
-                        <span className="text-xs lg:text-sm font-semibold text-foreground capitalize">{currentTier}</span>
-                      </div>
-                      {user.currentPeriodEnd && (
-                        <div className="col-span-2 sm:col-span-1">
-                          <p className="font-mono-dm text-[9px] lg:text-[10px] text-muted-foreground uppercase tracking-wider mb-1">
-                            {user.status === 'cancelled' ? 'Ends' : 'Renews'}
-                          </p>
-                          <span className="text-xs lg:text-sm font-semibold text-foreground">
-                            {new Date(user.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    <div className="mt-3 lg:mt-4 p-2.5 lg:p-3 rounded-lg bg-muted/20 border border-border/50">
-                      <p className="text-[10px] lg:text-xs text-muted-foreground leading-relaxed">
-                        Manage payment methods, view invoices, or cancel subscription.
-                      </p>
-                    </div>
-                  </>
+                  <BillingManagement
+                    customerId={user.dodoCustomerId}
+                    subscriptionId={user.dodoSubscriptionId}
+                    currentPlan={currentTier}
+                    onCancelSuccess={fetchUserPlan}
+                  />
                 )}
               </section>
             )}
@@ -791,7 +771,7 @@ function SettingsContent() {
               Delete Account
             </AlertDialogTitle>
             <AlertDialogDescription className="space-y-3">
-              <p>This action cannot be undone. This will permanently delete:</p>
+              <span className="block">This action cannot be undone. This will permanently delete:</span>
               <ul className="list-disc list-inside space-y-1 text-sm">
                 <li>Your account and profile</li>
                 <li>All articles and drafts</li>
@@ -799,7 +779,7 @@ function SettingsContent() {
                 <li>All WordPress connections</li>
                 <li>Your subscription (if active)</li>
               </ul>
-              <p className="font-semibold text-foreground pt-2">Are you absolutely sure?</p>
+              <span className="block font-semibold text-foreground pt-2">Are you absolutely sure?</span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

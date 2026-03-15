@@ -5,6 +5,7 @@
 
 import useSWR, { SWRConfiguration } from 'swr';
 import { getFirebaseAuth } from '@/lib/firebase-client';
+import { toast } from 'sonner';
 
 // Default SWR configuration
 export const swrConfig: SWRConfiguration = {
@@ -35,6 +36,13 @@ async function fetcherWithAuth(url: string) {
   });
 
   if (!response.ok) {
+    // If user not found (404), sign them out immediately
+    if (response.status === 404) {
+      await auth.signOut();
+      toast.error('Account not found. Please sign up again.');
+      window.location.href = '/auth/signin';
+      throw new Error('Account not found');
+    }
     const error = new Error('API request failed');
     (error as any).status = response.status;
     throw error;

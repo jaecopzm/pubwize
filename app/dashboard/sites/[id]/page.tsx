@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Globe } from "lucide-react";
@@ -11,8 +11,8 @@ import SiteForm, { SiteFormData } from "../site-form";
 
 export default function EditSitePage() {
     const router = useRouter();
-    const params = useSearchParams();
-    const siteId = params.get("id");
+    const params = useParams();
+    const siteId = params.id as string;
 
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);

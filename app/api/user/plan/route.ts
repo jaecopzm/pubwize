@@ -3,6 +3,7 @@ import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { cache, cacheKeys, cacheTTL } from "@/lib/redis";
 import { withRateLimit } from "@/lib/rate-limit";
 import { sendWelcomeEmail } from "@/lib/email/email-service";
+import { checkAccountCreationAbuse } from "@/lib/abuse-prevention";
 
 export const GET = withRateLimit(async (req: NextRequest) => {
   try {
@@ -79,22 +80,54 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     }
 
     const db = adminDb();
-    const now = new Date();
-    const periodEnd = new Date(now);
-    periodEnd.setMonth(periodEnd.getMonth() + 1);
 
     // Check if user already exists
     const userRef = db.collection("users").doc(userId);
     const userDoc = await userRef.get();
 
     if (userDoc.exists) {
-      // User already exists, don't overwrite
-      return NextResponse.json({ success: true, existing: true });
+      const userData = userDoc.data();
+      
+      // If user is marked as deleted, allow re-creation
+      if (userData?.deleted) {
+        // Continue to create new user (will overwrite the deleted marker)
+      } else {
+        // User already exists and is active, don't overwrite
+        return NextResponse.json({ success: true, existing: true });
+      }
     }
+
+    // Get IP address for abuse prevention
+    const ipAddress = req.headers.get('x-forwarded-for')?.split(',')[0] || 
+                      req.headers.get('x-real-ip') || 
+                      'unknown';
+
+    // Check for abuse patterns
+    const abuseCheck = await checkAccountCreationAbuse(email, ipAddress);
+    
+    if (!abuseCheck.allowed) {
+      // Delete the Firebase Auth user that was just created
+      try {
+        await adminAuth().deleteUser(userId);
+      } catch (err) {
+        console.error('Failed to delete abusive user:', err);
+      }
+      
+      return NextResponse.json(
+        { error: abuseCheck.reason || "Account creation not allowed" }, 
+        { status: 403 }
+      );
+    }
+
+    const now = new Date();
+    const periodEnd = new Date(now);
+    periodEnd.setMonth(periodEnd.getMonth() + 1);
 
     // Create new user with free tier and new usage structure
     await userRef.set({
       email,
+      emailDomain: email.split('@')[1]?.toLowerCase(),
+      signupIp: ipAddress,
       plan: "free", // Use 'plan' instead of 'planTier' for consistency
       usage: {
         articlesUsed: 0,
@@ -113,9 +146,15 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     await cache.del(cacheKeys.userPlan(userId));
 
     // Send welcome email (async, don't wait)
-    sendWelcomeEmail(email, email.split('@')[0]).catch(err => 
-      console.error('Failed to send welcome email:', err)
-    );
+    sendWelcomeEmail(email, email.split('@')[0])
+      .then(() => console.log(`[User Plan] Welcome email sent to ${email}`))
+      .catch(err => {
+        console.error('[User Plan] Failed to send welcome email:', err);
+        // Check if it's a Resend API key issue
+        if (!process.env.RESEND_API_KEY) {
+          console.error('[User Plan] RESEND_API_KEY is not configured!');
+        }
+      });
 
     return NextResponse.json({ success: true, existing: false });
   } catch (error) {

@@ -130,7 +130,12 @@ export function AdvancedAnalytics() {
             </div>
             <div className="min-w-0">
               <p className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider truncate">Cost/Article</p>
-              <p className="text-xl sm:text-2xl font-bold">${data.roi.costPerArticle}</p>
+              <p className="text-xl sm:text-2xl font-bold">
+                {typeof data.roi.costPerArticle === 'string' && data.roi.costPerArticle === 'Free' 
+                  ? <span className="text-teal">Free</span>
+                  : `$${data.roi.costPerArticle}`
+                }
+              </p>
             </div>
           </div>
         </div>
@@ -178,7 +183,9 @@ export function AdvancedAnalytics() {
             </div>
             <div className="flex justify-between items-center p-2 sm:p-3 rounded-lg bg-card/50">
               <span className="text-xs sm:text-sm text-muted-foreground">ROI Multiple</span>
-              <span className="text-base sm:text-xl font-bold text-gold">{data.roi.breakEven}%</span>
+              <span className="text-base sm:text-xl font-bold text-gold">
+                {data.roi.breakEven > 0 ? `${data.roi.breakEven}x` : 'N/A'}
+              </span>
             </div>
           </div>
         </div>
@@ -191,15 +198,32 @@ export function AdvancedAnalytics() {
           <div className="space-y-2 sm:space-y-4">
             <div className="flex justify-between items-center p-2 sm:p-3 rounded-lg bg-muted/30">
               <span className="text-xs sm:text-sm text-muted-foreground">Avg Completion</span>
-              <span className="text-base sm:text-xl font-bold">{data.performance.avgCompletionDays}d</span>
+              <span className="text-base sm:text-xl font-bold">
+                {data.performance.avgCompletionMinutes >= 60 
+                  ? `${Math.round(data.performance.avgCompletionMinutes / 60)}h`
+                  : `${data.performance.avgCompletionMinutes}m`
+                }
+              </span>
             </div>
             <div className="flex justify-between items-center p-2 sm:p-3 rounded-lg bg-muted/30">
               <span className="text-xs sm:text-sm text-muted-foreground">Fastest Article</span>
-              <span className="text-base sm:text-xl font-bold text-teal">{data.performance.fastestHours}h</span>
+              <span className="text-base sm:text-xl font-bold text-teal">
+                {data.performance.fastestMinutes >= 60 
+                  ? `${Math.round(data.performance.fastestMinutes / 60)}h`
+                  : `${data.performance.fastestMinutes}m`
+                }
+              </span>
             </div>
             <div className="flex justify-between items-center p-2 sm:p-3 rounded-lg bg-muted/30">
               <span className="text-xs sm:text-sm text-muted-foreground">Slowest Article</span>
-              <span className="text-base sm:text-xl font-bold text-muted-foreground">{data.performance.slowestHours}h</span>
+              <span className="text-base sm:text-xl font-bold text-muted-foreground">
+                {data.performance.slowestMinutes >= 1440 
+                  ? `${Math.round(data.performance.slowestMinutes / 1440)}d`
+                  : data.performance.slowestMinutes >= 60
+                  ? `${Math.round(data.performance.slowestMinutes / 60)}h`
+                  : `${data.performance.slowestMinutes}m`
+                }
+              </span>
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { trackAccountDeletion } from "@/lib/abuse-prevention";
 
 export async function DELETE(request: NextRequest) {
   try {
@@ -14,6 +15,16 @@ export async function DELETE(request: NextRequest) {
 
     const decodedToken = await auth.verifyIdToken(token);
     const uid = decodedToken.uid;
+
+    // Get user data before deletion
+    const userDoc = await db.collection("users").doc(uid).get();
+    const userData = userDoc.data();
+    const userEmail = decodedToken.email || userData?.email;
+
+    // Track deletion for abuse prevention
+    if (userEmail) {
+      await trackAccountDeletion(uid, userEmail);
+    }
 
     // Delete user data from Firestore
     const batch = db.batch();
@@ -35,8 +46,18 @@ export async function DELETE(request: NextRequest) {
     
     await batch.commit();
 
-    // Delete Firebase Auth user
-    await auth.deleteUser(uid);
+    // Delete Firebase Auth user (non-blocking - user can still sign out)
+    try {
+      await auth.deleteUser(uid);
+    } catch (authError) {
+      // Auth deletion failed - mark user as deleted in Firestore instead
+      // This allows re-signup with same email
+      await db.collection("users").doc(uid).set({
+        deleted: true,
+        deletedAt: new Date(),
+        email: userEmail,
+      });
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

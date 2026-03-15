@@ -74,8 +74,8 @@ export default function ArticlesPage() {
             updatedAt: article.updatedAt ? new Date(article.updatedAt._seconds * 1000) : undefined,
             featuredImage: article.featuredImage,
             featuredImageAttribution: article.featuredImageAttribution,
-            wordCount: article.wordCount || Math.floor(Math.random() * 2000) + 800,
-            views: article.views || Math.floor(Math.random() * 500),
+            wordCount: article.wordCount || 0,
+            views: article.views || 0,
           }));
           setArticles(articlesData);
         }
@@ -669,16 +669,17 @@ export default function ArticlesPage() {
                 <h3 className="text-sm sm:text-base font-bold text-foreground group-hover:text-gold transition-colors truncate">
                   {article.keyword}
                 </h3>
-                <div className="flex items-center gap-2 sm:gap-3 mt-1 text-[10px] sm:text-xs text-muted-foreground flex-wrap">
-                  <span className="flex items-center gap-1 whitespace-nowrap">
-                    <FileText size={12} className="flex-shrink-0" />
-                    <span>{article.wordCount?.toLocaleString() || 0} words</span>
+                <div className="flex items-center gap-2 mt-1 text-[10px] sm:text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1 shrink-0">
+                    <FileText size={12} />
+                    <span className="hidden xs:inline">{article.wordCount?.toLocaleString() || 0}</span>
+                    <span className="xs:hidden">{(article.wordCount || 0) > 1000 ? `${Math.round((article.wordCount || 0) / 1000)}k` : article.wordCount || 0}</span>
                   </span>
-                  <span className="flex items-center gap-1 whitespace-nowrap">
-                    <Eye size={12} className="flex-shrink-0" />
-                    <span>{article.views || 0} views</span>
+                  <span className="flex items-center gap-1 shrink-0">
+                    <Eye size={12} />
+                    <span>{article.views || 0}</span>
                   </span>
-                  <span className="hidden sm:inline truncate">{sitesMap[article.siteId]?.siteName || "Unknown"}</span>
+                  <span className="hidden sm:inline truncate ml-1">{sitesMap[article.siteId]?.siteName || "Unknown"}</span>
                 </div>
               </div>
 

@@ -24,9 +24,12 @@ export const GET = withRateLimit(async (req: NextRequest) => {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const planTier = userData.planTier || 'free';
+    const planTier = userData.planTier || userData.plan || 'free';
     const plan: PlanTier = planTier === 'free' || planTier === 'starter' || planTier === 'pro' ? planTier : 'free';
-    const limits = PLANS[plan].limits;
+    
+    // For analytics, always show Pro limits since this is a Pro-only feature
+    const displayPlan: PlanTier = 'pro';
+    const limits = PLANS[displayPlan].limits;
     const usage = userData.usage || {};
 
     // Calculate current period usage (excluding rollover for display)
@@ -49,51 +52,82 @@ export const GET = withRateLimit(async (req: NextRequest) => {
     const statusBreakdown = {
       brief: articles.filter(a => a.status === 'brief').length,
       outline: articles.filter(a => a.status === 'outline').length,
-      draft: articles.filter(a => a.status === 'draft').length,
+      draft: articles.filter(a => a.status === 'draft' || a.status === 'draft_generated').length,
       optimized: articles.filter(a => a.status === 'optimized').length,
     };
 
-    // Performance Metrics
-    const completedArticles = articles.filter(a => a.status === 'optimized' && a.createdAt && a.updatedAt);
-    const avgCompletionTime = completedArticles.length > 0
-      ? completedArticles.reduce((sum, a) => {
-          const start = a.createdAt?.toDate?.() || new Date(a.createdAt);
-          const end = a.updatedAt?.toDate?.() || new Date(a.updatedAt);
-          return sum + (end.getTime() - start.getTime());
-        }, 0) / completedArticles.length / (1000 * 60 * 60 * 24) // Convert to days
+    // Performance Metrics - only for completed articles
+    const completedArticles = articles.filter(a => 
+      (a.status === 'optimized' || a.status === 'draft_generated') && 
+      a.createdAt && 
+      a.updatedAt
+    );
+    
+    const completionTimes = completedArticles
+      .map(a => {
+        const start = a.createdAt?.toDate?.() || new Date(a.createdAt);
+        const end = a.updatedAt?.toDate?.() || new Date(a.updatedAt);
+        const diffMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+        return Math.max(diffMinutes, 1); // At least 1 minute
+      })
+      .filter(time => time > 0 && time < 120) // Only count articles completed within 2 hours (realistic for AI generation)
+      .sort((a, b) => a - b);
+
+    const avgCompletionMinutes = completionTimes.length > 0
+      ? completionTimes.reduce((sum, time) => sum + time, 0) / completionTimes.length
       : 0;
 
-    const completionTimes = completedArticles.map(a => {
-      const start = a.createdAt?.toDate?.() || new Date(a.createdAt);
-      const end = a.updatedAt?.toDate?.() || new Date(a.updatedAt);
-      return (end.getTime() - start.getTime()) / (1000 * 60 * 60); // Hours
-    }).sort((a, b) => a - b);
-
-    // Content Insights
+    // Content Insights - only count unique keywords
     const keywordCounts = articles.reduce((acc: any, a) => {
-      acc[a.keyword] = (acc[a.keyword] || 0) + 1;
+      if (a.keyword) {
+        const normalized = a.keyword.toLowerCase().trim();
+        acc[normalized] = (acc[normalized] || 0) + 1;
+      }
       return acc;
     }, {});
+    
     const topKeywords = Object.entries(keywordCounts)
       .sort(([, a]: any, [, b]: any) => b - a)
       .slice(0, 5)
       .map(([keyword, count]) => ({ keyword, count }));
 
+    // Site usage
     const siteCounts = articles.reduce((acc: any, a) => {
-      acc[a.siteId] = (acc[a.siteId] || 0) + 1;
+      if (a.siteId) {
+        acc[a.siteId] = (acc[a.siteId] || 0) + 1;
+      }
       return acc;
     }, {});
     const mostUsedSite = Object.entries(siteCounts).sort(([, a]: any, [, b]: any) => b - a)[0];
 
-    const avgWordCount = articles.length > 0
-      ? Math.round(articles.reduce((sum, a) => sum + (a.wordCount || 0), 0) / articles.length)
+    // Calculate word count from articles with draft content
+    const articlesWithContent = articles.filter(a => a.draft?.content && a.draft.content.length > 100);
+    const avgWordCount = articlesWithContent.length > 0
+      ? Math.round(articlesWithContent.reduce((sum, a) => {
+          const content = a.draft?.content || '';
+          const text = content
+            .replace(/```[\s\S]*?```/g, '')
+            .replace(/`[^`]*`/g, '')
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+            .replace(/[#*_~\[\](){}]/g, '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          return sum + text.split(/\s+/).filter(w => w.length > 0).length;
+        }, 0) / articlesWithContent.length)
       : 0;
 
-    // ROI Calculator
+    // ROI Calculator - more accurate
     const planPrice = plan === 'pro' ? 49 : plan === 'starter' ? 19 : 0;
-    const costPerArticle = currentPeriodUsage.articlesUsed > 0 ? planPrice / currentPeriodUsage.articlesUsed : 0;
-    const timeSavedHours = currentPeriodUsage.articlesUsed * 3.5; // Assume 3.5 hours saved per article
-    const valueGenerated = currentPeriodUsage.articlesUsed * 150; // Assume $150 value per article
+    const articlesGenerated = currentPeriodUsage.articlesUsed;
+    const costPerArticle = articlesGenerated > 0 && planPrice > 0 
+      ? (planPrice / articlesGenerated).toFixed(2) 
+      : planPrice === 0 ? 'Free' : '0.00';
+    const timeSavedHours = Math.round(articlesGenerated * 3.5); // 3.5 hours per article
+    const valueGenerated = articlesGenerated * 150; // $150 value per article
+    const roiMultiple = planPrice > 0 && valueGenerated > 0 
+      ? Math.round((valueGenerated / planPrice) * 10) / 10 
+      : 0;
 
     // Get sites count
     const sitesSnapshot = await db
@@ -111,7 +145,8 @@ export const GET = withRateLimit(async (req: NextRequest) => {
     };
 
     return NextResponse.json({
-      plan,
+      plan: displayPlan, // Return 'pro' for display purposes
+      actualPlan: plan, // Keep actual plan for reference
       usage: {
         articlesUsed: currentPeriodUsage.articlesUsed,
         articlesLimit: limits.articlesPerMonth,
@@ -134,20 +169,34 @@ export const GET = withRateLimit(async (req: NextRequest) => {
         periodEnd: usage.periodEnd?.toDate?.() || new Date(),
       },
       performance: {
-        avgCompletionDays: Math.round(avgCompletionTime * 10) / 10,
-        fastestHours: completionTimes.length > 0 ? Math.round(completionTimes[0] * 10) / 10 : 0,
-        slowestHours: completionTimes.length > 0 ? Math.round(completionTimes[completionTimes.length - 1] * 10) / 10 : 0,
+        avgCompletionMinutes: completionTimes.length > 0 ? Math.round(avgCompletionMinutes) : 0,
+        fastestMinutes: completionTimes.length > 0 ? Math.round(completionTimes[0]) : 0,
+        slowestMinutes: completionTimes.length > 0 ? Math.round(completionTimes[completionTimes.length - 1]) : 0,
+        completedCount: completedArticles.length,
       },
       insights: {
         topKeywords,
         mostUsedSite: mostUsedSite ? { siteId: mostUsedSite[0], count: mostUsedSite[1] } : null,
         avgWordCount,
+        articlesWithContent: articlesWithContent.length,
+        totalWords: articlesWithContent.reduce((sum, a) => {
+          const content = a.draft?.content || '';
+          const text = content
+            .replace(/```[\s\S]*?```/g, '')
+            .replace(/`[^`]*`/g, '')
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+            .replace(/[#*_~\[\](){}]/g, '')
+            .replace(/<[^>]+>/g, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+          return sum + text.split(/\s+/).filter(w => w.length > 0).length;
+        }, 0),
       },
       roi: {
-        costPerArticle: Math.round(costPerArticle * 100) / 100,
-        timeSavedHours: Math.round(timeSavedHours),
-        valueGenerated: Math.round(valueGenerated),
-        breakEven: planPrice > 0 && valueGenerated > 0 ? Math.round((valueGenerated / planPrice) * 100) : 0,
+        costPerArticle,
+        timeSavedHours,
+        valueGenerated,
+        breakEven: roiMultiple,
       },
     });
   } catch (error) {

@@ -6,6 +6,7 @@ import { getFirebaseAuth } from "@/lib/firebase-client";
 import { Plus, Globe, Pencil, Trash2, TrendingUp, Calendar, Search, Grid3x3, List, BarChart3, ExternalLink, Activity, Sparkles, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
 
 interface Site {
   id: string;
@@ -14,6 +15,7 @@ interface Site {
   niche: string;
   articleCount: number;
   createdAt: Date;
+  suggestedTopic?: string;
 }
 
 type ViewMode = 'grid' | 'list';
@@ -21,6 +23,7 @@ type SortBy = 'name' | 'date' | 'articles';
 
 export default function SitesPage() {
   const router = useRouter();
+  const { plan } = useUserPlan();
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState<string | null>(null);
@@ -86,11 +89,43 @@ export default function SitesPage() {
       }));
 
       setSites(sites);
+
+      // Fetch topic suggestions for Pro users (async, don't block)
+      if (plan === 'pro') {
+        fetchTopicSuggestions(sites, idToken);
+      }
     } catch (error) {
       console.error("Failed to fetch sites:", error);
       toast.error("Failed to load sites");
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function fetchTopicSuggestions(sites: Site[], idToken: string) {
+    // Fetch suggestions for each site (limit to first 3 to avoid rate limits)
+    const sitesToFetch = sites.slice(0, 3);
+    
+    for (const site of sitesToFetch) {
+      try {
+        const res = await fetch('/api/sites/suggest-topic', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${idToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ siteId: site.id }),
+        });
+
+        if (res.ok) {
+          const { topic } = await res.json();
+          setSites(prev => prev.map(s => 
+            s.id === site.id ? { ...s, suggestedTopic: topic } : s
+          ));
+        }
+      } catch (error) {
+        console.error(`Failed to fetch topic for site ${site.id}:`, error);
+      }
     }
   }
 
@@ -421,21 +456,31 @@ export default function SitesPage() {
               </div>
 
               {/* Pro Feature: Suggested Next Topic */}
-              <div className="mb-5 p-3 rounded-xl bg-lilac/5 border border-lilac/10 group-hover:border-lilac/20 transition-all">
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Sparkles className="h-3 w-3 text-lilac" />
-                  <span className="text-[9px] font-bold text-lilac uppercase tracking-widest">Next Topic Idea</span>
+              {plan === 'pro' && (
+                <div className="mb-5 p-3 rounded-xl bg-lilac/5 border border-lilac/10 group-hover:border-lilac/20 transition-all">
+                  <div className="flex items-center gap-1.5 mb-1.5">
+                    <Sparkles className="h-3 w-3 text-lilac" />
+                    <span className="text-[9px] font-bold text-lilac uppercase tracking-widest">Next Topic Idea</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground leading-snug">
+                    {site.suggestedTopic ? (
+                      <>
+                        Suggested: <span className="text-foreground font-semibold">"{site.suggestedTopic}"</span>
+                      </>
+                    ) : (
+                      <>
+                        Latest trend in {site.niche}: <span className="text-foreground font-semibold">"How to scale {site.niche} in 2026"</span>
+                      </>
+                    )}
+                  </p>
+                  <button
+                    onClick={() => router.push(`/dashboard/articles/new?keyword=${encodeURIComponent(site.suggestedTopic || `How to scale ${site.niche} in 2026`)}&siteId=${site.id}`)}
+                    className="mt-2.5 flex items-center gap-1 text-[10px] font-bold text-lilac hover:underline"
+                  >
+                    Create Article <ChevronRight size={10} />
+                  </button>
                 </div>
-                <p className="text-[11px] text-muted-foreground leading-snug">
-                  Latest trend in {site.niche}: <span className="text-foreground font-semibold">"How to scale {site.niche} in 2026"</span>
-                </p>
-                <button
-                  onClick={() => router.push(`/dashboard/articles/new?keyword=${encodeURIComponent(`How to scale ${site.niche} in 2026`)}&siteId=${site.id}`)}
-                  className="mt-2.5 flex items-center gap-1 text-[10px] font-bold text-lilac hover:underline"
-                >
-                  Create Article <ChevronRight size={10} />
-                </button>
-              </div>
+              )}
 
               <div className="flex gap-2">
                 <button

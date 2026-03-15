@@ -24,6 +24,7 @@ import { toast } from "sonner";
 import { AnalyticsDashboard } from "@/components/analytics-dashboard";
 import { UpgradeModal } from "@/components/upgrade-modal";
 import { UsageMeter } from "@/components/pricing";
+import { OnboardingChecklist } from "@/components/onboarding-checklist";
 import { useUsage } from "@/lib/hooks/use-usage";
 import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
 import { UpgradeCTA } from "@/components/upgrade-cta";
@@ -53,6 +54,7 @@ export default function DashboardOverviewPage() {
   const router = useRouter();
   const { data: usageData, loading: usageLoading } = useUsage();
   const { periodEnd } = useUserPlan(); // Get periodEnd from SWR hook
+  const [userName, setUserName] = useState("Writer");
   const [stats, setStats] = useState<Stats>({
     totalArticles: 0,
     totalSites: 0,
@@ -71,22 +73,35 @@ export default function DashboardOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState("");
+  const [hasWordPress, setHasWordPress] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         const auth = getFirebaseAuth();
-        const idToken = await auth.currentUser?.getIdToken();
+        const user = auth.currentUser;
+        const idToken = await user?.getIdToken();
         if (!idToken) return;
 
-        const [statsRes, articlesRes] = await Promise.all([
+        // Extract first name from email
+        if (user?.email) {
+          const emailPrefix = user.email.split('@')[0];
+          const firstName = emailPrefix.split(/[._-]/)[0];
+          setUserName(firstName.charAt(0).toUpperCase() + firstName.slice(1));
+        }
+
+        const [statsRes, articlesRes, wpSitesRes] = await Promise.all([
           fetch("/api/stats", { headers: { Authorization: `Bearer ${idToken}` } }),
           fetch("/api/articles", { headers: { Authorization: `Bearer ${idToken}` } }),
+          fetch("/api/wordpress/sites", { headers: { Authorization: `Bearer ${idToken}` } }),
         ]);
 
         const statsData = statsRes.ok ? await statsRes.json() : {};
         const articlesData = articlesRes.ok ? await articlesRes.json() : { articles: [] };
+        const wpSitesData = wpSitesRes.ok ? await wpSitesRes.json() : { sites: [] };
         const articles = articlesData.articles || [];
+        
+        setHasWordPress((wpSitesData.sites || []).length > 0);
 
         setAllArticles(articles);
 
@@ -260,7 +275,7 @@ export default function DashboardOverviewPage() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 sm:gap-4 relative z-10">
         <div className="min-w-0">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight font-display">
-            Welcome back, <span className="gradient-gold-teal">Writer</span>
+            Welcome back, <span className="gradient-gold-teal">{userName}</span>
           </h1>
           <p className="mt-1 text-xs sm:text-sm lg:text-base text-muted-foreground">
             You've generated {articlesUsed} articles this month. Ready for more?
@@ -291,6 +306,15 @@ export default function DashboardOverviewPage() {
           </button>
         </div>
       </div>
+
+      {/* Onboarding Checklist - Show for new users */}
+      {stats.totalArticles < 3 && (
+        <OnboardingChecklist
+          totalArticles={stats.totalArticles}
+          totalSites={stats.totalSites}
+          hasWordPress={hasWordPress}
+        />
+      )}
 
       {/* Stats Row */}
       <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 relative z-10">

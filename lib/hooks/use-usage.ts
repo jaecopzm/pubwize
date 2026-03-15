@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { getFirebaseAuth } from '@/lib/firebase-client';
 import { PLANS, type PlanTier } from '@/lib/pricing';
+import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export interface UsageData {
   plan: PlanTier;
@@ -22,6 +24,7 @@ export interface UsageData {
 }
 
 export function useUsage() {
+  const router = useRouter();
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -46,6 +49,13 @@ export function useUsage() {
       });
 
       if (!response.ok) {
+        // If user not found (404), sign them out immediately
+        if (response.status === 404) {
+          await auth.signOut();
+          toast.error('Account not found. Please sign up again.');
+          router.push('/auth/signin');
+          return;
+        }
         throw new Error('Failed to fetch usage');
       }
 

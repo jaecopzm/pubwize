@@ -85,7 +85,13 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
   // Determine if user should see upgrade nudge
   const showUpgrade = plan === 'free' || plan === 'starter';
   const planDisplay = plan === 'free' ? 'Free Plan' : plan === 'starter' ? 'Starter' : plan === 'pro' ? 'Pro' : 'Enterprise';
-  const usagePercent = usage.limit > 0 ? Math.round((usage.articlesGenerated / usage.limit) * 100) : 0;
+  
+  // Use detailed usage data for accurate counts
+  const articlesUsed = detailedUsage?.usage?.articlesUsed || usage.articlesGenerated || 0;
+  const articlesLimit = detailedUsage?.limits?.articlesPerMonth || usage.limit || 5;
+  const rollover = detailedUsage?.usage?.rolloverArticles || 0;
+  const totalLimit = articlesLimit + rollover;
+  const usagePercent = totalLimit > 0 ? Math.round((articlesUsed / totalLimit) * 100) : 0;
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -213,26 +219,26 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
               }}>
                 <span>Articles</span>
                 <span style={{ fontWeight: 600 }}>
-                  {usage.articlesGenerated} / {usage.limit}
+                  {articlesUsed} of {totalLimit}
                 </span>
               </div>
               <div style={{
-                height: 6,
-                background: 'rgba(0,0,0,0.2)',
-                borderRadius: 3,
-                overflow: 'hidden'
+                height: 8,
+                background: 'rgba(255,255,255,0.1)',
+                borderRadius: 4,
+                overflow: 'hidden',
+                border: '1px solid rgba(255,255,255,0.05)'
               }}>
                 <div style={{
                   height: '100%',
                   width: `${Math.min(usagePercent, 100)}%`,
                   background: usagePercent >= 100 
-                    ? 'linear-gradient(90deg, #ef4444 0%, #dc2626 100%)'
+                    ? '#ef4444'
                     : usagePercent >= 80
-                    ? 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)'
-                    : 'linear-gradient(90deg, var(--gold) 0%, var(--teal) 100%)',
+                    ? '#f59e0b'
+                    : '#10b981',
                   transition: 'width 0.3s ease',
-                  borderRadius: 3,
-                  animation: usagePercent >= 90 ? 'pulse 2s infinite' : 'none'
+                  boxShadow: usagePercent > 0 ? '0 0 8px rgba(16, 185, 129, 0.5)' : 'none'
                 }} />
               </div>
             </div>
