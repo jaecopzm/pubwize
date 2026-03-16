@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateAIJSON } from "@/lib/ai-providers";
+import { generateAIJSON, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
 import { validateContent, validateKeyword } from "@/lib/validation";
@@ -11,6 +11,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // 1. Authenticate
   const auth = await authenticateRequest(req);
   assertValid(auth.success, auth.error || "Authentication failed");
+
+  const uid = auth.uid!;
 
   // 2. Validate request body
   const body = await req.json();
@@ -75,11 +77,11 @@ Identify 3-5 sections that would benefit most from images.
   }>;
 
   try {
-    recommendations = await generateAIJSON({
+    recommendations = await aiUserContext.run(uid, () => generateAIJSON({
       systemPrompt,
       userPrompt,
       temperature: 0.7,
-    });
+    }));
   } catch (aiError) {
     console.error("Image recommendations AI failed:", aiError);
     throw new ExternalServiceError("AI image recommendation service", aiError);

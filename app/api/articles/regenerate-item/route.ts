@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateAIResponse } from "@/lib/ai-providers";
+import { generateAIResponse, aiUserContext } from "@/lib/ai-providers";
 import { adminDb } from "@/lib/firebase-admin";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { withErrorHandler, QuotaExceededError, assertValid, ExternalServiceError } from "@/lib/error-handler";
@@ -54,11 +54,11 @@ Return ONLY the question text, no quotes or additional formatting.`;
     // 5. Generate new content
     let newValue: string;
     try {
-        newValue = await generateAIResponse({
+        newValue = await aiUserContext.run(uid, () => generateAIResponse({
             systemPrompt,
             userPrompt,
             temperature: 0.9,
-        });
+        }));
         // Remove quotes if any
         newValue = newValue.replace(/^["']|["']$/g, '');
     } catch (aiError) {

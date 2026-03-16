@@ -10,6 +10,7 @@ import { renderQuotaWarningEmail } from './templates/quota-warning';
 import { renderPaymentSuccessEmail } from './templates/payment-success-optimized';
 import { renderPaymentFailedEmail } from './templates/payment-failed-optimized';
 import { renderSubscriptionCancelledEmail } from './templates/subscription-cancelled-optimized';
+// Note: all templates now export from .ts files (not .tsx)
 import { logger } from '../logger';
 
 const BASE_URL = process.env.NEXT_PUBLIC_APP_URL || 'https://pubwize.com';

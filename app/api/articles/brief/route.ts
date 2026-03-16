@@ -4,7 +4,7 @@ import {
   GenerateBriefRequestBody,
   GenerateBriefResponse,
 } from "@/lib/types";
-import { generateBrief } from "@/lib/ai-providers";
+import { generateBrief, aiUserContext } from "@/lib/ai-providers";
 import { fetchSerpContext } from "@/lib/serper";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { withErrorHandler, QuotaExceededError, assertValid, ExternalServiceError } from "@/lib/error-handler";
@@ -123,7 +123,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // 9. Generate brief
   let brief;
   try {
-    brief = await generateBrief({
+    brief = await aiUserContext.run(uid, () => generateBrief({
       keyword,
       siteContext: {
         niche: siteData.niche,
@@ -132,7 +132,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         brandVoice: siteData.brandVoice || undefined,
       },
       serpContext,
-    });
+    }));
   } catch (err) {
     console.error("OpenRouter brief generation failed:", err);
     throw new ExternalServiceError("AI generation service", err);

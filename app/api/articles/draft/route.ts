@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { generateDraftStream } from "@/lib/ai-providers";
+import { generateDraftStream, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
 import { validateArticleId } from "@/lib/validation";
@@ -82,7 +82,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   (async () => {
     try {
-      const generator = generateDraftStream({
+      const generator = aiUserContext.run(uid, () => generateDraftStream({
         outline: articleData.outline as any,
         keyword: articleData.keyword!,
         tone,
@@ -90,7 +90,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         lsiKeywords,
         siteBrandVoice,
         internalLinkArticles,
-      });
+      }));
 
       for await (const chunk of generator) {
         fullContent += chunk;

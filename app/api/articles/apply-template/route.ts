@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateAIJSON } from "@/lib/ai-providers";
+import { generateAIJSON, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
 import { validateKeyword } from "@/lib/validation";
@@ -9,7 +9,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const auth = await authenticateRequest(req);
   assertValid(auth.success, auth.error || "Authentication failed");
 
-  // 2. Validate request body
+  const uid = auth.uid!;
+
+  // 5. Generate outline
   const body = await req.json();
   const validation = validateRequestBody(body, ["templateId", "keyword", "structure"]);
   assertValid(validation.valid, validation.error || "Invalid request");
@@ -60,11 +62,11 @@ ${structure.map((section: string, i: number) => `${i + 1}. ${section}`).join('\n
   };
 
   try {
-    outline = await generateAIJSON({
+    outline = await aiUserContext.run(uid, () => generateAIJSON({
       systemPrompt,
       userPrompt,
       temperature: 0.7,
-    });
+    }));
   } catch (aiError) {
     console.error("Template application AI failed:", aiError);
     throw new ExternalServiceError("AI template service", aiError);

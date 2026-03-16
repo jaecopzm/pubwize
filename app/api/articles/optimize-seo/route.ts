@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
-import { optimizeContentWithSEOSuggestions } from "@/lib/ai-providers";
+import { optimizeContentWithSEOSuggestions, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
 import { validateContent, validateKeyword } from "@/lib/validation";
@@ -57,11 +57,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // 5. Generate optimized content
   let optimizedContent: string;
   try {
-    optimizedContent = await optimizeContentWithSEOSuggestions({
+    optimizedContent = await aiUserContext.run(uid, () => optimizeContentWithSEOSuggestions({
       content,
       keyword,
       suggestions
-    });
+    }));
   } catch (err) {
     console.error("OpenRouter optimization failed:", err);
     throw new ExternalServiceError("AI optimization service", err);

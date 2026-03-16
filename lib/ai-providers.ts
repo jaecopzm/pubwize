@@ -1,6 +1,27 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { AsyncLocalStorage } from "async_hooks";
 import type { BriefData, OutlineData, DraftData, OptimizationData, SocialMediaData, SiteBrandVoice } from "./types";
 import type { SerpContext } from "./serper";
+
+// Carries the current userId through async AI call chains without changing every function signature
+export const aiUserContext = new AsyncLocalStorage<string>();
+
+export async function logAIUsage(userId: string, data: {
+  provider: string;
+  model: string;
+  taskType: string;
+}) {
+  try {
+    const { adminDb } = await import("./firebase-admin");
+    await adminDb().collection("aiUsageLogs").add({
+      userId,
+      ...data,
+      ts: new Date(),
+    });
+  } catch {
+    // non-critical, never throw
+  }
+}
 
 // Provider configuration
 export type AIProvider = 'gemini' | 'openrouter' | 'groq';
@@ -8,6 +29,7 @@ export type AIProvider = 'gemini' | 'openrouter' | 'groq';
 interface AIRequest {
   systemPrompt: string;
   userPrompt: string;
+  userId?: string; // for usage logging
   temperature?: number;
   maxTokens?: number;
   expectJSON?: boolean;
@@ -283,6 +305,17 @@ export async function generateAI(request: AIRequest): Promise<AIResponse> {
 
       // Cache successful response
       setCache(cacheKey, response);
+
+      // Log AI usage (fire-and-forget)
+      const userId = request.userId ?? aiUserContext.getStore();
+      if (userId) {
+        logAIUsage(userId, {
+          provider: response.provider,
+          model: response.model,
+          taskType: request.taskType ?? "unknown",
+        }).catch(() => {});
+      }
+
       return response;
 
     } catch (error) {

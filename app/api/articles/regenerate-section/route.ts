@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateAIResponse } from "@/lib/ai-providers";
+import { generateAIResponse, aiUserContext } from "@/lib/ai-providers";
 import { adminDb } from "@/lib/firebase-admin";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { withErrorHandler, QuotaExceededError, assertValid, ExternalServiceError } from "@/lib/error-handler";
@@ -64,11 +64,11 @@ ${sectionContent || "No content yet - create from scratch"}`;
   // 7. Generate new content
   let newContent: string;
   try {
-    newContent = await generateAIResponse({
+    newContent = await aiUserContext.run(uid, () => generateAIResponse({
       systemPrompt,
       userPrompt,
       temperature: 0.8,
-    });
+    }));
   } catch (aiError) {
     console.error("Section regeneration failed:", aiError);
     throw new ExternalServiceError("AI regeneration service", aiError);

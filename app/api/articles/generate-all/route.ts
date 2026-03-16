@@ -5,6 +5,7 @@ import {
     streamOutlineRaw,
     generateDraftStream,
     streamOptimizationRaw,
+    aiUserContext,
 } from "@/lib/ai-providers";
 import { injectImagesIntoMarkdown } from "@/lib/unsplash";
 import { withErrorHandler, assertValid } from "@/lib/error-handler";
@@ -92,7 +93,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     const encoder = new TextEncoder();
     const send = (data: any) => encoder.encode(`data: ${JSON.stringify(data)}\n\n`);
 
-    (async () => {
+    aiUserContext.run(uid, async () => {
         try {
             // ── Phase 1: Brief (streaming tokens + done event) ─────────
             await writer.write(send({ phase: "brief" }));
@@ -196,7 +197,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         } finally {
             await writer.close();
         }
-    })();
+    });
 
     return new Response(readable, {
         headers: {

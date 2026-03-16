@@ -140,6 +140,7 @@ export default function LandingPage() {
                   <Link href="#how-it-works" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">How It Works</Link>
                   <Link href="#features" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Features</Link>
                   <Link href="#pricing" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Pricing</Link>
+                  <Link href="/blog" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Blog</Link>
                   <Link href="/auth/signin" className="text-xs font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Sign In</Link>
                 </div>
                 <div className="hidden lg:block">
@@ -170,6 +171,7 @@ export default function LandingPage() {
                 <Link href="#how-it-works" onClick={() => setMenuOpen(false)} className="text-sm font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">How It Works</Link>
                 <Link href="#features" onClick={() => setMenuOpen(false)} className="text-sm font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Features</Link>
                 <Link href="#pricing" onClick={() => setMenuOpen(false)} className="text-sm font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Pricing</Link>
+                <Link href="/blog" onClick={() => setMenuOpen(false)} className="text-sm font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Blog</Link>
                 <Link href="/auth/signin" onClick={() => setMenuOpen(false)} className="text-sm font-bold text-[var(--text-2)] hover:text-[var(--text-1)] transition-colors">Sign In</Link>
                 <Link href="/auth/signup" onClick={() => setMenuOpen(false)} className="btn-gold text-xs text-center py-2.5 shadow-lg">Get Started Free</Link>
               </div>
@@ -332,6 +334,80 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* ══ Blog Section ═══════════════════════════════════════════ */}
+          <section className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14 md:py-16 relative">
+            <div className="text-center mb-8 sm:mb-12">
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--teal)]/30 bg-[var(--teal)]/10 px-3 py-1 mb-4 sm:mb-6">
+                <Sparkles className="w-3 h-3 text-[var(--teal)]" />
+                <span className="text-[0.6rem] font-bold text-[var(--teal)] tracking-[0.2em] font-mono uppercase">SEO INSIGHTS</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-black font-display text-[var(--text-1)] mb-3 sm:mb-4">
+                Learn from the <span className="text-[var(--gold)]">experts</span>
+              </h2>
+              <p className="text-sm sm:text-base text-[var(--text-2)] max-w-2xl mx-auto leading-relaxed">
+                Proven SEO strategies, AI content tips, and ranking tactics from the team building the future of content marketing.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-6 sm:gap-8 mb-8 sm:mb-12">
+              {[
+                {
+                  title: "Why AI-Generated Content Ranks (When Done Right)",
+                  excerpt: "Google doesn't penalize AI content — it penalizes thin, unhelpful content. Here's how to use AI to produce articles that actually rank.",
+                  readTime: "4 min read",
+                  tag: "AI Writing",
+                  slug: "ai-content-that-ranks"
+                },
+                {
+                  title: "The Pillar-Cluster Strategy That Doubled Our Traffic",
+                  excerpt: "How we used topic clusters and internal linking to dominate competitive keywords and build topical authority.",
+                  readTime: "6 min read",
+                  tag: "SEO Strategy",
+                  slug: "pillar-cluster-strategy"
+                },
+                {
+                  title: "How to Rank a New Article in 30 Days",
+                  excerpt: "The exact process we use to get fresh content ranking on page one within a month, even in competitive niches.",
+                  readTime: "5 min read",
+                  tag: "Quick Wins",
+                  slug: "rank-new-article-30-days"
+                }
+              ].map((post, i) => (
+                <Link key={i} href={`/blog/${post.slug}`} className="group cursor-pointer">
+                  <article className="rounded-2xl border border-border/50 bg-background/50 p-6 sm:p-8 transition-all duration-300 hover:border-[var(--gold)]/30 hover:shadow-xl hover:shadow-[var(--gold)]/5 hover:-translate-y-1 backdrop-blur-sm h-full">
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-[0.6rem] font-bold text-[var(--gold)] bg-[var(--gold)]/10 px-2 py-0.5 rounded-md tracking-[0.15em] uppercase">
+                        {post.tag}
+                      </span>
+                      <span className="text-[0.6rem] text-[var(--text-3)] font-medium">{post.readTime}</span>
+                    </div>
+                    <h3 className="text-base sm:text-lg font-bold text-[var(--text-1)] mb-3 group-hover:text-[var(--gold)] transition-colors leading-tight">
+                      {post.title}
+                    </h3>
+                    <p className="text-xs sm:text-sm text-[var(--text-2)] leading-relaxed mb-4">
+                      {post.excerpt}
+                    </p>
+                    <div className="flex items-center gap-2 text-[var(--gold)] group-hover:gap-3 transition-all">
+                      <span className="text-xs font-bold">Read article</span>
+                      <ArrowRight className="w-3 h-3" />
+                    </div>
+                  </article>
+                </Link>
+              ))}
+            </div>
+
+            <div className="text-center">
+              <Link 
+                href="/blog" 
+                className="inline-flex items-center gap-2 rounded-xl border border-[var(--teal)]/30 bg-[var(--teal)]/10 px-6 py-3 text-sm font-bold text-[var(--teal)] hover:bg-[var(--teal)]/20 hover:border-[var(--teal)]/50 transition-all shadow-lg shadow-[var(--teal)]/10 hover:shadow-[var(--teal)]/20"
+              >
+                <Sparkles className="w-4 h-4" />
+                View all articles
+                <ArrowRight className="w-4 h-4" />
+              </Link>
+            </div>
+          </section>
+
           {/* ══ Pricing ═════════════════════════════════════════════════ */}
           <section id="pricing" className="bg-secondary/5 border-y border-border/40 py-12 sm:py-16 md:py-20">
             <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -401,7 +477,7 @@ export default function LandingPage() {
                 <div>
                   <h4 className="text-xs font-black text-[var(--text-1)] tracking-[0.15em] uppercase mb-3 sm:mb-4">Product</h4>
                   <ul className="space-y-2 sm:space-y-3">
-                    {[["Features", "#features"], ["Pricing", "#pricing"], ["Dashboard", "/dashboard"]].map(([label, href]) => (
+                    {[["Features", "#features"], ["Pricing", "#pricing"], ["Blog", "/blog"], ["Dashboard", "/dashboard"]].map(([label, href]) => (
                       <li key={label}><Link href={href} className="text-xs sm:text-sm text-[var(--text-3)] font-medium hover:text-[var(--gold)] transition-colors">{label}</Link></li>
                     ))}
                   </ul>

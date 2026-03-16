@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
+import { aiUserContext, logAIUsage } from "@/lib/ai-providers";
 
 const MODEL_NAME = "gemini-2.5-flash-lite";
 
@@ -93,7 +94,10 @@ ${niche ? `Niche: "${niche}"` : ""}
 
 Generate a complete Pillar & Cluster content strategy.`;
 
-        const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
+        const result = await aiUserContext.run(uid, () =>
+            model.generateContent(`${systemPrompt}\n\n${userPrompt}`)
+        );
+        logAIUsage(uid, { provider: "gemini", model: MODEL_NAME, taskType: "cluster" });
         let text = result.response.text().trim();
 
         if (text.startsWith("```")) {

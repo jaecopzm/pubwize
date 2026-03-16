@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { adminDb } from '@/lib/firebase-admin';
-import { generateAIStream } from '@/lib/ai-providers';
+import { generateAIStream, aiUserContext } from '@/lib/ai-providers';
 import { withErrorHandler, assertValid } from '@/lib/error-handler';
 import { authenticateRequest, checkRateLimit, validateRequestBody } from '@/lib/api-security';
 import { validateArticleId, validateContent, validateKeyword } from '@/lib/validation';
@@ -98,13 +98,13 @@ Fix this content based on the suggestions above.`;
 
   (async () => {
     try {
-      const generator = generateAIStream({
+      const generator = aiUserContext.run(uid, () => generateAIStream({
         systemPrompt,
         userPrompt,
         temperature: 0.7,
         maxTokens: 8000,
-        taskType: 'draft', // Use Groq for fast streaming
-      });
+        taskType: 'draft',
+      }));
 
       for await (const chunk of generator) {
         fixedContent += chunk;

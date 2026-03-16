@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb } from "@/lib/firebase-admin";
-import { generateSocialMedia } from "@/lib/ai-providers";
+import { generateSocialMedia, aiUserContext } from "@/lib/ai-providers";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import type { SocialMediaData } from "@/lib/types";
 
@@ -70,11 +70,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate social media content
-    const socialMediaData = await generateSocialMedia({
+    const socialMediaData = await aiUserContext.run(uid, () => generateSocialMedia({
       content: articleData.draft.content,
       keyword: articleData.keyword,
       tone: articleData.settings?.tone || "professional",
-    });
+    }));
 
     // Save to Firestore
     await articleRef.update({

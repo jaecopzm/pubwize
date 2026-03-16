@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb, adminAuth } from "@/lib/firebase-admin";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { aiUserContext, logAIUsage } from "@/lib/ai-providers";
 
 const MODEL_NAME = "gemini-2.5-flash-lite";
 
@@ -78,7 +79,10 @@ ${draftContent.slice(0, 6000)}
 
 Generate the 3 social media assets now.`;
 
-        const result = await model.generateContent(`${systemPrompt}\n\n${userPrompt}`);
+        const result = await aiUserContext.run(userId, () =>
+          model.generateContent(`${systemPrompt}\n\n${userPrompt}`)
+        );
+        logAIUsage(userId, { provider: "gemini", model: MODEL_NAME, taskType: "repurpose" });
         let text = result.response.text().trim();
 
         if (text.startsWith("```")) {

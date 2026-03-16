@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { generateAIStream } from "@/lib/ai-providers";
+import { generateAIStream, aiUserContext } from "@/lib/ai-providers";
 import { adminDb } from "@/lib/firebase-admin";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { withErrorHandler, QuotaExceededError, assertValid } from "@/lib/error-handler";
@@ -109,13 +109,13 @@ Return ONLY the rewritten text with no explanation.`;
 
   (async () => {
     try {
-      const generator = generateAIStream({
+      const generator = aiUserContext.run(uid, () => generateAIStream({
         systemPrompt,
         userPrompt,
         temperature: 0.7,
         maxTokens: 4096,
-        taskType: 'draft', // Use Groq for fast streaming
-      });
+        taskType: 'draft',
+      }));
 
       for await (const chunk of generator) {
         await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));

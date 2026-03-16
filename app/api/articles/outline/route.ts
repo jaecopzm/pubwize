@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebase-admin";
 import type { OutlineData } from "@/lib/types";
-import { generateOutline } from "@/lib/ai-providers";
+import { generateOutline, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
 import { validateArticleId } from "@/lib/validation";
@@ -61,10 +61,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // 6. Generate outline
   let outline: OutlineData;
   try {
-    outline = await generateOutline({
+    outline = await aiUserContext.run(uid, () => generateOutline({
       brief: articleData.brief as any,
       keyword: articleData.keyword!,
-    });
+    }));
   } catch (err) {
     console.error("OpenRouter outline generation failed:", err);
     throw new ExternalServiceError("AI generation service", err);
