@@ -72,7 +72,7 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
   const router = useRouter();
   const { plan, usage, isLoading } = useUserPlan();
   const { data: detailedUsage } = useUsage();
-  const { setOpenMobile, isMobile } = useSidebar();
+  const { setOpenMobile, isMobile, setOpen } = useSidebar();
 
   // Auto-close sidebar on mobile when navigating
   const handleNavigation = React.useCallback((url: string) => {
@@ -94,7 +94,7 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
   const usagePercent = totalLimit > 0 ? Math.round((articlesUsed / totalLimit) * 100) : 0;
 
   return (
-    <Sidebar collapsible="icon" {...props}>
+    <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border">
 
       {/* ── Brand Header ── */}
       <SidebarHeader style={{ borderBottom: "1px solid rgba(255,255,255,0.055)", padding: "14px 10px 12px" }}>
@@ -105,12 +105,12 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
 
         {/* When expanded: logo + text layout */}
         <div className="group-data-[collapsible=icon]:hidden flex items-center justify-center gap-2">
-          <img src="/PubWize.png" alt="Pubwize" className="h-9 w-auto flex-shrink-0" />
+          <img src="/PubWize.png" alt="Pubwize" className="h-9 w-auto flex-shrink-0 max-w-full" />
         </div>
       </SidebarHeader>
 
       {/* ── Navigation ── */}
-      <SidebarContent style={{ paddingTop: 10, gap: 0, overflowY: 'auto', flex: 1 }}>
+      <SidebarContent style={{ paddingTop: 6, gap: 0, overflowY: 'auto', flex: 1 }}>
         <SidebarGroup>
           {/* Section label */}
           <div className="sb-group-label group-data-[collapsible=icon]:hidden">
@@ -130,7 +130,7 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
                       asChild
                     >
                       <div className={`sb-nav-item${isActive ? " active" : ""}`}>
-                        <item.icon />
+                        <item.icon className="h-5 w-5 flex-shrink-0" />
                         <span className="group-data-[collapsible=icon]:hidden">
                           {item.title}
                         </span>
@@ -170,7 +170,7 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
                         asChild
                       >
                         <div className={`sb-nav-item${isActive ? " active" : ""}`}>
-                          <item.icon />
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
                           <span className="group-data-[collapsible=icon]:hidden flex items-center gap-2">
                             {item.title}
                             {item.badge && (
@@ -192,7 +192,7 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
       </SidebarContent>
 
       {/* ── Footer ── */}
-      <SidebarFooter style={{ padding: "6px 0 8px", flexShrink: 0 }}>
+      <SidebarFooter style={{ padding: "4px 0 6px", flexShrink: 0 }}>
 
         {/* Plan & Usage Info */}
         {!isLoading && (

@@ -246,7 +246,7 @@ function SignUpForm() {
             <button
               type="submit"
               disabled={loading || !isPasswordStrong || password !== confirmPassword}
-              className="btn-gold w-full py-2.5 text-sm font-semibold mt-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 touch-manipulation"
+              className="btn-gold w-full py-2.5 text-sm font-semibold mt-2 disabled:opacity-50 disabled:cursor-not-allowed active:scale-95 touch-manipulation flex items-center justify-center"
             >
               {loading ? "Creating account..." : "Continue"}
             </button>

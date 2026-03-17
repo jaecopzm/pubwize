@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getAllPosts } from "@/lib/blog";
 import type { Metadata } from "next";
-import { ArrowRight, Calendar, Clock, Sparkles } from "lucide-react";
+import { ArrowRight, Calendar, Clock, Sparkles, ArrowLeft } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Blog — Pubwize",
@@ -18,26 +18,37 @@ export default function BlogPage() {
 
   return (
     <main className="min-h-screen aurora-bg noise-overlay">
+      {/* Back Button */}
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-4 sm:pt-6">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors active:scale-95 touch-manipulation min-h-[44px]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Home
+        </Link>
+      </div>
+
       {/* Hero Section */}
       <div className="relative overflow-hidden border-b border-border/50">
         <div className="absolute inset-0 bg-gradient-to-b from-gold/5 via-transparent to-transparent pointer-events-none" />
-        <div className="max-w-6xl mx-auto px-6 py-16 sm:py-24 lg:py-32 relative z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 lg:py-24 relative z-10">
           <div className="flex items-center gap-2 mb-6">
             <div className="h-8 w-8 rounded-lg bg-gold/10 flex items-center justify-center">
               <Sparkles className="h-4 w-4 text-gold" />
             </div>
             <span className="font-mono-dm text-xs font-bold uppercase tracking-widest text-gold">Pubwize Blog</span>
           </div>
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 max-w-3xl">
+          <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight mb-4 sm:mb-6 max-w-3xl">
             SEO strategies that <span className="gradient-gold-teal">actually work</span>
           </h1>
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl leading-relaxed">
+          <p className="text-base sm:text-lg md:text-xl text-muted-foreground max-w-2xl leading-relaxed">
             AI content tips, ranking strategies, and growth guides from the team building the future of SEO content.
           </p>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-12 sm:py-16 lg:py-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-16 lg:py-20">
         {posts.length === 0 ? (
           <div className="text-center py-20">
             <div className="inline-flex h-16 w-16 items-center justify-center rounded-2xl bg-muted/50 mb-6">

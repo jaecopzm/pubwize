@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb, FieldValue } from "@/lib/firebase-admin";
 import {
   GenerateBriefRequestBody,
   GenerateBriefResponse,
@@ -139,7 +139,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // 10. Create article
-  const now = new Date();
   const articleRef = db.collection("articles").doc();
 
   await articleRef.set({
@@ -157,8 +156,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       tone: body.tone ?? "neutral",
       targetWordCount: body.targetWordCount ?? null,
     },
-    createdAt: now,
-    updatedAt: now,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
   });
 
   // 11. Increment usage counter

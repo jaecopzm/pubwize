@@ -188,10 +188,10 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
   if (!user) return null;
 
   return (
-    <SidebarProvider>
+    <SidebarProvider defaultOpen={false}>
       <AppSidebar userEmail={user.email ?? undefined} onSignOut={handleSignOut} />
 
-      <SidebarInset className="flex flex-col min-h-screen bg-background">
+      <SidebarInset className="flex flex-col min-h-screen bg-background w-full overflow-x-hidden">
 
         {/* Usage warning banner */}
         {usageData && (
@@ -213,12 +213,12 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
             {routeLabel(pathname)}
           </span>
 
-          {/* Usage indicator */}
+          {/* Usage indicator - hidden on small mobile */}
           {usageData && (
             <Link 
               href="/dashboard/settings?tab=billing"
               className={cn(
-                "hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all hover:scale-105",
+                "hidden xs:flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium transition-all hover:scale-105 flex-shrink-0",
                 usageData.usage.articlesUsed >= usageData.limits.articlesPerMonth 
                   ? "bg-destructive/10 text-destructive border border-destructive/20"
                   : usageData.usage.articlesUsed / usageData.limits.articlesPerMonth > 0.8
@@ -227,12 +227,13 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
               )}
             >
               <Zap className="h-3 w-3" />
-              <span>{usageData.usage.articlesUsed}/{usageData.limits.articlesPerMonth}</span>
+              <span className="hidden sm:inline">{usageData.usage.articlesUsed}/{usageData.limits.articlesPerMonth}</span>
+              <span className="sm:hidden">{usageData.usage.articlesUsed}</span>
             </Link>
           )}
 
-          {/* Theme toggle - now visible on all screen sizes */}
-          <div>
+          {/* Theme toggle */}
+          <div className="flex-shrink-0">
             <ThemeToggle />
           </div>
 

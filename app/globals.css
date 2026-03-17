@@ -182,10 +182,12 @@
   body {
     @apply bg-background text-foreground antialiased;
     font-family: var(--font-manrope), 'Manrope', sans-serif;
+    overflow-x: hidden;
   }
 
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
 
   *:focus-visible {
@@ -310,7 +312,7 @@
     text-transform: uppercase;
     color: var(--sidebar-foreground);
     opacity: 0.4;
-    padding: 8px 16px 6px;
+    padding: 6px 16px 4px;
   }
 
   .sb-nav-item {
@@ -318,7 +320,7 @@
     align-items: center;
     gap: 12px;
     width: 100%;
-    padding: 10px 16px;
+    padding: 8px 16px;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
@@ -327,6 +329,14 @@
     transition: all 0.2s ease;
     cursor: pointer;
     position: relative;
+    min-height: 44px;
+  }
+
+  @media (max-width: 640px) {
+    .sb-nav-item {
+      padding: 10px 16px;
+      font-size: 15px;
+    }
   }
 
   .sb-nav-item:hover {
@@ -360,11 +370,19 @@
   }
 
   .sb-upgrade {
-    margin: 8px 12px;
-    padding: 14px;
+    margin: 6px 12px;
+    padding: 12px;
     border-radius: 12px;
     background: linear-gradient(135deg, rgba(245, 166, 35, 0.1), rgba(20, 184, 166, 0.05));
     border: 1px solid rgba(245, 166, 35, 0.25);
+    overflow: hidden;
+  }
+
+  @media (max-width: 640px) {
+    .sb-upgrade {
+      margin: 6px 8px;
+      padding: 10px;
+    }
   }
 
   .sb-upgrade-title {
@@ -375,6 +393,13 @@
     font-weight: 700;
     color: #F5A623;
     margin-bottom: 4px;
+    word-break: break-word;
+  }
+
+  @media (max-width: 640px) {
+    .sb-upgrade-title {
+      font-size: 14px;
+    }
   }
 
   .sb-upgrade-sub {
@@ -396,12 +421,29 @@
     border: none;
     cursor: pointer;
     transition: all 0.2s ease;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  @media (max-width: 640px) {
+    .sb-upgrade-btn {
+      padding: 10px 14px;
+      font-size: 13px;
+    }
   }
 
   .sb-upgrade-btn:hover {
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(245, 166, 35, 0.4);
     background: linear-gradient(135deg, #e09615, #F5A623);
+  }
+
+  @media (max-width: 640px) {
+    .sb-upgrade-btn:active {
+      transform: scale(0.98);
+    }
   }
 
   .sb-sep {
@@ -767,12 +809,14 @@
     top: 0;
     z-index: 50;
     backdrop-filter: blur(8px);
+    min-height: 60px;
   }
 
   @media (max-width: 640px) {
     .dlw-topbar {
-      padding: 10px 16px;
+      padding: 10px 12px;
       gap: 8px;
+      min-height: 56px;
     }
   }
 
@@ -800,6 +844,13 @@
     border-radius: 50%;
     background: var(--muted-foreground);
     opacity: 0.3;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 640px) {
+    .dlw-pip {
+      display: none;
+    }
   }
 
   .dlw-route {
@@ -807,6 +858,16 @@
     font-weight: 600;
     color: var(--foreground);
     flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  @media (max-width: 640px) {
+    .dlw-route {
+      font-size: 15px;
+      font-weight: 700;
+    }
   }
 
   .dlw-status {
@@ -820,6 +881,15 @@
     font-size: 12px;
     font-weight: 500;
     color: var(--teal);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 640px) {
+    .dlw-status {
+      padding: 6px;
+      min-width: 28px;
+      justify-content: center;
+    }
   }
 
   .dlw-status-dot {
@@ -845,17 +915,18 @@
     overflow-y: auto;
     position: relative;
     z-index: 1;
+    max-width: 100%;
   }
 
   @media (max-width: 1024px) {
     .dlw-content {
-      padding: 20px;
+      padding: 20px 16px;
     }
   }
 
   @media (max-width: 640px) {
     .dlw-content {
-      padding: 16px;
+      padding: 16px 12px;
     }
   }
 
@@ -979,6 +1050,13 @@
     overflow: hidden;
     transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+  }
+
+  @media (max-width: 640px) {
+    .card-premium {
+      padding: 1rem;
+      border-radius: 12px;
+    }
   }
 
   .card-premium::before {
@@ -1149,6 +1227,30 @@
   
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--muted-foreground);
+    border-radius: 3px;
+    opacity: 0.3;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: var(--gold);
+    opacity: 0.6;
   }
 
   /* ── Typography ── */
@@ -1338,10 +1440,15 @@
   }
 
   /* ── Responsive typography ── */
+  .container-responsive {
+    width: 100%;
+    max-width: 100%;
+  }
+
   @media (max-width: 768px) {
     .container-responsive {
-      padding-left: 1rem;
-      padding-right: 1rem;
+      padding-left: 0.75rem;
+      padding-right: 0.75rem;
     }
   }
 
@@ -1354,6 +1461,64 @@
     .text-responsive-xl {
       font-size: 1.875rem;
       line-height: 2.25rem;
+    }
+
+    .text-responsive-2xl {
+      font-size: 2rem;
+      line-height: 2.5rem;
+    }
+
+    .text-responsive-3xl {
+      font-size: 2.25rem;
+      line-height: 2.75rem;
+    }
+  }
+
+  /* ── Mobile touch targets ── */
+  @media (max-width: 640px) {
+    button, a[role="button"], [role="button"] {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    /* Ensure tables are scrollable on mobile */
+    table {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Better mobile spacing */
+    .mobile-spacing-tight > * + * {
+      margin-top: 0.75rem;
+    }
+
+    .mobile-spacing-normal > * + * {
+      margin-top: 1rem;
+    }
+
+    .mobile-spacing-loose > * + * {
+      margin-top: 1.5rem;
+    }
+  }
+
+  /* ── Mobile-first utilities ── */
+  @media (max-width: 640px) {
+    .mobile-full-width {
+      width: 100% !important;
+      max-width: 100% !important;
+    }
+
+    .mobile-text-center {
+      text-align: center !important;
+    }
+
+    .mobile-hidden {
+      display: none !important;
+    }
+
+    .mobile-flex-col {
+      flex-direction: column !important;
     }
   }
 }

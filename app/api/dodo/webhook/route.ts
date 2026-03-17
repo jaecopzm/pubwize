@@ -4,10 +4,10 @@ import { Webhook } from 'standardwebhooks';
 import { adminDb } from '@/lib/firebase-admin';
 import { cache, cacheKeys } from '@/lib/redis';
 import type { SubscriptionStatus } from '@/lib/types';
-import { 
-  sendPaymentSuccessEmail, 
+import {
+  sendPaymentSuccessEmail,
   sendPaymentFailedEmail,
-  sendSubscriptionCancelledEmail 
+  sendSubscriptionCancelledEmail,
 } from '@/lib/email/email-service';
 
 const WEBHOOK_PROCESSED_PREFIX = 'dodo:webhook:processed:';
@@ -33,6 +33,14 @@ function planFromPriceId(priceId: string): string {
   return 'unknown';
 }
 
+/**
+ * FIX #3: Destructure `plan` out of `data` before spreading into updateData.
+ * Previously `...data` leaked a `plan` key into Firestore (which nothing reads),
+ * while `planTier` was only sometimes set — causing upgrades to silently fail.
+ *
+ * FIX #1: Return the resolved Firestore document ID so callers can reuse it
+ * for email lookups instead of issuing a second, potentially-mismatched query.
+ */
 async function updateUserSubscription(
   customerId: string,
   data: {
@@ -43,7 +51,7 @@ async function updateUserSubscription(
     cancelledAt?: string | null;
   },
   customDataUserId?: string
-) {
+): Promise<string | null> {
   const db = adminDb();
   let userRef: FirebaseFirestore.DocumentReference | null = null;
 
@@ -72,32 +80,39 @@ async function updateUserSubscription(
     console.error(
       `[Dodo webhook] No user found for customerId=${customerId} userId=${customDataUserId}`
     );
-    return;
+    return null;
   }
 
-  const updateData: any = {
-    ...data,
+  // FIX #3: Destructure plan out so it never leaks into Firestore via the spread.
+  const { plan, ...rest } = data;
+
+  const updateData: Record<string, unknown> = {
+    ...rest,
     dodoCustomerId: customerId,
     updatedAt: new Date().toISOString(),
   };
 
-  // SECURITY: Only update plan if status is active
-  // Don't upgrade user if payment failed or subscription is on hold
-  if (data.plan) {
+  // SECURITY: Only write planTier when the subscription is confirmed active.
+  // Never upgrade the user if payment failed, is on hold, paused, etc.
+  if (plan) {
     if (data.status === 'active') {
-      updateData.planTier = data.plan;
-      console.log(`[Dodo webhook] Upgrading user to plan=${data.plan}`);
+      updateData.planTier = plan;
+      console.log(`[Dodo webhook] Upgrading user to planTier=${plan}`);
     } else {
-      console.log(`[Dodo webhook] NOT upgrading plan - status=${data.status} (must be active)`);
-      delete updateData.plan; // Don't update plan field
+      console.log(
+        `[Dodo webhook] NOT upgrading planTier — status=${data.status} (must be active)`
+      );
     }
   }
 
   await userRef.update(updateData);
 
-  const finalUserId = userRef.id;
-  console.log(`[Dodo webhook] Invalidating cache for ${finalUserId}`);
-  await cache.del(cacheKeys.userPlan(finalUserId));
+  const resolvedUserId = userRef.id;
+  console.log(`[Dodo webhook] Invalidating cache for ${resolvedUserId}`);
+  await cache.del(cacheKeys.userPlan(resolvedUserId));
+
+  // FIX #1: Return the resolved ID so callers don't need a second Firestore query.
+  return resolvedUserId;
 }
 
 export async function POST(req: NextRequest) {
@@ -105,11 +120,10 @@ export async function POST(req: NextRequest) {
 
   if (!webhookSecret) {
     console.error('[Dodo webhook] Missing webhook secret');
-    return NextResponse.json(
-      { error: 'Server misconfiguration' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Server misconfiguration' }, { status: 500 });
   }
+
+  let idempotencyKey: string | null = null;
 
   try {
     const rawBody = await req.text();
@@ -119,14 +133,14 @@ export async function POST(req: NextRequest) {
     const webhookTimestamp = req.headers.get('webhook-timestamp');
 
     if (!webhookId || !webhookSignature || !webhookTimestamp) {
-        console.warn('[Dodo webhook] Missing required webhook headers');
-        return NextResponse.json({ error: 'Missing headers' }, { status: 400 });
+      console.warn('[Dodo webhook] Missing required webhook headers');
+      return NextResponse.json({ error: 'Missing headers' }, { status: 400 });
     }
 
-    // Check idempotency
-    const idempotencyKey = `${WEBHOOK_PROCESSED_PREFIX}${webhookId}`;
+    // Check idempotency — skip if already processed
+    idempotencyKey = `${WEBHOOK_PROCESSED_PREFIX}${webhookId}`;
     const alreadyProcessed = await cache.get(idempotencyKey);
-    
+
     if (alreadyProcessed) {
       console.log(`[Dodo webhook] Already processed: ${webhookId}`);
       return NextResponse.json({ received: true });
@@ -136,17 +150,15 @@ export async function POST(req: NextRequest) {
     const webhook = new Webhook(webhookSecret);
 
     try {
-        await webhook.verify(rawBody, {
-            "webhook-id": webhookId,
-            "webhook-signature": webhookSignature,
-            "webhook-timestamp": webhookTimestamp,
-        });
-    } catch (err: any) {
-        console.error("Webhook verification failed:", err.message);
-        return NextResponse.json(
-            { error: "Invalid webhook signature" },
-            { status: 401 }
-        );
+      await webhook.verify(rawBody, {
+        'webhook-id': webhookId,
+        'webhook-signature': webhookSignature,
+        'webhook-timestamp': webhookTimestamp,
+      });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error('[Dodo webhook] Webhook verification failed:', message);
+      return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 401 });
     }
 
     // Parse the verified payload
@@ -154,11 +166,11 @@ export async function POST(req: NextRequest) {
     const { type: eventType, data } = payload;
 
     console.log(
-        `[Dodo webhook] Event received: ${eventType}`,
-        JSON.stringify({
-            subscription: data.subscription_id,
-            customer: data.customer?.customer_id,
-        })
+      `[Dodo webhook] Event received: ${eventType}`,
+      JSON.stringify({
+        subscription: data.subscription_id,
+        customer: data.customer?.customer_id,
+      })
     );
 
     switch (eventType) {
@@ -167,19 +179,28 @@ export async function POST(req: NextRequest) {
         const customerId = data.customer?.customer_id as string;
         const subscriptionId = data.subscription_id as string;
 
-        const priceId = data.product_id ?? '';
+        // FIX #5: Use the correct price/product field. Log both so you can
+        // confirm which one carries your price IDs in the Dodo dashboard.
+        // Adjust `priceId` assignment below once confirmed.
+        const priceId: string = data.price_id ?? data.product_id ?? '';
+        console.log(
+          `[Dodo webhook] price_id=${data.price_id} product_id=${data.product_id} — using: ${priceId}`
+        );
         const plan = planFromPriceId(priceId);
 
-        const customData = (data.metadata || data.custom_data) as Record<string, string> | undefined;
+        const customData = (data.metadata || data.custom_data) as
+          | Record<string, string>
+          | undefined;
         const customDataUserId = customData?.userId;
 
-        const currentPeriodEnd = data.next_billing_date ?? '';
+        const currentPeriodEnd: string = data.next_billing_date ?? '';
 
         console.log(
-          `[Dodo webhook] Subscription active/renewed for user=${customDataUserId} plan=${plan}`
+          `[Dodo webhook] Subscription ${eventType} for user=${customDataUserId} plan=${plan}`
         );
 
-        await updateUserSubscription(
+        // FIX #1: Capture the resolved userId returned from updateUserSubscription.
+        const resolvedUserId = await updateUserSubscription(
           customerId,
           {
             dodoSubscriptionId: subscriptionId,
@@ -191,32 +212,38 @@ export async function POST(req: NextRequest) {
           customDataUserId
         );
 
-        // Send payment success email
-        if (eventType === 'subscription.active') {
+        // FIX #2: Send payment success email for BOTH active AND renewed events.
+        // Previously only 'subscription.active' triggered an email — renewals were silent.
+        if (resolvedUserId) {
           try {
             const db = adminDb();
-            const userRef = db.collection('users').where('dodoCustomerId', '==', customerId);
-            const userSnapshot = await userRef.limit(1).get();
-            if (!userSnapshot.empty) {
-              const userDoc = userSnapshot.docs[0];
-              const userData = userDoc.data();
-              if (userData?.email) {
-                const billingCycle = priceId?.includes('annual') ? 'annual' : 'monthly';
-                const amount = plan === 'pro' ? (billingCycle === 'annual' ? '348' : '29') : (billingCycle === 'annual' ? '228' : '19');
-                
-                await sendPaymentSuccessEmail({
-                  userEmail: userData.email,
-                  userName: userData.displayName || 'there',
-                  plan: plan.charAt(0).toUpperCase() + plan.slice(1),
-                  amount,
-                  billingCycle,
-                  nextBillingDate: new Date(currentPeriodEnd).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  }),
-                });
-              }
+            // FIX #1: Use the resolved ID directly — no second ambiguous query needed.
+            const userDoc = await db.collection('users').doc(resolvedUserId).get();
+            const userData = userDoc.data();
+
+            if (userData?.email) {
+              const billingCycle = priceId?.includes('annual') ? 'annual' : 'monthly';
+              const amount =
+                plan === 'pro'
+                  ? billingCycle === 'annual'
+                    ? '348'
+                    : '29'
+                  : billingCycle === 'annual'
+                    ? '228'
+                    : '19';
+
+              await sendPaymentSuccessEmail({
+                userEmail: userData.email,
+                userName: userData.displayName || 'there',
+                plan: plan.charAt(0).toUpperCase() + plan.slice(1),
+                amount,
+                billingCycle,
+                nextBillingDate: new Date(currentPeriodEnd).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }),
+              });
             }
           } catch (emailError) {
             console.error('[Dodo webhook] Failed to send payment success email:', emailError);
@@ -227,13 +254,12 @@ export async function POST(req: NextRequest) {
       }
 
       case 'subscription.updated': {
-        // SECURITY: Only update if subscription is already active
-        // Don't upgrade on initial subscription.updated before payment succeeds
+        // SECURITY: Only update if subscription is already active.
+        // Don't upgrade on initial subscription.updated before payment succeeds.
         const customerId = data.customer?.customer_id as string;
         const subscriptionId = data.subscription_id as string;
         const subscriptionStatus = data.status as string;
 
-        // Only process if subscription is active (payment succeeded)
         if (subscriptionStatus !== 'active') {
           console.log(
             `[Dodo webhook] Ignoring subscription.updated with status=${subscriptionStatus} (waiting for active)`
@@ -241,13 +267,16 @@ export async function POST(req: NextRequest) {
           break;
         }
 
-        const priceId = data.product_id ?? '';
+        // FIX #5: Same price field fix as above.
+        const priceId: string = data.price_id ?? data.product_id ?? '';
         const plan = planFromPriceId(priceId);
 
-        const customData = (data.metadata || data.custom_data) as Record<string, string> | undefined;
+        const customData = (data.metadata || data.custom_data) as
+          | Record<string, string>
+          | undefined;
         const customDataUserId = customData?.userId;
 
-        const currentPeriodEnd = data.next_billing_date ?? '';
+        const currentPeriodEnd: string = data.next_billing_date ?? '';
 
         console.log(
           `[Dodo webhook] Updating active subscription for user=${customDataUserId} plan=${plan}`
@@ -276,34 +305,34 @@ export async function POST(req: NextRequest) {
           `[Dodo webhook] Subscription ${eventType} for customer=${customerId}`
         );
 
-        await updateUserSubscription(customerId, {
+        // FIX #1: Capture resolvedUserId for the email lookup below.
+        const resolvedUserId = await updateUserSubscription(customerId, {
           status: eventType === 'subscription.cancelled' ? 'cancelled' : 'expired',
           currentPeriodEnd: data.next_billing_date ?? '',
           cancelledAt: data.cancelled_at || new Date().toISOString(),
         });
 
-        // Send cancellation email
-        if (eventType === 'subscription.cancelled') {
+        if (eventType === 'subscription.cancelled' && resolvedUserId) {
           try {
             const db = adminDb();
-            const userRef = db.collection('users').where('dodoCustomerId', '==', customerId);
-            const userSnapshot = await userRef.limit(1).get();
-            if (!userSnapshot.empty) {
-              const userDoc = userSnapshot.docs[0];
-              const userData = userDoc.data();
-              if (userData?.email) {
-                const endDate = data.next_billing_date || data.cancelled_at;
-                await sendSubscriptionCancelledEmail({
-                  userEmail: userData.email,
-                  userName: userData.displayName || 'there',
-                  plan: userData.planTier?.charAt(0).toUpperCase() + userData.planTier?.slice(1) || 'Premium',
-                  endDate: new Date(endDate).toLocaleDateString('en-US', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  }),
-                });
-              }
+            // FIX #1: Direct lookup by ID instead of re-querying by customerId.
+            const userDoc = await db.collection('users').doc(resolvedUserId).get();
+            const userData = userDoc.data();
+
+            if (userData?.email) {
+              const endDate = data.next_billing_date || data.cancelled_at;
+              await sendSubscriptionCancelledEmail({
+                userEmail: userData.email,
+                userName: userData.displayName || 'there',
+                plan:
+                  userData.planTier?.charAt(0).toUpperCase() +
+                  userData.planTier?.slice(1) || 'Premium',
+                endDate: new Date(endDate).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }),
+              });
             }
           } catch (emailError) {
             console.error('[Dodo webhook] Failed to send cancellation email:', emailError);
@@ -314,7 +343,9 @@ export async function POST(req: NextRequest) {
       }
 
       case 'payment.succeeded': {
-        const customData = (data.metadata || data.custom_data) as Record<string, string> | undefined;
+        const customData = (data.metadata || data.custom_data) as
+          | Record<string, string>
+          | undefined;
         console.log(
           `[Dodo webhook] Payment succeeded for user=${customData?.userId}`
         );
@@ -323,29 +354,35 @@ export async function POST(req: NextRequest) {
 
       case 'payment.failed': {
         const customerId = data.customer?.customer_id as string;
-        const customData = (data.metadata || data.custom_data) as Record<string, string> | undefined;
+        const customData = (data.metadata || data.custom_data) as
+          | Record<string, string>
+          | undefined;
 
         console.log(
           `[Dodo webhook] Payment failed for customer=${customerId} user=${customData?.userId}`
         );
 
-        // Set subscription to failed status, don't upgrade user
-        await updateUserSubscription(customerId, {
-          status: 'failed',
-        }, customData?.userId);
+        // Set subscription to failed status, do NOT upgrade the user.
+        const resolvedUserId = await updateUserSubscription(
+          customerId,
+          { status: 'failed' },
+          customData?.userId
+        );
 
-        // Send payment failed email
-        try {
-          const db = adminDb();
-          const userRef = db.collection('users').where('dodoCustomerId', '==', customerId);
-          const userSnapshot = await userRef.limit(1).get();
-          if (!userSnapshot.empty) {
-            const userDoc = userSnapshot.docs[0];
+        if (resolvedUserId) {
+          try {
+            const db = adminDb();
+            // FIX #1: Direct lookup by ID.
+            const userDoc = await db.collection('users').doc(resolvedUserId).get();
             const userData = userDoc.data();
+
             if (userData?.email) {
-              const plan = userData.planTier?.charAt(0).toUpperCase() + userData.planTier?.slice(1) || 'Premium';
-              const amount = userData.planTier === 'pro' ? '29' : '19'; // Assume monthly
-              
+              const plan =
+                userData.planTier?.charAt(0).toUpperCase() +
+                userData.planTier?.slice(1) || 'Premium';
+              // Billing cycle is unknown at this point; default to monthly.
+              const amount = userData.planTier === 'pro' ? '29' : '19';
+
               await sendPaymentFailedEmail({
                 userEmail: userData.email,
                 userName: userData.displayName || 'there',
@@ -354,9 +391,9 @@ export async function POST(req: NextRequest) {
                 reason: data.failure_reason || 'Payment method declined',
               });
             }
+          } catch (emailError) {
+            console.error('[Dodo webhook] Failed to send payment failed email:', emailError);
           }
-        } catch (emailError) {
-          console.error('[Dodo webhook] Failed to send payment failed email:', emailError);
         }
 
         break;
@@ -366,17 +403,23 @@ export async function POST(req: NextRequest) {
       case 'subscription.failed': {
         const customerId = data.customer?.customer_id as string;
         const subscriptionId = data.subscription_id as string;
-        const customData = (data.metadata || data.custom_data) as Record<string, string> | undefined;
+        const customData = (data.metadata || data.custom_data) as
+          | Record<string, string>
+          | undefined;
 
         console.log(
           `[Dodo webhook] Subscription payment failed for subscription=${subscriptionId} user=${customData?.userId}`
         );
 
-        // Put subscription on hold, don't upgrade user
-        await updateUserSubscription(customerId, {
-          dodoSubscriptionId: subscriptionId,
-          status: 'on_hold',
-        }, customData?.userId);
+        // Put subscription on hold, do NOT upgrade the user.
+        await updateUserSubscription(
+          customerId,
+          {
+            dodoSubscriptionId: subscriptionId,
+            status: 'on_hold',
+          },
+          customData?.userId
+        );
 
         break;
       }
@@ -384,32 +427,40 @@ export async function POST(req: NextRequest) {
       case 'subscription.paused': {
         const customerId = data.customer?.customer_id as string;
         const subscriptionId = data.subscription_id as string;
-        const customData = (data.metadata || data.custom_data) as Record<string, string> | undefined;
+        const customData = (data.metadata || data.custom_data) as
+          | Record<string, string>
+          | undefined;
 
         console.log(
           `[Dodo webhook] Subscription paused for subscription=${subscriptionId}`
         );
 
-        await updateUserSubscription(customerId, {
-          dodoSubscriptionId: subscriptionId,
-          status: 'paused',
-        }, customData?.userId);
+        await updateUserSubscription(
+          customerId,
+          {
+            dodoSubscriptionId: subscriptionId,
+            status: 'paused',
+          },
+          customData?.userId
+        );
 
         break;
       }
 
       default:
-        console.log(
-          `[Dodo webhook] Unhandled event type: ${eventType}`
-        );
+        console.log(`[Dodo webhook] Unhandled event type: ${eventType}`);
     }
 
-    // Mark as processed
+    // FIX #4: Only mark as processed AFTER the handler fully succeeds.
+    // Previously this ran even when the switch case threw, permanently
+    // suppressing retries from Dodo.
     await cache.set(idempotencyKey, '1', WEBHOOK_PROCESSED_TTL);
 
     return NextResponse.json({ received: true });
   } catch (err) {
     console.error('[Dodo webhook] Handler error:', err);
-    return NextResponse.json({ received: true });
+    // FIX #4: Return 500 so Dodo retries the event.
+    // Do NOT set the idempotency key here — the event was not handled successfully.
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

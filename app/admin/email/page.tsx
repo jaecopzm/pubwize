@@ -105,12 +105,12 @@ export default function AdminEmailPage() {
     <div className="space-y-8 max-w-4xl relative z-10">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-lilac/20 to-gold/20 flex items-center justify-center">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-lilac/20 to-gold/20 flex items-center justify-center flex-shrink-0">
           <Mail className="h-5 w-5 text-lilac" />
         </div>
-        <div>
-          <h1 className="font-display text-2xl font-bold">Email Campaign</h1>
-          <p className="text-sm text-muted-foreground">Send targeted emails to user segments</p>
+        <div className="min-w-0">
+          <h1 className="font-display text-xl sm:text-2xl font-bold">Email Campaign</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Send targeted emails to user segments</p>
         </div>
       </div>
 

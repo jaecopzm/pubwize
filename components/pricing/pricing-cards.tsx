@@ -26,6 +26,8 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
   const router = useRouter();
 
   const handleSelectPlan = (planId: PlanTier) => {
+    console.log('Plan selected:', planId);
+    
     if (planId === 'free') {
       if (onSelectPlan) onSelectPlan(planId, billingCycle === 'annual');
       return;
@@ -37,7 +39,10 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
       return;
     }
 
+    console.log('User state:', { loading, user: !!user });
+
     if (!loading && !user) {
+      console.log('Redirecting to signup with plan:', planId);
       router.push(`/auth/signup?plan=${planId}&billing=${billingCycle}`);
       return;
     }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { adminDb, FieldValue } from "@/lib/firebase-admin";
 import {
     streamBriefRaw,
     streamOutlineRaw,
@@ -111,7 +111,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
                     await writer.write(send({ thinkingChunk: item }));
                 } else {
                     brief = item.__done;
-                    await articleRef.update({ brief, status: "brief_generated", updatedAt: new Date() });
+                    await articleRef.update({ brief, status: "brief_generated", updatedAt: FieldValue.serverTimestamp() });
                     await writer.write(send({ briefDone: brief }));
                 }
             }
@@ -127,7 +127,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
                     await writer.write(send({ thinkingChunk: item }));
                 } else {
                     outline = item.__done;
-                    await articleRef.update({ outline, status: "outline_generated", updatedAt: new Date() });
+                    await articleRef.update({ outline, status: "outline_generated", updatedAt: FieldValue.serverTimestamp() });
                     await writer.write(send({ outlineDone: outline }));
                 }
             }
@@ -146,7 +146,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
                         optimization = item.__done;
                         await articleRef.update({
                             optimization,
-                            updatedAt: new Date(),
+                            updatedAt: FieldValue.serverTimestamp(),
                         });
                         await writer.write(send({ seoDone: optimization }));
                     }
@@ -187,7 +187,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
                 console.warn("Automated image injection failed:", imgErr);
             }
 
-            await articleRef.update({ draft, status: "optimized", updatedAt: new Date() });
+            await articleRef.update({ draft, status: "optimized", updatedAt: FieldValue.serverTimestamp() });
 
 
             await writer.write(send({ done: true, articleId }));

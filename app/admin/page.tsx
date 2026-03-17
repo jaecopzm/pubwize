@@ -85,12 +85,12 @@ export default function AdminPage() {
     <div className="space-y-8 relative z-10">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gold/20 to-teal/20 flex items-center justify-center">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gold/20 to-teal/20 flex items-center justify-center flex-shrink-0">
           <Activity className="h-5 w-5 text-gold" />
         </div>
-        <div>
-          <h1 className="font-display text-2xl font-bold">Platform Overview</h1>
-          <p className="text-sm text-muted-foreground">Real-time metrics and system health</p>
+        <div className="min-w-0">
+          <h1 className="font-display text-xl sm:text-2xl font-bold truncate">Platform Overview</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">Real-time metrics and system health</p>
         </div>
       </div>
 
@@ -301,7 +301,7 @@ export default function AdminPage() {
                       </p>
                     </div>
                     <span className="text-xs text-muted-foreground shrink-0">
-                      {event.ts ? new Date(event.ts.seconds * 1000).toLocaleDateString() : ""}
+                      {event.ts?.seconds ? new Date(event.ts.seconds * 1000).toLocaleDateString() : "—"}
                     </span>
                   </div>
                 ))

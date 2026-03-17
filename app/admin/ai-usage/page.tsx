@@ -58,12 +58,12 @@ export default function AdminAIUsagePage() {
     <div className="space-y-6 relative z-10">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gold/20 to-teal/20 flex items-center justify-center">
+        <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-gold/20 to-teal/20 flex items-center justify-center flex-shrink-0">
           <Brain className="h-5 w-5 text-gold" />
         </div>
-        <div>
-          <h1 className="font-display text-2xl font-bold">AI Usage Analytics</h1>
-          <p className="text-sm text-muted-foreground">
+        <div className="min-w-0 flex-1">
+          <h1 className="font-display text-xl sm:text-2xl font-bold">AI Usage Analytics</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             {data?.total || 0} total API calls tracked
           </p>
         </div>
@@ -186,7 +186,9 @@ export default function AdminAIUsagePage() {
                 Recent API Calls ({data.total})
               </h2>
             </div>
-            <div className="rounded-2xl border border-border bg-card overflow-hidden">
+            
+            {/* Desktop Table */}
+            <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden">
               {/* Table Header */}
               <div className="grid grid-cols-5 gap-4 px-6 py-4 border-b border-border bg-muted/30 text-xs font-mono-dm font-bold uppercase tracking-widest text-muted-foreground">
                 <span>User ID</span>
@@ -228,6 +230,47 @@ export default function AdminAIUsagePage() {
                   ))
                 )}
               </div>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden space-y-3 max-h-96 overflow-y-auto">
+              {data.logs.length === 0 ? (
+                <div className="rounded-2xl border border-border bg-card p-12 text-center">
+                  <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+                  <p className="text-sm text-muted-foreground">No API calls logged yet</p>
+                </div>
+              ) : (
+                data.logs.map((log) => (
+                  <div key={log.id} className="rounded-xl border border-border bg-card p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="h-8 w-8 rounded-lg bg-gold/10 flex items-center justify-center">
+                        <Zap className="h-4 w-4 text-gold" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold capitalize">{log.provider}</p>
+                        <p className="text-xs text-muted-foreground font-mono truncate">{log.model}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-xs">
+                      <div>
+                        <p className="text-muted-foreground mb-1">Task</p>
+                        <p className="font-semibold capitalize">{log.taskType}</p>
+                      </div>
+                      <div>
+                        <p className="text-muted-foreground mb-1">Time</p>
+                        <p className="font-semibold">
+                          {log.ts ? new Date(log.ts).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : "—"}
+                        </p>
+                      </div>
+                      <div className="col-span-2">
+                        <p className="text-muted-foreground mb-1">User ID</p>
+                        <p className="font-mono text-xs text-muted-foreground truncate">{log.userId}</p>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </section>
         </>

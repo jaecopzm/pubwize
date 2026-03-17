@@ -170,8 +170,8 @@ export default function AdminUsersPage() {
         )}
       </div>
 
-      {/* Users Table */}
-      <div className="rounded-2xl border border-border bg-card overflow-hidden">
+      {/* Users Table - Desktop */}
+      <div className="hidden md:block rounded-2xl border border-border bg-card overflow-hidden">
         {/* Table Header */}
         <div className="flex items-center gap-4 px-6 py-4 border-b border-border bg-muted/30">
           <button
@@ -305,6 +305,125 @@ export default function AdminUsersPage() {
             ))
           )}
         </div>
+      </div>
+
+      {/* Users Cards - Mobile */}
+      <div className="md:hidden space-y-3">
+        {filtered.length === 0 ? (
+          <div className="rounded-2xl border border-border bg-card p-12 text-center">
+            <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
+            <p className="text-sm text-muted-foreground">
+              {search ? "No users match your search" : "No users found"}
+            </p>
+          </div>
+        ) : (
+          filtered.map((user) => (
+            <div
+              key={user.uid}
+              className={cn(
+                "rounded-xl border border-border bg-card p-4 transition-all",
+                selected.has(user.uid) && "bg-gold/5 border-gold/30"
+              )}
+            >
+              <div className="flex items-start gap-3 mb-3">
+                <button
+                  onClick={() => toggleSelect(user.uid)}
+                  className="flex items-center justify-center w-5 h-5 mt-1"
+                >
+                  {selected.has(user.uid) ? (
+                    <CheckSquare className="h-4 w-4 text-gold" />
+                  ) : (
+                    <Square className="h-4 w-4 text-muted-foreground" />
+                  )}
+                </button>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gold/10 to-teal/10 flex items-center justify-center flex-shrink-0">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {user.email}
+                      </p>
+                      {user.displayName && (
+                        <p className="text-xs text-muted-foreground truncate">
+                          {user.displayName}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <p className="text-muted-foreground mb-1">Plan</p>
+                      <div className="flex items-center gap-1.5">
+                        {user.planTier === 'pro' ? (
+                          <Crown className="h-3.5 w-3.5 text-gold" />
+                        ) : user.planTier === 'starter' ? (
+                          <Zap className="h-3.5 w-3.5 text-teal" />
+                        ) : (
+                          <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                        )}
+                        <span className={cn(
+                          "font-semibold capitalize",
+                          user.planTier === 'pro' ? 'text-gold' : 
+                          user.planTier === 'starter' ? 'text-teal' : 
+                          'text-muted-foreground'
+                        )}>
+                          {user.planTier}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <p className="text-muted-foreground mb-1">Status</p>
+                      <span className={cn(
+                        "inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold",
+                        user.planStatus === 'active' ? 'bg-teal/10 text-teal' :
+                        user.planStatus === 'canceled' ? 'bg-red-500/10 text-red-500' :
+                        'bg-muted text-muted-foreground'
+                      )}>
+                        {user.planStatus || 'free'}
+                      </span>
+                    </div>
+
+                    <div>
+                      <p className="text-muted-foreground mb-1">Articles</p>
+                      <p className="font-semibold text-foreground">
+                        {user.articleCountThisPeriod}
+                      </p>
+                    </div>
+
+                    <div>
+                      <p className="text-muted-foreground mb-1">Joined</p>
+                      <p className="font-semibold text-foreground">
+                        {user.createdAt ? new Date(user.createdAt.seconds * 1000).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-3 border-t border-border">
+                <button
+                  onClick={() => router.push(`/admin/users/${user.uid}`)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:text-gold hover:bg-gold/10 transition-colors"
+                >
+                  <Eye className="h-4 w-4" />
+                  <span>View</span>
+                </button>
+                <button
+                  onClick={() => deleteSingle(user.uid)}
+                  className="flex-1 flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-muted-foreground hover:text-red-500 hover:bg-red-500/10 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  <span>Delete</span>
+                </button>
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
       {/* Load More */}

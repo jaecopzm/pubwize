@@ -235,6 +235,27 @@ export default function ArticlesPage() {
             </Link>
           )}
           <button
+            onClick={async () => {
+              try {
+                const auth = getFirebaseAuth();
+                const idToken = await auth.currentUser?.getIdToken();
+                const res = await fetch("/api/articles/fix-word-count", {
+                  method: "POST",
+                  headers: { Authorization: `Bearer ${idToken}` },
+                });
+                const data = await res.json();
+                toast.success(`Updated ${data.updated} articles`);
+                window.location.reload();
+              } catch (error) {
+                toast.error("Failed to fix word counts");
+              }
+            }}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl border border-teal/30 bg-teal/10 px-3 sm:px-4 py-2 text-sm font-semibold transition-all hover:bg-teal/20 text-teal"
+          >
+            <FileText className="h-4 w-4" />
+            <span className="hidden xs:inline">Fix Words</span>
+          </button>
+          <button
             onClick={() => router.push("/dashboard/research")}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 sm:px-4 py-2 text-sm font-semibold transition-all hover:border-teal/30 hover:text-foreground text-muted-foreground"
           >

@@ -18,17 +18,17 @@ export async function GET(req: NextRequest) {
       type: "signup" as const,
       id: d.id,
       label: d.data().email ?? d.id,
-      ts: d.data().createdAt,
+      ts: d.data().createdAt || null,
     })),
     ...recentArticles.docs.map((d) => ({
       type: "article" as const,
       id: d.id,
-      label: d.data().title ?? "Untitled",
+      label: d.data().title || d.data().keyword || "Untitled",
       userId: d.data().ownerId,
-      ts: d.data().createdAt,
+      ts: d.data().createdAt || null,
     })),
   ]
-    .filter((e) => e.ts)
+    .filter((e) => e.ts && e.ts.seconds)
     .sort((a, b) => (b.ts?.seconds ?? 0) - (a.ts?.seconds ?? 0))
     .slice(0, 40);
 
