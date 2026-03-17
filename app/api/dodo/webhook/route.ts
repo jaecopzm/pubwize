@@ -147,6 +147,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify webhook signature
+    console.log('[Dodo webhook] Using secret prefix:', webhookSecret.slice(0, 12) + '...');
     const webhook = new Webhook(webhookSecret);
 
     try {

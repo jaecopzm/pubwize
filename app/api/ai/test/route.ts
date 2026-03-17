@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getProviderStatus, generateAI, getTaskAssignments } from "@/lib/ai-providers";
 
 export async function GET() {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
   try {
     const status = getProviderStatus();
     const assignments = getTaskAssignments();
@@ -20,6 +23,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  if (process.env.NODE_ENV !== 'development') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  }
   try {
     const { prompt, expectJSON = false, taskType = 'quick' } = await request.json();
     

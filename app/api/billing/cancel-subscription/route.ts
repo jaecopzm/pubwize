@@ -21,6 +21,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing subscriptionId' }, { status: 400 });
     }
 
+    // Verify the subscription belongs to this user
+    const db = adminDb();
+    const userDoc = await db.collection('users').doc(uid).get();
+    const userData = userDoc.data();
+
+    if (userData?.dodoSubscriptionId !== subscriptionId) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const apiKey = process.env.DODO_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: 'Payment system not configured' }, { status: 500 });
@@ -29,26 +38,11 @@ export async function POST(req: NextRequest) {
     const env = getDodoEnv();
     const mode = env === 'sandbox' ? 'test_mode' : 'live_mode';
 
-    const client = new DodoPayments({
-      bearerToken: apiKey,
-      environment: mode,
-    });
+    const client = new DodoPayments({ bearerToken: apiKey, environment: mode });
 
-    // Cancel the subscription via update
-    await client.subscriptions.update(subscriptionId, {
-      status: 'cancelled'
-    });
+    await client.subscriptions.update(subscriptionId, { status: 'cancelled' });
 
-    // Update user in Firestore
-    const db = adminDb();
-    await db.collection('users').doc(uid).update({
-      plan: 'free',
-      planTier: 'free',
-      dodoSubscriptionId: null,
-      status: 'canceled',
-      canceledAt: new Date(),
-    });
-
+    // Don't update Firestore here — the webhook owns subscription state
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('Cancel subscription error:', error);
