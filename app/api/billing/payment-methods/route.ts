@@ -34,12 +34,10 @@ export async function GET(req: NextRequest) {
       environment: mode,
     });
 
-    // Get customer details which includes payment method info
-    const customer = await client.customers.retrieve(customerId);
+    // Get customer's saved payment methods
+    const result = await client.customers.retrievePaymentMethods(customerId);
 
-    return NextResponse.json({ 
-      paymentMethods: (customer as any).default_payment_method ? [(customer as any).default_payment_method] : [] 
-    });
+    return NextResponse.json({ paymentMethods: result.items || [] });
   } catch (error: any) {
     console.error('Get payment methods error:', error);
     return NextResponse.json(

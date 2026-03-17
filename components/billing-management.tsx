@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { getFirebaseAuth } from "@/lib/firebase-client";
-import { CreditCard, Download, Calendar, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import { CreditCard, Calendar, AlertCircle, ExternalLink } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { createDodoCustomerPortalSession } from "@/app/actions/dodo";
@@ -11,6 +12,7 @@ interface BillingManagementProps {
   customerId?: string;
   subscriptionId?: string;
   currentPlan: string;
+  currentPeriodEnd?: string;
   onCancelSuccess?: () => void;
 }
 
@@ -18,6 +20,7 @@ export function BillingManagement({
   customerId, 
   subscriptionId, 
   currentPlan,
+  currentPeriodEnd,
   onCancelSuccess 
 }: BillingManagementProps) {
   const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
@@ -100,9 +103,14 @@ export function BillingManagement({
 
       if (!res.ok) throw new Error("Failed to cancel");
 
-      toast.success("Subscription canceled successfully");
+      toast.success(
+        currentPeriodEnd
+          ? `Subscription cancelled. Access continues until ${new Date(currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`
+          : "Subscription cancelled successfully"
+      );
       setShowCancelConfirm(false);
-      onCancelSuccess?.();
+      // Fix #4: delay refetch — webhook needs time to update Firestore
+      setTimeout(() => onCancelSuccess?.(), 4000);
     } catch (error) {
       toast.error("Failed to cancel subscription");
     } finally {
@@ -120,8 +128,23 @@ export function BillingManagement({
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      <div className="space-y-6">
+        <div>
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-gold" />
+            Payment Methods
+          </h3>
+          <Skeleton className="h-16 w-full rounded-xl" />
+        </div>
+        <div>
+          <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-teal" />
+            Billing History
+          </h3>
+          <div className="space-y-2">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 w-full rounded-xl" />)}
+          </div>
+        </div>
       </div>
     );
   }
@@ -139,21 +162,28 @@ export function BillingManagement({
           <div className="space-y-3">
             {paymentMethods.map((method) => (
               <div
-                key={method.id}
+                key={method.payment_method_id}
                 className="flex items-center justify-between p-4 rounded-xl border border-border bg-card"
               >
                 <div className="flex items-center gap-3">
                   <CreditCard className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="font-medium">
-                      {method.card?.brand?.toUpperCase()} •••• {method.card?.last4}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Expires {method.card?.exp_month}/{method.card?.exp_year}
-                    </p>
+                    {method.card ? (
+                      <>
+                        <p className="font-medium">
+                          {method.card.card_network ? `${method.card.card_network} ` : ''}
+                          {method.card.card_type ?? 'Card'}
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          Expires {method.card.expiry_month}/{method.card.expiry_year}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="font-medium capitalize">{method.payment_method.replace(/_/g, ' ')}</p>
+                    )}
                   </div>
                 </div>
-                {method.is_default && (
+                {method.recurring_enabled && (
                   <span className="text-xs font-bold px-2 py-1 rounded bg-teal/10 text-teal">
                     DEFAULT
                   </span>
@@ -185,37 +215,21 @@ export function BillingManagement({
           <div className="space-y-2">
             {invoices.slice(0, 5).map((invoice, index) => (
               <div
-                key={invoice.id || `invoice-${index}`}
+                key={invoice.payment_id || `invoice-${index}`}
                 className="flex items-center justify-between p-4 rounded-xl border border-border bg-card hover:border-gold/20 transition-colors"
               >
                 <div>
                   <p className="font-medium">
-                    ${(invoice.amount_total / 100).toFixed(2)}
+                    {invoice.currency?.toUpperCase() ?? 'USD'} {invoice.total_amount != null ? (invoice.total_amount / 100).toFixed(2) : '—'}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {invoice.created ? format(new Date(invoice.created * 1000), 'MMM d, yyyy') : 'N/A'}
+                    {invoice.created_at ? format(new Date(invoice.created_at), 'MMM d, yyyy') : 'N/A'}
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span
-                    className={`text-xs font-bold px-2 py-1 rounded ${
-                      invoice.status === 'paid'
-                        ? 'bg-teal/10 text-teal'
-                        : 'bg-muted text-muted-foreground'
-                    }`}
-                  >
-                    {invoice.status?.toUpperCase()}
+                  <span className="text-xs font-bold px-2 py-1 rounded bg-teal/10 text-teal">
+                    PAID
                   </span>
-                  {invoice.invoice_pdf && (
-                    <a
-                      href={invoice.invoice_pdf}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-lg hover:bg-muted transition-colors"
-                    >
-                      <Download className="h-4 w-4" />
-                    </a>
-                  )}
                 </div>
               </div>
             ))}

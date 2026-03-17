@@ -137,6 +137,7 @@ function SignUpForm() {
         router.push("/dashboard");
       }
     } catch (error: any) {
+      if (error?.code === 'auth/popup-closed-by-user') return;
       console.error("Google sign up error:", error);
       toast.error(error.message || "Google sign up failed");
     } finally {

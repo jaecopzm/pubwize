@@ -64,6 +64,7 @@ export default function SignInPage() {
 
       router.push("/dashboard");
     } catch (error: any) {
+      if (error?.code === 'auth/popup-closed-by-user') return;
       console.error("Google sign in error:", error);
       toast.error(error.message || "Google sign in failed");
     } finally {

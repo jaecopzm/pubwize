@@ -94,42 +94,31 @@ function SettingsContent() {
     const checkoutPlan = searchParams.get('checkout');
     const checkoutBilling = searchParams.get('billing') as 'monthly' | 'annual';
     const success = searchParams.get('success');
-    const canceled = searchParams.get('canceled');
 
-    // Show success message after returning from portal/checkout
+    // Fix #1: simple one-time refetch after delay instead of fragile polling
     if (success === 'true') {
       toast.success('Subscription updated successfully');
-      
-      // Poll for subscription data (webhook might take a few seconds)
-      let attempts = 0;
-      const pollInterval = setInterval(async () => {
-        attempts++;
-        await fetchUserPlan();
-        
-        // Stop polling after 10 attempts (30 seconds) or when customerId is set
-        if (attempts >= 10 || user?.dodoCustomerId) {
-          clearInterval(pollInterval);
-        }
-      }, 3000);
-      
       router.replace('/dashboard/settings?tab=billing');
+      setTimeout(() => fetchUserPlan(), 5000);
       return;
     }
 
     if (checkoutPlan && user?.email) {
       setActiveTab('billing');
-      // Only auto-checkout once if needed (we'd need a ref to prevent double firing in strict mode)
       try {
         startTransition(async () => {
+          const auth = getFirebaseAuth();
+          // Fix #5: use Firebase UID, not email
+          const uid = auth.currentUser?.uid;
+          if (!uid) return;
           const priceId = getDodoPriceId(checkoutPlan as 'starter' | 'pro', checkoutBilling || 'monthly');
-          const result = await createDodoCheckoutSession({ priceId, customerEmail: user.email, userId: user.email }); // Note user.email used for now if uid isn't there
+          const result = await createDodoCheckoutSession({ priceId, customerEmail: user.email, userId: uid });
           if (result.success && result.url) {
             window.location.href = result.url;
           } else {
             toast.error(result.error || "Checkout failed to initialize.");
           }
         });
-        // Clean URL so it doesn't pop up again on refresh
         router.replace('/dashboard/settings');
       } catch (err) {
         console.error("Failed to auto-open checkout", err);
@@ -526,46 +515,68 @@ function SettingsContent() {
             {/* Payment Management */}
             {currentTier !== 'free' && (
               <section className="card-premium rounded-xl lg:rounded-2xl border border-border bg-card p-4 lg:p-8">
-                <div className="mb-4 lg:mb-6 flex flex-col gap-3">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-xl lg:rounded-2xl bg-gold/15 text-gold shadow-inner">
-                      <Crown className="h-5 w-5 lg:h-6 lg:w-6" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h2 className="font-display text-base lg:text-lg font-bold text-foreground">Subscription</h2>
-                      <p className="font-mono-dm text-[10px] lg:text-xs text-muted-foreground mt-0.5 truncate">
-                        {!user?.dodoCustomerId && 'Processing subscription...'}
-                        {user?.dodoCustomerId && user.status === 'active' && 'Active subscription'}
-                        {user?.dodoCustomerId && user.status === 'on_hold' && 'Update payment method'}
-                        {user?.dodoCustomerId && user.status === 'cancelled' && 'Ends ' + (user.currentPeriodEnd ? new Date(user.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : '')}
-                      </p>
-                    </div>
+                <div className="mb-4 lg:mb-6 flex items-start gap-3">
+                  <div className="flex h-10 w-10 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-xl lg:rounded-2xl bg-gold/15 text-gold shadow-inner">
+                    <Crown className="h-5 w-5 lg:h-6 lg:w-6" />
                   </div>
-                  {user?.dodoCustomerId ? (
-                    <button
-                      onClick={handleManageSubscription}
-                      disabled={isPending}
-                      className="btn-gold text-xs lg:text-sm px-3 py-2 lg:px-4 w-full disabled:opacity-50"
-                    >
-                      {isPending ? 'Loading...' : 'Manage Subscription'}
-                    </button>
-                  ) : (
-                    <div className="p-4 rounded-lg bg-teal/5 border border-teal/20">
-                      <div className="flex items-center gap-2 mb-2">
-                        <div className="h-2 w-2 rounded-full bg-teal animate-pulse" />
-                        <p className="text-sm font-medium text-foreground">Processing your subscription...</p>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        This usually takes 10-30 seconds. The page will update automatically.
-                      </p>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h2 className="font-display text-base lg:text-lg font-bold text-foreground">Subscription</h2>
+                      {user?.dodoCustomerId && (
+                        <span className={cn(
+                          "text-[10px] font-bold px-2 py-0.5 rounded-full border",
+                          user.status === 'active' ? "bg-teal/10 text-teal border-teal/30" :
+                          user.status === 'cancelled' ? "bg-muted text-muted-foreground border-border" :
+                          user.status === 'on_hold' ? "bg-destructive/10 text-destructive border-destructive/30" :
+                          "bg-muted text-muted-foreground border-border"
+                        )}>
+                          {user.status === 'active' ? 'ACTIVE' :
+                           user.status === 'cancelled' ? 'CANCELLED' :
+                           user.status === 'on_hold' ? 'PAYMENT FAILED' :
+                           (user.status ?? 'PROCESSING')?.toUpperCase()}
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <p className="font-mono-dm text-[10px] lg:text-xs text-muted-foreground mt-0.5">
+                      {!user?.dodoCustomerId && 'Processing — this usually takes 10–30 seconds'}
+                      {user?.dodoCustomerId && user.status === 'active' && user.currentPeriodEnd && (() => {
+                        const renewDate = new Date(user.currentPeriodEnd);
+                        const isStale = renewDate < new Date();
+                        return isStale
+                          ? 'Renewal date pending sync...'
+                          : `Renews ${renewDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                      })()}
+                      {user?.dodoCustomerId && user.status === 'cancelled' && user.currentPeriodEnd &&
+                        `Access until ${new Date(user.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                      {user?.dodoCustomerId && user.status === 'on_hold' && 'Update your payment method to restore access'}
+                    </p>
+                  </div>
                 </div>
+
+                {user?.dodoCustomerId ? (
+                  <button
+                    onClick={handleManageSubscription}
+                    disabled={isPending}
+                    className="btn-gold text-xs lg:text-sm px-3 py-2 lg:px-4 w-full disabled:opacity-50 mb-6"
+                  >
+                    {isPending ? 'Loading...' : 'Manage Subscription'}
+                  </button>
+                ) : (
+                  <div className="p-4 rounded-lg bg-teal/5 border border-teal/20 mb-6">
+                    <div className="flex items-center gap-2 mb-1">
+                      <div className="h-2 w-2 rounded-full bg-teal animate-pulse" />
+                      <p className="text-sm font-medium text-foreground">Processing your subscription...</p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">This usually takes 10–30 seconds.</p>
+                  </div>
+                )}
+
                 {user?.dodoCustomerId && (
                   <BillingManagement
                     customerId={user.dodoCustomerId}
                     subscriptionId={user.dodoSubscriptionId}
                     currentPlan={currentTier}
+                    currentPeriodEnd={user.currentPeriodEnd}
                     onCancelSuccess={fetchUserPlan}
                   />
                 )}
