@@ -343,12 +343,78 @@ export async function POST(req: NextRequest) {
       }
 
       case 'payment.succeeded': {
+        const customerId = data.customer?.customer_id as string;
+        const subscriptionId = data.subscription_id as string;
         const customData = (data.metadata || data.custom_data) as
           | Record<string, string>
           | undefined;
+        const customDataUserId = customData?.userId;
+
         console.log(
-          `[Dodo webhook] Payment succeeded for user=${customData?.userId}`
+          `[Dodo webhook] Payment succeeded for user=${customDataUserId} subscription=${subscriptionId}`
         );
+
+        if (!subscriptionId) {
+          console.warn('[Dodo webhook] payment.succeeded has no subscription_id, skipping');
+          break;
+        }
+
+        // Fetch subscription from Dodo to get the price/product ID
+        let plan = 'unknown';
+        let currentPeriodEnd = '';
+        try {
+          const DodoPayments = (await import('dodopayments')).default;
+          const env = (process.env.NEXT_PUBLIC_DODO_ENV ?? 'sandbox') === 'sandbox' ? 'test_mode' : 'live_mode';
+          const client = new DodoPayments({ bearerToken: process.env.DODO_API_KEY!, environment: env });
+          const sub = await client.subscriptions.retrieve(subscriptionId);
+          const priceId: string = (sub as any).price_id ?? (sub as any).product_id ?? '';
+          plan = planFromPriceId(priceId);
+          currentPeriodEnd = (sub as any).next_billing_date ?? '';
+          console.log(`[Dodo webhook] Fetched subscription plan=${plan} priceId=${priceId}`);
+        } catch (err) {
+          console.error('[Dodo webhook] Failed to fetch subscription details:', err);
+        }
+
+        const resolvedUserId = await updateUserSubscription(
+          customerId,
+          {
+            dodoSubscriptionId: subscriptionId,
+            plan,
+            status: 'active',
+            currentPeriodEnd,
+            cancelledAt: null,
+          },
+          customDataUserId
+        );
+
+        if (resolvedUserId) {
+          try {
+            const db = adminDb();
+            const userDoc = await db.collection('users').doc(resolvedUserId).get();
+            const userData = userDoc.data();
+            if (userData?.email) {
+              const billingCycle = plan === 'pro' ? 'monthly' : 'monthly'; // default; refine if price_id available
+              const amount = plan === 'pro' ? '29' : '19';
+              await sendPaymentSuccessEmail({
+                userEmail: userData.email,
+                userName: userData.displayName || 'there',
+                plan: plan.charAt(0).toUpperCase() + plan.slice(1),
+                amount,
+                billingCycle,
+                nextBillingDate: currentPeriodEnd
+                  ? new Date(currentPeriodEnd).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric',
+                    })
+                  : '',
+              });
+            }
+          } catch (emailError) {
+            console.error('[Dodo webhook] Failed to send payment success email:', emailError);
+          }
+        }
+
         break;
       }
 
