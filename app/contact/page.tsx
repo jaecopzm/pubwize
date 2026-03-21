@@ -50,7 +50,7 @@ export default function ContactPage() {
             </p>
           </div>
 
-          {/* Billing Support (Dodo Payments) */}
+          {/* Billing Support (Paddle) */}
           <div className="card-premium p-8 border border-border flex flex-col h-full">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-3 rounded-xl bg-teal/10 text-teal shrink-0">
@@ -59,10 +59,14 @@ export default function ContactPage() {
               <h2 className="text-2xl font-bold" style={{ color: 'var(--text-1)' }}>Billing Support</h2>
             </div>
             <p className="mb-4 flex-grow" style={{ color: 'var(--text-2)' }}>
-              Our order process and payment processing is conducted by our payment partner, Dodo Payments. They act as the Merchant of Record for all orders.
+              Our order process and payment processing is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders and handles returns.
             </p>
             <p className="mb-4" style={{ color: 'var(--text-2)' }}>
-              For billing questions, payment issues, or charge inquiries, please reach out to Dodo Payments support or contact us and we can assist.
+              For billing questions, payment issues, or charge inquiries, visit{" "}
+              <a href="https://paddle.net" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--gold)' }}>
+                paddle.net
+              </a>{" "}
+              or contact us and we can assist.
             </p>
           </div>
 

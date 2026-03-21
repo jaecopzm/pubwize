@@ -213,164 +213,205 @@ export default function ArticlesPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto aurora-bg noise-overlay">
+    <div className="min-h-screen p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
       {/* Header */}
-      <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 relative z-10">
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Content <span className="gradient-gold-teal">Library</span>
-          </h1>
-          <p className="mt-1 sm:mt-2 text-sm text-muted-foreground">
-            {articles.length} articles across {Object.keys(sitesMap).length} sites
-          </p>
-        </div>
-        <div className="flex gap-2 sm:gap-3 w-full sm:w-auto">
-          {plan === 'pro' && (
-            <Link
-              href="/dashboard/articles/bulk"
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl border border-gold/30 bg-gold/10 px-3 sm:px-4 py-2 text-sm font-semibold transition-all hover:bg-gold/20 text-gold"
+      <div className="mb-8 relative">
+        <div className="absolute inset-0 bg-gradient-to-r from-[#6366f1]/5 via-transparent to-[#22d3ee]/5 blur-3xl -z-10" />
+        <div className="flex flex-col gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-[#6366f1] to-[#22d3ee] flex items-center justify-center shadow-lg shadow-[#6366f1]/20">
+                <FileText className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-4xl font-black tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+                  <span className="text-foreground">Content</span>{" "}
+                  <span className="bg-gradient-to-r from-[#6366f1] to-[#22d3ee] bg-clip-text text-transparent">Library</span>
+                </h1>
+                <p className="text-sm text-muted-foreground font-medium">
+                  {articles.length} articles · {Object.keys(sitesMap).length} sites · {filteredArticles.reduce((sum, a) => sum + (a.wordCount || 0), 0).toLocaleString()} words
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-wrap gap-2 w-full">
+            {plan === 'pro' && (
+              <Link
+                href="/dashboard/articles/bulk"
+                className="flex items-center justify-center gap-2 rounded-xl border border-[rgba(99,102,241,0.3)] bg-gradient-to-r from-[rgba(99,102,241,0.1)] to-[rgba(34,211,238,0.1)] px-4 py-2.5 text-sm font-bold transition-all hover:shadow-lg hover:shadow-[#6366f1]/20 text-[#818cf8] hover:scale-105"
+              >
+                <Zap className="h-4 w-4" />
+                Bulk Create
+              </Link>
+            )}
+            <button
+              onClick={async () => {
+                try {
+                  const auth = getFirebaseAuth();
+                  const idToken = await auth.currentUser?.getIdToken();
+                  const res = await fetch("/api/articles/fix-word-count", {
+                    method: "POST",
+                    headers: { Authorization: `Bearer ${idToken}` },
+                  });
+                  const data = await res.json();
+                  toast.success(`Updated ${data.updated} articles`);
+                  window.location.reload();
+                } catch (error) {
+                  toast.error("Failed to fix word counts");
+                }
+              }}
+              className="flex items-center justify-center gap-2 rounded-xl border border-teal/30 bg-teal/10 px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold transition-all hover:bg-teal/20 text-teal"
             >
-              <Zap className="h-4 w-4" />
-              <span className="hidden xs:inline">Bulk</span>
-            </Link>
-          )}
-          <button
-            onClick={async () => {
-              try {
-                const auth = getFirebaseAuth();
-                const idToken = await auth.currentUser?.getIdToken();
-                const res = await fetch("/api/articles/fix-word-count", {
-                  method: "POST",
-                  headers: { Authorization: `Bearer ${idToken}` },
-                });
-                const data = await res.json();
-                toast.success(`Updated ${data.updated} articles`);
-                window.location.reload();
-              } catch (error) {
-                toast.error("Failed to fix word counts");
-              }
-            }}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl border border-teal/30 bg-teal/10 px-3 sm:px-4 py-2 text-sm font-semibold transition-all hover:bg-teal/20 text-teal"
-          >
-            <FileText className="h-4 w-4" />
-            <span className="hidden xs:inline">Fix Words</span>
-          </button>
-          <button
-            onClick={() => router.push("/dashboard/research")}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 sm:px-4 py-2 text-sm font-semibold transition-all hover:border-teal/30 hover:text-foreground text-muted-foreground"
-          >
-            <Search className="h-4 w-4" />
-            <span className="hidden xs:inline">Research</span>
-          </button>
-          <button
-            onClick={() => router.push("/dashboard/articles/new")}
-            className="flex-1 sm:flex-initial btn-gold text-sm px-3 sm:px-4 py-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span className="hidden xs:inline">New Article</span>
-            <span className="xs:hidden">New</span>
-          </button>
+              <FileText className="h-4 w-4" />
+              <span className="hidden xs:inline">Fix Words</span>
+              <span className="xs:hidden">Fix</span>
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/research")}
+              className="flex items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 sm:px-4 py-2.5 text-xs sm:text-sm font-bold transition-all hover:border-gold/30 hover:shadow-md text-muted-foreground hover:text-foreground"
+            >
+              <Search className="h-4 w-4" />
+              Research
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/articles/new")}
+              className="btn-gold text-xs sm:text-sm px-4 sm:px-5 py-2.5 shadow-lg shadow-gold/20 hover:shadow-xl hover:shadow-gold/30"
+            >
+              <Plus className="h-4 w-4" />
+              <span className="hidden xs:inline">New Article</span>
+              <span className="xs:hidden">New</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 relative z-10">
+      {/* Enhanced Stats Cards with Hover Effects */}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 sm:gap-3 mb-6">
         {[
-          { label: "All", count: statusCounts.all, status: "all" as FilterStatus, icon: FileText, color: 'text-muted-foreground' },
-          { label: "Brief", count: statusCounts.brief, status: "brief" as FilterStatus, icon: Sparkles, color: 'text-gold' },
-          { label: "Outline", count: statusCounts.outline, status: "outline" as FilterStatus, icon: TrendingUp, color: 'text-teal' },
-          { label: "Draft", count: statusCounts.draft, status: "draft" as FilterStatus, icon: FileText, color: 'text-lilac' },
-          { label: "Optimized", count: statusCounts.optimized, status: "optimized" as FilterStatus, icon: Sparkles, color: 'text-teal' },
+          { label: "All", count: statusCounts.all, status: "all" as FilterStatus, icon: FileText, color: 'from-slate-500 to-slate-600', textColor: 'text-slate-600' },
+          { label: "Brief", count: statusCounts.brief, status: "brief" as FilterStatus, icon: Sparkles, color: 'from-gold to-amber-500', textColor: 'text-gold' },
+          { label: "Outline", count: statusCounts.outline, status: "outline" as FilterStatus, icon: TrendingUp, color: 'from-teal to-cyan-500', textColor: 'text-teal' },
+          { label: "Draft", count: statusCounts.draft, status: "draft" as FilterStatus, icon: FileText, color: 'from-lilac to-purple-500', textColor: 'text-lilac' },
+          { label: "Optimized", count: statusCounts.optimized, status: "optimized" as FilterStatus, icon: Sparkles, color: 'from-emerald-500 to-teal', textColor: 'text-emerald-500' },
         ].map((stat) => (
           <button
             key={stat.status}
             onClick={() => setFilterStatus(stat.status)}
             className={cn(
-              "rounded-xl border p-3 sm:p-4 text-left transition-all card-premium",
+              "group relative rounded-xl sm:rounded-2xl border p-3 sm:p-4 text-left transition-all duration-300 overflow-hidden",
               filterStatus === stat.status
-                ? "border-gold/30 bg-gold/8 ring-2 ring-gold/20"
-                : "border-border hover:border-gold/20"
+                ? "border-transparent shadow-xl scale-105"
+                : "border-border hover:border-gold/30 hover:scale-102"
             )}
           >
-            <div className="flex items-center justify-between mb-2">
-              <stat.icon className={cn("h-4 w-4", stat.color, "opacity-70")} />
-              <span className="text-xl sm:text-2xl font-bold text-foreground">{stat.count}</span>
+            {filterStatus === stat.status && (
+              <div className={cn("absolute inset-0 bg-gradient-to-br opacity-10", stat.color)} />
+            )}
+            <div className="relative z-10">
+              <div className="flex items-center justify-between mb-2 sm:mb-3">
+                <div className={cn(
+                  "h-8 w-8 sm:h-10 sm:w-10 rounded-lg sm:rounded-xl flex items-center justify-center transition-all",
+                  filterStatus === stat.status 
+                    ? `bg-gradient-to-br ${stat.color} text-white shadow-lg` 
+                    : "bg-muted text-muted-foreground group-hover:bg-gold/10"
+                )}>
+                  <stat.icon className="h-4 w-4 sm:h-5 sm:w-5" />
+                </div>
+                <span className={cn(
+                  "text-2xl sm:text-3xl font-black transition-colors",
+                  filterStatus === stat.status ? stat.textColor : "text-foreground"
+                )}>
+                  {stat.count}
+                </span>
+              </div>
+              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground font-bold">
+                {stat.label}
+              </p>
             </div>
-            <p className="font-mono-dm text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground">
-              {stat.label}
-            </p>
           </button>
         ))}
       </div>
 
-      {/* Search & Controls */}
-      <div className="mb-6 space-y-3 relative z-10">
+      {/* Enhanced Search & Controls */}
+      <div className="mb-6 space-y-3 sm:space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search */}
-          <div className="search-glow-wrapper flex-1">
-            <div className="search-glow" />
-            <div className="relative z-10">
-              <Search className="absolute left-3 sm:left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search articles by keyword..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 sm:pl-12 h-11 sm:h-12 rounded-xl border border-border bg-card text-foreground"
-              />
-            </div>
+          {/* Search with Icon Animation */}
+          <div className="relative flex-1 group">
+            <Search className="absolute left-3 sm:left-4 top-1/2 h-4 w-4 sm:h-5 sm:w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-gold" />
+            <Input
+              placeholder="Search articles..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 sm:pl-12 h-11 sm:h-12 rounded-xl border-border bg-card text-foreground focus:border-gold/50 focus:ring-2 focus:ring-gold/20 transition-all text-sm"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 h-6 w-6 rounded-lg bg-muted hover:bg-muted/80 flex items-center justify-center text-muted-foreground hover:text-foreground transition-all text-lg"
+              >
+                ×
+              </button>
+            )}
           </div>
 
-          {/* View Toggle & Export */}
+          {/* View Toggle & Actions */}
           <div className="flex gap-2">
-            <div className="flex rounded-xl border border-border bg-card overflow-hidden">
+            <div className="flex rounded-xl border border-border bg-card overflow-hidden shadow-sm">
               <button
                 onClick={() => setViewMode("grid")}
                 className={cn(
-                  "p-2.5 sm:p-3 transition-colors",
-                  viewMode === "grid" ? "bg-gold/10 text-gold" : "text-muted-foreground hover:text-foreground"
+                  "p-2.5 sm:p-3 transition-all",
+                  viewMode === "grid" 
+                    ? "bg-gradient-to-br from-gold/20 to-amber-500/20 text-gold shadow-inner" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                <Grid3x3 size={16} />
+                <Grid3x3 size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
+              <div className="w-px bg-border" />
               <button
                 onClick={() => setViewMode("list")}
                 className={cn(
-                  "p-2.5 sm:p-3 transition-colors border-l border-border",
-                  viewMode === "list" ? "bg-gold/10 text-gold" : "text-muted-foreground hover:text-foreground"
+                  "p-2.5 sm:p-3 transition-all",
+                  viewMode === "list" 
+                    ? "bg-gradient-to-br from-gold/20 to-amber-500/20 text-gold shadow-inner" 
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
-                <List size={16} />
+                <List size={16} className="sm:w-[18px] sm:h-[18px]" />
               </button>
             </div>
 
             <button
               onClick={exportToCSV}
-              className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 sm:px-4 py-2.5 sm:py-3 text-sm font-semibold text-muted-foreground hover:border-gold/30 hover:text-foreground transition-all"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card px-3 sm:px-4 py-2.5 sm:py-3 text-xs sm:text-sm font-bold text-muted-foreground hover:border-gold/30 hover:text-foreground hover:shadow-md transition-all"
             >
-              <Download size={16} />
+              <Download size={16} className="sm:w-[18px] sm:h-[18px]" />
               <span className="hidden sm:inline">Export</span>
             </button>
           </div>
         </div>
 
-        {/* Sort & Select All */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {/* Sort & Filters Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2.5 sm:p-3 rounded-xl border border-border bg-card/50">
+          <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 sm:pb-0">
             <button
               onClick={toggleSelectAll}
-              className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-all whitespace-nowrap flex-shrink-0"
+              className="flex items-center gap-1.5 sm:gap-2 rounded-lg border border-border bg-background px-2.5 sm:px-3 py-1.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:border-gold/30 transition-all whitespace-nowrap flex-shrink-0"
             >
               {selectedArticles.length === filteredArticles.length && filteredArticles.length > 0 ? (
-                <CheckSquare size={14} className="text-gold" />
+                <CheckSquare size={14} className="sm:w-4 sm:h-4 text-gold" />
               ) : (
-                <Square size={14} />
+                <Square size={14} className="sm:w-4 sm:h-4" />
               )}
-              <span className="hidden sm:inline">Select All</span>
+              <span className="hidden xs:inline">Select All</span>
+              <span className="xs:hidden">All</span>
             </button>
 
-            <div className="w-px h-5 bg-border flex-shrink-0" />
+            <div className="h-5 sm:h-6 w-px bg-border flex-shrink-0" />
 
-            <span className="text-xs font-semibold text-muted-foreground flex-shrink-0">Sort:</span>
+            <span className="text-[10px] sm:text-xs font-bold text-muted-foreground flex-shrink-0">Sort:</span>
             {[
               { value: "recent", label: "Recent" },
               { value: "oldest", label: "Oldest" },
@@ -381,10 +422,10 @@ export default function ArticlesPage() {
                 key={sort.value}
                 onClick={() => setSortBy(sort.value as SortBy)}
                 className={cn(
-                  "rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0",
+                  "rounded-lg px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs font-bold transition-all whitespace-nowrap flex-shrink-0",
                   sortBy === sort.value
-                    ? "border-gold/40 bg-gold/10 text-gold"
-                    : "border-border bg-card text-muted-foreground hover:border-gold/30 hover:text-foreground"
+                    ? "bg-gradient-to-r from-gold/20 to-amber-500/20 text-gold shadow-sm"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                 )}
               >
                 {sort.label}
@@ -392,9 +433,10 @@ export default function ArticlesPage() {
             ))}
           </div>
 
-          <span className="text-xs font-semibold text-muted-foreground whitespace-nowrap flex-shrink-0 text-right sm:text-left">
+          <div className="flex items-center gap-2 text-[10px] sm:text-xs font-bold text-muted-foreground whitespace-nowrap justify-end sm:justify-start">
+            <div className="h-2 w-2 rounded-full bg-gold animate-pulse" />
             {filteredArticles.length} {filteredArticles.length === 1 ? 'article' : 'articles'}
-          </span>
+          </div>
         </div>
       </div>
 

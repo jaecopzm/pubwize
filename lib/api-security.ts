@@ -4,7 +4,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { adminAuth } from "@/lib/firebase-admin";
+import { auth } from "@clerk/nextjs/server";
 
 // Rate limiting store (in-memory, consider Redis for production)
 const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
@@ -17,55 +17,27 @@ export interface AuthResult {
 }
 
 /**
- * Authenticate user from request headers
+ * Authenticate user using Clerk
  */
 export async function authenticateRequest(req: NextRequest): Promise<AuthResult> {
   try {
-    const authHeader = req.headers.get("authorization") || "";
-    const [bearer, token] = authHeader.split(" ");
+    const { userId } = await auth();
 
-    if (bearer !== "Bearer" || !token) {
+    if (!userId) {
       return {
         success: false,
-        error: "Missing or invalid authorization header",
-        statusCode: 401,
-      };
-    }
-
-    const decoded = await adminAuth().verifyIdToken(token);
-    
-    if (!decoded.uid) {
-      return {
-        success: false,
-        error: "Invalid token",
+        error: "Missing or invalid authorization",
         statusCode: 401,
       };
     }
 
     return {
       success: true,
-      uid: decoded.uid,
+      uid: userId,
     };
   } catch (error: any) {
-    console.error("Authentication error:", error);
+    console.error("Clerk Authentication error:", error);
     
-    // Handle specific Firebase auth errors
-    if (error.code === "auth/id-token-expired") {
-      return {
-        success: false,
-        error: "Token expired. Please sign in again.",
-        statusCode: 401,
-      };
-    }
-    
-    if (error.code === "auth/id-token-revoked") {
-      return {
-        success: false,
-        error: "Token revoked. Please sign in again.",
-        statusCode: 401,
-      };
-    }
-
     return {
       success: false,
       error: "Authentication failed",

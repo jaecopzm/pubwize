@@ -5,6 +5,7 @@ export type PlanStatus = "active" | "trialing" | "canceled" | "past_due";
 export type SubscriptionStatus =
   | "pending"
   | "active"
+  | "trialing"
   | "on_hold"
   | "paused"
   | "cancelled"
@@ -22,10 +23,8 @@ export interface UserDoc {
   photoURL?: string | null;
   planTier: PlanTier;
   planStatus: PlanStatus;
-  stripeCustomerId?: string | null;
-  stripeSubscriptionId?: string | null;
-  dodoCustomerId?: string | null;
-  dodoSubscriptionId?: string | null;
+  paddleCustomerId?: string | null;
+  paddleSubscriptionId?: string | null;
   status?: SubscriptionStatus;
   currentPeriodEnd?: string;
   cancelledAt?: string | null;

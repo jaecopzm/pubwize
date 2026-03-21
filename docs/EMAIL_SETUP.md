@@ -76,9 +76,9 @@ Check your server logs for:
 | Event | Email Type | Trigger |
 |-------|-----------|---------|
 | User signs up | Welcome | `/api/user/plan` POST |
-| Payment succeeds | Payment Success | Dodo webhook `subscription.active` |
-| Payment fails | Payment Failed | Dodo webhook `payment.failed` |
-| Subscription cancelled | Cancellation | Dodo webhook `subscription.cancelled` |
+| Payment succeeds | Payment Success | Paddle webhook `subscription.activated` |
+| Payment fails | Payment Failed | Paddle webhook `transaction.payment_failed` |
+| Subscription cancelled | Cancellation | Paddle webhook `subscription.canceled` |
 | Article published | Published | WordPress publish success |
 | Quota warning | Quota Warning | 80% usage reached |
 

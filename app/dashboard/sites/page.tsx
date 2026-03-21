@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 import { Plus, Globe, Pencil, Trash2, TrendingUp, Calendar, Search, Grid3x3, List, BarChart3, ExternalLink, Activity, Sparkles, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
@@ -185,51 +186,69 @@ export default function SitesPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto aurora-bg noise-overlay min-h-screen">
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto min-h-screen">
       {/* Header */}
-      <div className="mb-6 lg:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4 relative z-10">
-        <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-            Your <span className="gradient-gold-teal">Sites</span>
-          </h1>
-          <p className="mt-1 sm:mt-2 text-sm text-muted-foreground">
-            {sites.length} {sites.length === 1 ? 'site' : 'sites'} configured
-          </p>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="mb-8 relative"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-primary/5 blur-3xl -z-10" />
+        <div className="flex flex-col gap-6">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <motion.div 
+                whileHover={{ scale: 1.05, rotate: 5 }}
+                className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-primary flex items-center justify-center shadow-lg shadow-violet-500/20"
+              >
+                <Globe className="h-6 w-6 text-white" />
+              </motion.div>
+              <div>
+                <h1 className="text-4xl font-black tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+                  Your <span className="bg-gradient-to-r from-violet-500 to-primary bg-clip-text text-transparent">Sites</span>
+                </h1>
+                <p className="text-sm text-muted-foreground font-medium">
+                  {sites.length} {sites.length === 1 ? 'site' : 'sites'} configured
+                </p>
+              </div>
+            </div>
+          </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => router.push("/dashboard/sites/new")}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all w-full sm:w-auto"
+          >
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">New Site</span>
+            <span className="sm:hidden">Add Site</span>
+          </motion.button>
         </div>
-        <button
-          onClick={() => router.push("/dashboard/sites/new")}
-          className="btn-gold w-full sm:w-auto"
-        >
-          <Plus className="h-4 w-4" />
-          <span className="hidden sm:inline">New Site</span>
-          <span className="sm:hidden">Add Site</span>
-        </button>
-      </div>
+      </motion.div>
 
       {/* Stats Cards */}
       {!loading && sites.length > 0 && (
         <div className="grid grid-cols-3 gap-3 lg:gap-4 mb-6 relative z-10">
-          <div className="card-premium p-3 lg:p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <Globe className="h-4 w-4 text-teal" />
-              <span className="font-mono-dm text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wider">Sites</span>
-            </div>
-            <p className="text-xl lg:text-2xl font-bold text-foreground">{stats.total}</p>
-          </div>
-          <div className="card-premium p-3 lg:p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <BarChart3 className="h-4 w-4 text-gold" />
-              <span className="font-mono-dm text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wider">Articles</span>
-            </div>
-            <p className="text-xl lg:text-2xl font-bold text-foreground">{stats.totalArticles}</p>
-          </div>
-          <div className="card-premium p-3 lg:p-4">
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp className="h-4 w-4 text-lilac" />
-              <span className="font-mono-dm text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wider">Niches</span>
-            </div>
-            <p className="text-xl lg:text-2xl font-bold text-foreground">{stats.niches}</p>
-          </div>
+          {[
+            { icon: Globe, label: 'Sites', value: stats.total, color: 'text-cyan-500' },
+            { icon: BarChart3, label: 'Articles', value: stats.totalArticles, color: 'text-primary' },
+            { icon: TrendingUp, label: 'Niches', value: stats.niches, color: 'text-violet-500' },
+          ].map((stat, i) => (
+            <motion.div
+              key={stat.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              whileHover={{ y: -2 }}
+              className="card-premium p-3 lg:p-4"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <stat.icon className={cn("h-4 w-4", stat.color)} />
+                <span className="font-mono-dm text-[10px] lg:text-xs text-muted-foreground uppercase tracking-wider">{stat.label}</span>
+              </div>
+              <p className="text-xl lg:text-2xl font-bold text-foreground">{stat.value}</p>
+            </motion.div>
+          ))}
         </div>
       )}
 
@@ -323,8 +342,8 @@ export default function SitesPage() {
         </div>
       ) : sites.length === 0 ? (
         <div className="rounded-xl lg:rounded-2xl border border-dashed border-border p-8 lg:p-12 text-center card-premium relative z-10">
-          <div className="mx-auto flex h-14 w-14 lg:h-16 lg:w-16 items-center justify-center rounded-2xl bg-teal/10">
-            <Globe className="h-7 w-7 lg:h-8 lg:w-8 text-teal" />
+          <div className="mx-auto flex h-14 w-14 lg:h-16 lg:w-16 items-center justify-center rounded-2xl bg-emerald-500/10">
+            <Globe className="h-7 w-7 lg:h-8 lg:w-8 text-emerald-500" />
           </div>
           <h3 className="mt-4 lg:mt-6 text-base lg:text-lg font-bold font-display text-foreground">No sites yet</h3>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -351,7 +370,7 @@ export default function SitesPage() {
               className="card-premium p-4 lg:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
             >
               <div className="flex items-start gap-3 flex-1 min-w-0">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal/10 text-teal flex-shrink-0">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-500 flex-shrink-0">
                   <Globe className="h-5 w-5" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -407,8 +426,12 @@ export default function SitesPage() {
         </div>
       ) : (
         <div className="grid gap-4 lg:gap-6 md:grid-cols-2 lg:grid-cols-3 relative z-10">
-          {filteredSites.map((site) => (
-            <div
+          {filteredSites.map((site, index) => (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: index * 0.05 }}
+              whileHover={{ y: -4, scale: 1.02 }}
               key={site.id}
               className="group rounded-xl lg:rounded-2xl border border-border p-4 lg:p-6 transition-all card-premium"
             >
@@ -427,7 +450,7 @@ export default function SitesPage() {
                     <ExternalLink className="h-3 w-3 opacity-0 group-hover/link:opacity-100 transition-opacity flex-shrink-0" />
                   </a>
                 </div>
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal/10 text-teal flex-shrink-0 ml-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-500 flex-shrink-0 ml-3">
                   <Globe className="h-5 w-5" />
                 </div>
               </div>
@@ -447,20 +470,20 @@ export default function SitesPage() {
                   <span className="metric-label">Status</span>
                   <span className="metric-value flex items-center gap-1.5">
                     <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-teal"></span>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-500 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                     </span>
-                    <span className="text-[10px] text-teal/80 font-bold uppercase tracking-wider">Live</span>
+                    <span className="text-[10px] text-emerald-500/80 font-bold uppercase tracking-wider">Live</span>
                   </span>
                 </div>
               </div>
 
               {/* Pro Feature: Suggested Next Topic */}
               {plan === 'pro' && (
-                <div className="mb-5 p-3 rounded-xl bg-lilac/5 border border-lilac/10 group-hover:border-lilac/20 transition-all">
+                <div className="mb-5 p-3 rounded-xl bg-violet-500/5 border border-violet-500/10 group-hover:border-violet-500/20 transition-all">
                   <div className="flex items-center gap-1.5 mb-1.5">
-                    <Sparkles className="h-3 w-3 text-lilac" />
-                    <span className="text-[9px] font-bold text-lilac uppercase tracking-widest">Next Topic Idea</span>
+                    <Sparkles className="h-3 w-3 text-violet-500" />
+                    <span className="text-[9px] font-bold text-violet-500 uppercase tracking-widest">Next Topic Idea</span>
                   </div>
                   <p className="text-[11px] text-muted-foreground leading-snug">
                     {site.suggestedTopic ? (
@@ -475,7 +498,7 @@ export default function SitesPage() {
                   </p>
                   <button
                     onClick={() => router.push(`/dashboard/articles/new?keyword=${encodeURIComponent(site.suggestedTopic || `How to scale ${site.niche} in 2026`)}&siteId=${site.id}`)}
-                    className="mt-2.5 flex items-center gap-1 text-[10px] font-bold text-lilac hover:underline"
+                    className="mt-2.5 flex items-center gap-1 text-[10px] font-bold text-violet-500 hover:underline"
                   >
                     Create Article <ChevronRight size={10} />
                   </button>
@@ -498,7 +521,7 @@ export default function SitesPage() {
                   <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       )}

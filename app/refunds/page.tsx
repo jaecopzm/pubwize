@@ -22,9 +22,20 @@ export default function RefundsPage() {
       {/* Content */}
       <div className="max-w-4xl mx-auto px-6 py-16">
         <h1 className="text-4xl font-bold font-display mb-4" style={{ color: 'var(--text-1)' }}>Refund Policy</h1>
-        <p className="text-sm mb-12" style={{ color: 'var(--text-3)' }}>Last updated: March 8, 2026</p>
+        <p className="text-sm mb-12" style={{ color: 'var(--text-3)' }}>Last updated: March 21, 2026</p>
 
         <div className="space-y-8 prose prose-invert max-w-none">
+          <section>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-1)' }}>Overview</h2>
+            <p style={{ color: 'var(--text-2)' }}>
+              Pubwize uses Paddle.com as our Merchant of Record. Paddle handles all payment processing, tax compliance, and buyer support. This policy works alongside{" "}
+              <a href="https://www.paddle.com/legal/refund-policy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--gold)' }}>
+                Paddle&apos;s Refund Policy
+              </a>
+              , which also applies to your purchase. Where local consumer protection laws grant you stronger rights, those rights always apply.
+            </p>
+          </section>
+
           <section>
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-1)' }}>14-Day Money-Back Guarantee</h2>
             <p style={{ color: 'var(--text-2)' }}>
@@ -53,20 +64,51 @@ export default function RefundsPage() {
           </section>
 
           <section>
+            <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-1)' }}>Statutory Withdrawal Rights</h2>
+            <p style={{ color: 'var(--text-2)' }}>
+              Depending on your country, you may have additional statutory rights:
+            </p>
+            <ul className="list-disc pl-6 mt-2 space-y-2" style={{ color: 'var(--text-2)' }}>
+              <li><strong>EU / EEA / UK / Switzerland:</strong> 14-day right to withdraw from your first purchase or first subscription payment</li>
+              <li><strong>Turkey / Israel:</strong> 14-day right to withdraw</li>
+              <li><strong>South Korea / Brazil / China / Canada:</strong> 7-day unconditional right to cancel</li>
+              <li><strong>Singapore:</strong> 5-day unconditional right to cancel</li>
+            </ul>
+            <p className="mt-3" style={{ color: 'var(--text-2)' }}>
+              These rights are enforced by Paddle as the Merchant of Record. See{" "}
+              <a href="https://www.paddle.com/legal/refund-policy" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--gold)' }}>
+                Paddle&apos;s full Refund Policy
+              </a>{" "}
+              for details.
+            </p>
+          </section>
+
+          <section>
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-1)' }}>How to Request a Refund</h2>
             <p style={{ color: 'var(--text-2)' }}>
-              To request a refund, please contact our support team at{" "}
-              <a href="mailto:support@pubwize.com" className="underline" style={{ color: 'var(--gold)' }}>
-                support@pubwize.com
-              </a>{" "}
-              with your account email and reason for the refund request.
+              To request a refund, you can:
             </p>
+            <ul className="list-disc pl-6 mt-2 space-y-2" style={{ color: 'var(--text-2)' }}>
+              <li>Use the <strong>"View receipt"</strong> or <strong>"Manage subscription"</strong> link in your Paddle receipt email</li>
+              <li>Visit{" "}
+                <a href="https://paddle.net" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--gold)' }}>
+                  paddle.net
+                </a>{" "}
+                and select "Request refund"
+              </li>
+              <li>Email us at{" "}
+                <a href="mailto:support@pubwize.com" className="underline" style={{ color: 'var(--gold)' }}>
+                  support@pubwize.com
+                </a>{" "}
+                and we&apos;ll assist you
+              </li>
+            </ul>
           </section>
 
           <section>
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-1)' }}>Processing Time</h2>
             <p style={{ color: 'var(--text-2)' }}>
-              Refunds are typically processed within 5-7 business days. The refund will be credited to the original payment method used for the purchase. Payments are processed by Dodo Payments, our authorised reseller and Merchant of Record.
+              Refunds are processed by Paddle within 14 days of approval. The refund will be credited to the original payment method used for the purchase.
             </p>
           </section>
 
@@ -99,10 +141,14 @@ export default function RefundsPage() {
           <section>
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-1)' }}>Contact</h2>
             <p style={{ color: 'var(--text-2)' }}>
-              For questions about our refund policy or to request a refund, contact us at{" "}
+              For questions about our refund policy, contact us at{" "}
               <a href="mailto:support@pubwize.com" className="underline" style={{ color: 'var(--gold)' }}>
                 support@pubwize.com
               </a>
+              . For direct payment or billing support, visit{" "}
+              <a href="https://paddle.net" target="_blank" rel="noopener noreferrer" className="underline" style={{ color: 'var(--gold)' }}>
+                paddle.net
+              </a>.
             </p>
           </section>
         </div>

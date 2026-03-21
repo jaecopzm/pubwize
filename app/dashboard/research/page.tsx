@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
     Search,
     Sparkles,
@@ -345,20 +346,20 @@ export default function ResearchPage() {
 
     const chipClass = (type: string) =>
         cn("badge-lilac", {
-            "bg-gold/10 text-gold border-gold/20": type === "suggested",
+            "bg-primary/10 text-primary border-primary/20": type === "suggested",
             "bg-teal/10 text-teal border-teal/20": type === "question",
             "bg-lilac/10 text-lilac border-lilac/20": type === "related",
         });
 
     const chipDot = (type: string) => ({
-        suggested: "bg-gold",
+        suggested: "bg-primary",
         question: "bg-teal",
         related: "bg-lilac",
     }[type as "suggested" | "question" | "related"]);
 
     const getDifficultyColor = (difficulty: number) => {
         if (difficulty < 30) return "text-teal";
-        if (difficulty < 50) return "text-gold";
+        if (difficulty < 50) return "text-primary";
         return "text-red-500";
     };
 
@@ -388,22 +389,31 @@ export default function ResearchPage() {
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
 
                 {/* ── Hero ── */}
-                <div className="text-center flex flex-col items-center mb-8 sm:mb-12">
-                    <div className="badge-gold mb-6 sm:mb-8">
+                <motion.div 
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-center flex flex-col items-center mb-8 sm:mb-12"
+                >
+                    <motion.div 
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ delay: 0.1 }}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary mb-6 sm:mb-8"
+                    >
                         <Sparkles size={11} />
                         Keyword Intelligence
-                    </div>
+                    </motion.div>
 
                     <h1 className="font-display text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground mb-4 sm:mb-6">
                         Discover your next<br />
-                        <span className="gradient-gold-teal">money keywords</span>
+                        <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">money keywords</span>
                     </h1>
 
                     <p className="text-sm sm:text-base lg:text-lg text-muted-foreground max-w-xl leading-relaxed px-4">
                         Enter a seed topic and we'll scan Google's autocomplete, PAA, and
                         related searches to surface the highest-leverage content opportunities.
                     </p>
-                </div>
+                </motion.div>
 
                 {/* ── Mode Toggle ── */}
                 <div className="flex items-center gap-2 mb-6 p-1 bg-card border border-border rounded-xl max-w-sm mx-auto">
@@ -428,19 +438,24 @@ export default function ResearchPage() {
                     >
                         <Network size={14} /> Strategy
                         {userPlan === "free" && (
-                            <Crown size={10} className="text-gold absolute -top-1 -right-1" />
+                            <Crown size={10} className="text-primary absolute -top-1 -right-1" />
                         )}
                     </button>
                 </div>
 
                 {/* ── Keyword Search ── */}
                 {mode === 'keywords' && (
-                    <div className="search-glow-wrapper max-w-3xl mx-auto mb-10 sm:mb-12 relative">
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="search-glow-wrapper max-w-3xl mx-auto mb-10 sm:mb-12 relative"
+                    >
                         <div className="search-glow" />
                         <form onSubmit={handleSearch}>
-                            <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center bg-card border border-border rounded-2xl overflow-hidden transition-all focus-within:border-transparent">
+                            <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center bg-card border border-border rounded-2xl overflow-hidden transition-all focus-within:border-primary/50 focus-within:shadow-lg focus-within:shadow-primary/10">
                                 <div className="flex items-center flex-1">
-                                    <div className="flex-shrink-0 px-4 sm:px-5 text-muted-foreground transition-colors focus-within:text-gold">
+                                    <div className="flex-shrink-0 px-4 sm:px-5 text-muted-foreground transition-colors focus-within:text-primary">
                                         <Search size={18} />
                                     </div>
                                     <input
@@ -492,7 +507,7 @@ export default function ResearchPage() {
                         )}
 
                         {error && <p className="mt-4 text-center text-sm text-red-500 font-semibold animate-in fade-in">{error}</p>}
-                    </div>
+                    </motion.div>
                 )}
 
                 {/* ── Cluster Strategy Mode ── */}
@@ -595,15 +610,15 @@ export default function ResearchPage() {
                         {clusterStrategy && !clusterLoading && (
                             <div className="space-y-3 sm:space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                                 {/* Pillar Article */}
-                                <div className="p-4 sm:p-6 rounded-2xl border-2 border-gold/40 bg-gradient-to-br from-gold/8 to-gold/3 relative overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
-                                    <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 rounded-full blur-3xl bg-gold/20 pointer-events-none" />
+                                <div className="p-4 sm:p-6 rounded-2xl border-2 border-primary/40 bg-gradient-to-br from-gold/8 to-gold/3 relative overflow-hidden shadow-lg hover:shadow-xl transition-shadow">
+                                    <div className="absolute top-0 right-0 -mr-8 -mt-8 h-32 w-32 rounded-full blur-3xl bg-primary/20 pointer-events-none" />
                                     <div className="relative flex items-start gap-3 sm:gap-4">
-                                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-gold text-obsidian shadow-lg">
+                                        <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl bg-primary text-obsidian shadow-lg">
                                             <Crown size={18} className="sm:w-5 sm:h-5" />
                                         </div>
                                         <div className="flex-1 min-w-0">
                                             <div className="flex items-center gap-2 mb-1.5">
-                                                <span className="badge-gold text-[9px] sm:text-[10px]">Pillar</span>
+                                                <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary text-[9px] sm:text-[10px]">Pillar</span>
                                                 <span className="text-xs sm:text-sm text-muted-foreground font-medium">{clusterStrategy.pillar.estimatedWordCount?.toLocaleString()}w</span>
                                             </div>
                                             <p className="font-display text-base sm:text-lg font-bold text-foreground leading-tight mb-1">{clusterStrategy.pillar.keyword}</p>
@@ -611,7 +626,7 @@ export default function ResearchPage() {
                                         </div>
                                         <button
                                             onClick={() => window.location.href = `/dashboard/articles/new?keyword=${encodeURIComponent(clusterStrategy.pillar.keyword)}`}
-                                            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-gold/20 border border-gold/30 text-xs sm:text-sm font-bold text-gold hover:bg-gold/30 transition-all whitespace-nowrap shrink-0 touch-manipulation min-h-[44px]"
+                                            className="flex items-center gap-1 px-3 py-2 rounded-lg bg-primary/20 border border-primary/30 text-xs sm:text-sm font-bold text-primary hover:bg-primary/30 transition-all whitespace-nowrap shrink-0 touch-manipulation min-h-[44px]"
                                         >
                                             <Plus size={14} />
                                             <span className="hidden xs:inline">Create</span>
@@ -735,7 +750,7 @@ export default function ResearchPage() {
                             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                                 <div className="flex items-center gap-3 flex-wrap">
                                     <h2 className="font-display text-lg sm:text-xl md:text-2xl font-bold text-foreground flex items-center gap-2">
-                                        <Zap size={16} className="text-gold sm:w-[18px] sm:h-[18px]" />
+                                        <Zap size={16} className="text-primary sm:w-[18px] sm:h-[18px]" />
                                         <span className="hidden sm:inline">Results for &ldquo;{query}&rdquo;</span>
                                         <span className="sm:hidden">Results</span>
                                     </h2>
@@ -758,7 +773,7 @@ export default function ResearchPage() {
                                     <button
                                         onClick={exportToCSV}
                                         disabled={!filteredResults || filteredResults.length === 0}
-                                        className="flex items-center justify-center gap-2 bg-card border border-border rounded-xl px-3 py-2 text-xs font-semibold text-muted-foreground hover:border-gold/30 hover:text-foreground transition-all flex-1 sm:flex-initial disabled:opacity-50 disabled:cursor-not-allowed"
+                                        className="flex items-center justify-center gap-2 bg-card border border-border rounded-xl px-3 py-2 text-xs font-semibold text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all flex-1 sm:flex-initial disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                         <Download size={14} />
                                         <span className="hidden sm:inline">Export</span>
@@ -773,7 +788,7 @@ export default function ResearchPage() {
                             <div className="flex items-center gap-2 overflow-x-auto pb-2 -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-hide">
                                 <button
                                     onClick={selectAll}
-                                    className="flex items-center gap-1.5 sm:gap-2 bg-card border border-border rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold text-muted-foreground hover:border-gold/30 hover:text-foreground transition-all whitespace-nowrap flex-shrink-0"
+                                    className="flex items-center gap-1.5 sm:gap-2 bg-card border border-border rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold text-muted-foreground hover:border-primary/30 hover:text-foreground transition-all whitespace-nowrap flex-shrink-0"
                                 >
                                     {selectedKeywords.size > 0 ? <CheckSquare size={13} /> : <Square size={13} />}
                                     <span className="hidden sm:inline">{selectedKeywords.size > 0 ? 'Clear' : 'Select 5'}</span>
@@ -786,8 +801,8 @@ export default function ResearchPage() {
                                     className={cn(
                                         "flex items-center gap-1.5 sm:gap-2 bg-card border rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0",
                                         filterType === "all"
-                                            ? "border-gold/40 bg-gold/10 text-gold"
-                                            : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+                                            ? "border-primary/40 bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                                     )}
                                     onClick={() => setFilterType("all")}
                                 >
@@ -798,8 +813,8 @@ export default function ResearchPage() {
                                     className={cn(
                                         "flex items-center gap-1.5 sm:gap-2 bg-card border rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0",
                                         filterType === "suggested"
-                                            ? "border-gold/40 bg-gold/10 text-gold"
-                                            : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+                                            ? "border-primary/40 bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                                     )}
                                     onClick={() => setFilterType("suggested")}
                                 >
@@ -811,8 +826,8 @@ export default function ResearchPage() {
                                     className={cn(
                                         "flex items-center gap-1.5 sm:gap-2 bg-card border rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0",
                                         filterType === "question"
-                                            ? "border-gold/40 bg-gold/10 text-gold"
-                                            : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+                                            ? "border-primary/40 bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                                     )}
                                     onClick={() => setFilterType("question")}
                                 >
@@ -824,8 +839,8 @@ export default function ResearchPage() {
                                     className={cn(
                                         "flex items-center gap-1.5 sm:gap-2 bg-card border rounded-lg sm:rounded-xl px-2.5 sm:px-3 py-1.5 sm:py-2 text-xs font-semibold transition-all whitespace-nowrap flex-shrink-0",
                                         filterType === "related"
-                                            ? "border-gold/40 bg-gold/10 text-gold"
-                                            : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+                                            ? "border-primary/40 bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                                     )}
                                     onClick={() => setFilterType("related")}
                                 >
@@ -842,8 +857,8 @@ export default function ResearchPage() {
                                     className={cn(
                                         "flex items-center gap-1.5 bg-card border rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all whitespace-nowrap",
                                         sortBy === "volume"
-                                            ? "border-gold/40 bg-gold/10 text-gold"
-                                            : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+                                            ? "border-primary/40 bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                                     )}
                                     onClick={() => setSortBy(sortBy === "volume" ? "relevance" : "volume")}
                                 >
@@ -854,8 +869,8 @@ export default function ResearchPage() {
                                     className={cn(
                                         "flex items-center gap-1.5 bg-card border rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all whitespace-nowrap",
                                         sortBy === "difficulty"
-                                            ? "border-gold/40 bg-gold/10 text-gold"
-                                            : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+                                            ? "border-primary/40 bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                                     )}
                                     onClick={() => setSortBy(sortBy === "difficulty" ? "relevance" : "difficulty")}
                                 >
@@ -866,8 +881,8 @@ export default function ResearchPage() {
                                     className={cn(
                                         "flex items-center gap-1.5 bg-card border rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-all whitespace-nowrap",
                                         sortBy === "cpc"
-                                            ? "border-gold/40 bg-gold/10 text-gold"
-                                            : "border-border text-muted-foreground hover:border-gold/30 hover:text-foreground"
+                                            ? "border-primary/40 bg-primary/10 text-primary"
+                                            : "border-border text-muted-foreground hover:border-primary/30 hover:text-foreground"
                                     )}
                                     onClick={() => setSortBy(sortBy === "cpc" ? "relevance" : "cpc")}
                                 >
@@ -886,7 +901,7 @@ export default function ResearchPage() {
                                             setFilterType("all");
                                             setSortBy("relevance");
                                         }}
-                                        className="mt-3 sm:mt-4 text-xs text-gold hover:underline"
+                                        className="mt-3 sm:mt-4 text-xs text-primary hover:underline"
                                     >
                                         Clear filters
                                     </button>
@@ -911,8 +926,8 @@ export default function ResearchPage() {
                                                 <div className={cn(
                                                     "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
                                                     isSelected
-                                                        ? "bg-gold border-gold shadow-sm shadow-gold/50"
-                                                        : "border-border bg-card group-hover:border-gold/50"
+                                                        ? "bg-primary border-primary shadow-sm shadow-gold/50"
+                                                        : "border-border bg-card group-hover:border-primary/50"
                                                 )}>
                                                     {isSelected && <CheckCircle2 size={12} className="text-background" />}
                                                 </div>
@@ -927,9 +942,9 @@ export default function ResearchPage() {
                                                 className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10 p-1.5 rounded-lg hover:bg-muted transition-colors touch-manipulation"
                                             >
                                                 {isSaved ? (
-                                                    <BookmarkCheck size={16} className="text-gold fill-gold" />
+                                                    <BookmarkCheck size={16} className="text-primary fill-gold" />
                                                 ) : (
-                                                    <Bookmark size={16} className="text-muted-foreground group-hover:text-gold transition-colors" />
+                                                    <Bookmark size={16} className="text-muted-foreground group-hover:text-primary transition-colors" />
                                                 )}
                                             </button>
 
@@ -966,7 +981,7 @@ export default function ResearchPage() {
                                             </div>
 
                                             <button
-                                                className="w-full flex items-center justify-center gap-2 bg-muted border border-border rounded-xl py-2.5 text-xs font-bold text-muted-foreground group-hover:bg-gold/10 group-hover:border-gold/30 group-hover:text-gold transition-all touch-manipulation"
+                                                className="w-full flex items-center justify-center gap-2 bg-muted border border-border rounded-xl py-2.5 text-xs font-bold text-muted-foreground group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:text-primary transition-all touch-manipulation"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     window.location.href = `/dashboard/articles/new?keyword=${encodeURIComponent(idea.keyword)}`;
@@ -989,8 +1004,8 @@ export default function ResearchPage() {
                         {[
                             {
                                 icon: <CheckCircle2 size={17} />,
-                                color: "bg-gold/10",
-                                iconColor: "text-gold",
+                                color: "bg-primary/10",
+                                iconColor: "text-primary",
                                 title: "Local Search",
                                 body: "Add city or country names to find hyper-local content opportunities with less competition.",
                             },

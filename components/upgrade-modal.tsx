@@ -20,42 +20,34 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
       onClick={onClose}
     >
       <div
-        className="rounded-2xl border max-w-2xl w-full card-premium overflow-hidden"
-        style={{
-          borderColor: "rgba(245,166,35,0.3)",
-          background: "var(--surface-1)",
-        }}
+        className="rounded-2xl border border-[rgba(99,102,241,0.3)] max-w-2xl w-full bg-card overflow-hidden shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
         <div
           className="relative p-8 pb-6"
           style={{
-            background: "linear-gradient(135deg, rgba(245,166,35,0.15) 0%, rgba(0,217,180,0.1) 100%)",
+            background: "linear-gradient(135deg, rgba(99,102,241,0.15) 0%, rgba(34,211,238,0.1) 100%)",
           }}
         >
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 rounded-lg transition-colors"
-            style={{ color: "var(--text-3)" }}
-            onMouseEnter={(e) => (e.currentTarget.style.color = "var(--text-1)")}
-            onMouseLeave={(e) => (e.currentTarget.style.color = "var(--text-3)")}
+            className="absolute top-4 right-4 p-2 rounded-lg transition-colors text-muted-foreground hover:text-foreground"
           >
             <X className="h-5 w-5" />
           </button>
 
           <div className="flex items-center gap-3 mb-3">
             <div
-              className="flex h-12 w-12 items-center justify-center rounded-xl shadow-gold"
-              style={{ background: "var(--gold)", color: "#0a0700" }}
+              className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366f1] to-[#22d3ee] shadow-lg shadow-[#6366f1]/30"
             >
-              <Crown className="h-6 w-6" />
+              <Crown className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="font-display text-2xl font-bold" style={{ color: "var(--text-1)" }}>
+              <h2 className="text-2xl font-black text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
                 Upgrade to Pro
               </h2>
-              <p className="text-sm" style={{ color: "var(--text-2)" }}>
+              <p className="text-sm text-muted-foreground">
                 {reason || "Unlock unlimited potential"}
               </p>
             </div>
@@ -67,21 +59,17 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
           <div className="grid md:grid-cols-2 gap-6 mb-8">
             {/* Starter */}
             <div
-              className="rounded-xl border p-6"
-              style={{
-                borderColor: "rgba(255,255,255,0.06)",
-                background: "var(--surface-2)",
-              }}
+              className="rounded-xl border border-border p-6 bg-card/50"
             >
               <div className="mb-4">
-                <h3 className="font-display text-lg font-bold mb-1" style={{ color: "var(--text-1)" }}>
+                <h3 className="text-lg font-bold mb-1 text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
                   Starter
                 </h3>
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-bold" style={{ color: "var(--text-1)" }}>
+                  <span className="text-3xl font-black text-foreground">
                     $29
                   </span>
-                  <span className="font-mono-dm text-xs" style={{ color: "var(--text-3)" }}>
+                  <span className="font-mono text-xs text-muted-foreground">
                     /month
                   </span>
                 </div>
@@ -94,8 +82,8 @@ export function UpgradeModal({ isOpen, onClose, reason }: UpgradeModalProps) {
                   "WordPress publishing",
                   "Email support",
                 ].map((feature, i) => (
-                  <li key={i} className="flex items-center gap-2 text-sm" style={{ color: "var(--text-2)" }}>
-                    <Check className="h-4 w-4 flex-shrink-0" style={{ color: "var(--teal)" }} />
+                  <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 flex-shrink-0 text-[#22d3ee]" />
                     {feature}
                   </li>
                 ))}

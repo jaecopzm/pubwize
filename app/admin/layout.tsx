@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged, type User } from "firebase/auth";
-import { getFirebaseAuth } from "@/lib/firebase-client";
+import { useUser } from "@clerk/nextjs";
 import { Shield, Users, Zap, Mail, BarChart3, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,21 +20,23 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
   const [checking, setChecking] = useState(true);
 
+  const { user, isLoaded } = useUser();
+
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    return onAuthStateChanged(auth, async (user: User | null) => {
+    if (isLoaded) {
       if (!user) {
-        router.replace("/auth/signin");
+        router.replace("/sign-in");
         return;
       }
-      const token = await user.getIdTokenResult();
-      if (!token.claims.admin) {
+      
+      if (user.publicMetadata?.admin !== true) {
         router.replace("/dashboard");
         return;
       }
+      
       setChecking(false);
-    });
-  }, [router]);
+    }
+  }, [user, isLoaded, router]);
 
   if (checking) {
     return (

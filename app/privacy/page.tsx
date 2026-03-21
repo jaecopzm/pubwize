@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       {/* Content */}
       <div className="max-w-4xl mx-auto px-6 py-16">
         <h1 className="text-4xl font-bold font-display mb-4" style={{ color: 'var(--text-1)' }}>Privacy Policy</h1>
-        <p className="text-sm mb-12" style={{ color: 'var(--text-3)' }}>Last updated: March 9, 2026</p>
+        <p className="text-sm mb-12" style={{ color: 'var(--text-3)' }}>Last updated: March 21, 2026</p>
 
         <div className="space-y-8 prose prose-invert max-w-none">
           <section>
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
               We collect information you provide directly to us when you create an account, request customer support, or purchase a subscription. This includes your name, email address, website URLs, and the content drafts you generate.
             </p>
             <p className="mt-2" style={{ color: 'var(--text-2)' }}>
-              We do not directly collect or store your full credit card information. Payments are processed securely via our Merchant of Record, Dodo Payments.
+              We do not directly collect or store your full credit card information. Payments are processed securely via our Merchant of Record, Paddle.com.
             </p>
           </section>
 
@@ -58,7 +58,8 @@ export default function PrivacyPage() {
                 <strong>AI Partners (Google Gemini, OpenAI via OpenRouter):</strong> We pass your queries, outlines, and partial drafts to these APIs. <strong>Your data is strictly processed and is never used to train their foundational models.</strong>
               </li>
               <li>
-                <strong>Payment Processor (Dodo Payments):</strong> Our order process is conducted by our payment partner Dodo Payments, the Merchant of Record. Dodo processes your personal and financial data to fulfill orders, handle taxes, and prevent fraud.
+                <strong>Payment Processor (Paddle.com):</strong> Our order process is conducted by our online reseller Paddle.com, the Merchant of Record. Paddle processes your personal and financial data to fulfill orders, handle taxes, and prevent fraud. See{" "}
+                <a href="https://www.paddle.com/legal/privacy" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">Paddle&apos;s Privacy Policy</a>.
               </li>
               <li>
                 <strong>Database & Authentication (Google Firebase/GCP):</strong> Used to securely store your user credentials and saved article drafts.
@@ -111,7 +112,8 @@ export default function PrivacyPage() {
                 Zambia</p>
             </div>
             <p className="mt-4" style={{ color: 'var(--text-2)' }}>
-              For queries related to your payment data processing, please contact our Merchant of Record, Dodo Payments.
+              For queries related to your payment data processing, please contact our Merchant of Record, Paddle, at{" "}
+              <a href="https://paddle.net" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">paddle.net</a>.
             </p>
           </section>
         </div>

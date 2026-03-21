@@ -18,48 +18,48 @@ export function ArticleStats({
   idealDensity,
 }: ArticleStatsProps) {
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3">
-      <div className="rounded-xl border border-gold/20 bg-gold/5 p-2.5 sm:p-3">
-        <div className="text-[10px] sm:text-xs font-mono-dm mb-1 text-text-3">Words</div>
-        <div className="text-base sm:text-lg font-bold font-mono-dm text-gold" key={wordCount}>
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className="rounded-xl border border-[rgba(99,102,241,0.2)] bg-[rgba(99,102,241,0.05)] p-3">
+        <div className="text-xs font-mono mb-1 text-muted-foreground">Words</div>
+        <div className="text-lg font-bold font-mono text-[#818cf8]" key={wordCount}>
           {wordCount.toLocaleString()}
         </div>
       </div>
 
-      <div className="rounded-xl border border-teal/20 bg-teal/5 p-2.5 sm:p-3">
-        <div className="text-[10px] sm:text-xs font-mono-dm mb-1 text-text-3">Readability</div>
+      <div className="rounded-xl border border-[rgba(34,211,238,0.2)] bg-[rgba(34,211,238,0.05)] p-3">
+        <div className="text-xs font-mono mb-1 text-muted-foreground">Readability</div>
         <div
-          className="text-base sm:text-lg font-bold font-mono-dm"
+          className="text-lg font-bold font-mono"
           style={{ color: readabilityColor }}
           key={readabilityScore}
         >
           {readabilityScore}
         </div>
-        <div className="text-[9px] sm:text-[10px] font-mono-dm mt-0.5 text-text-3">
+        <div className="text-[10px] font-mono mt-0.5 text-muted-foreground">
           {readabilityLabel}
         </div>
       </div>
 
       <div
-        className="rounded-xl border p-2.5 sm:p-3"
+        className="rounded-xl border p-3"
         style={{
-          borderColor: idealDensity ? 'rgba(0,217,180,0.2)' : 'rgba(255,107,107,0.2)',
-          background: idealDensity ? 'rgba(0,217,180,0.05)' : 'rgba(255,107,107,0.05)',
+          borderColor: idealDensity ? 'rgba(34,211,238,0.2)' : 'rgba(244,63,94,0.2)',
+          background: idealDensity ? 'rgba(34,211,238,0.05)' : 'rgba(244,63,94,0.05)',
         }}
       >
-        <div className="text-[10px] sm:text-xs font-mono-dm mb-1 text-text-3">Keyword</div>
+        <div className="text-xs font-mono mb-1 text-muted-foreground">Keyword</div>
         <div
-          className="text-base sm:text-lg font-bold font-mono-dm"
-          style={{ color: idealDensity ? 'var(--teal)' : '#ff6b6b' }}
+          className="text-lg font-bold font-mono"
+          style={{ color: idealDensity ? '#22d3ee' : '#f43f5e' }}
           key={keywordDensity}
         >
           {keywordDensity}%
         </div>
       </div>
 
-      <div className="rounded-xl border border-gold/20 bg-gold/5 p-2.5 sm:p-3">
-        <div className="text-[10px] sm:text-xs font-mono-dm mb-1 text-text-3">Read Time</div>
-        <div className="text-base sm:text-lg font-bold font-mono-dm text-gold" key={wordCount}>
+      <div className="rounded-xl border border-[rgba(167,139,250,0.2)] bg-[rgba(167,139,250,0.05)] p-3">
+        <div className="text-xs font-mono mb-1 text-muted-foreground">Read Time</div>
+        <div className="text-lg font-bold font-mono text-[#a78bfa]" key={wordCount}>
           {Math.ceil(wordCount / 200)} min
         </div>
       </div>

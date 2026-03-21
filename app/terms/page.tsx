@@ -22,7 +22,7 @@ export default function TermsPage() {
       {/* Content */}
       <div className="max-w-4xl mx-auto px-6 py-16">
         <h1 className="text-4xl font-bold font-display mb-4" style={{ color: 'var(--text-1)' }}>Terms of Service</h1>
-        <p className="text-sm mb-12" style={{ color: 'var(--text-3)' }}>Last updated: March 9, 2026</p>
+        <p className="text-sm mb-12" style={{ color: 'var(--text-3)' }}>Last updated: March 21, 2026</p>
 
         <div className="space-y-8 prose prose-invert max-w-none">
           <section>
@@ -56,7 +56,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-1)' }}>5. Merchant of Record, Billing & Subscriptions</h2>
             <p style={{ color: 'var(--text-2)' }}>
-              Our order process is conducted by our payment partner, Dodo Payments. Dodo Payments is the Merchant of Record for all our orders and handles customer service inquiries regarding returns and billing.
+              Our order process is conducted by our online reseller Paddle.com. Paddle.com is the Merchant of Record for all our orders. Paddle provides all customer service inquiries and handles returns.
             </p>
             <p className="mt-3" style={{ color: 'var(--text-2)' }}>
               Paid plans (Starter and Pro) include a <strong>7-day free trial</strong>. You will not be charged until the trial ends, and you may cancel at any time prior. Subscriptions auto-renew monthly or annually based on your selection.
@@ -93,7 +93,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-1)' }}>8. Governing Law & Jurisdiction</h2>
             <p style={{ color: 'var(--text-2)' }}>
-              These Terms and your use of the service shall be governed by and construed in accordance with the laws of the State of Delaware, United States, without giving effect to any principles of conflicts of law. Any disputes relating to the purchase or processing of payments shall be subject to terms specified by our Merchant of Record, Dodo Payments.
+              These Terms and your use of the service shall be governed by and construed in accordance with the laws of the State of Delaware, United States, without giving effect to any principles of conflicts of law. Any disputes relating to the purchase or processing of payments shall be subject to terms specified by our Merchant of Record, Paddle.com.
             </p>
           </section>
 
@@ -111,7 +111,8 @@ export default function TermsPage() {
                 Zambia</p>
             </div>
             <p className="mt-4" style={{ color: 'var(--text-2)' }}>
-              For payment or billing queries, please contact Dodo Payments support.
+              For payment or billing queries, please contact Paddle support at{" "}
+              <a href="https://paddle.net" target="_blank" rel="noopener noreferrer" className="text-gold hover:underline">paddle.net</a>.
             </p>
           </section>
         </div>

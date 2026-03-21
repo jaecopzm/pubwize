@@ -3,19 +3,15 @@
 import { Check, Zap, Crown, Gift, Clock, Shield } from "lucide-react";
 import { PLANS, formatPrice, getAnnualSavings, type PlanTier } from "@/lib/pricing";
 import { useState, useTransition } from "react";
-import { getDodoPriceId } from "@/lib/dodo";
-import { createDodoCheckoutSession } from "@/app/actions/dodo";
+import { getPaddlePriceId } from "@/lib/paddle";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 interface PricingCardsProps {
   currentPlan?: PlanTier;
-  /** Falls back to Dodo checkout if not provided */
   onSelectPlan?: (plan: PlanTier, isAnnual: boolean) => void;
-  /** If provided, will be attached to the Dodo checkout as the customer email */
   customerEmail?: string;
-  /** Called when a Dodo payment is successful */
   onSuccess?: () => void;
 }
 
@@ -33,7 +29,7 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
       return;
     }
 
-    // Always open Dodo checkout for paid plans
+    // Always open Paddle checkout for paid plans
     if (onSelectPlan) {
       onSelectPlan(planId, billingCycle === 'annual');
       return;
@@ -49,22 +45,24 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
 
     startTransition(async () => {
       try {
-        const priceId = getDodoPriceId(
-          planId as 'starter' | 'pro',
-          billingCycle
-        );
-        const result = await createDodoCheckoutSession({
-          priceId,
-          customerEmail: customerEmail || user?.email || undefined,
-          userId: user?.uid,
-        });
-
-        if (result.success && result.url) {
-          if (onSuccess) onSuccess(); // Signal intent before redirect
-          window.location.href = result.url;
-        } else {
-          toast.error(result.error || "Could not initialize checkout.");
+        if (!window.Paddle) {
+          toast.error("Payment system not loaded. Please refresh the page.");
+          return;
         }
+
+        const priceId = getPaddlePriceId(planId as 'starter' | 'pro', billingCycle);
+        
+        window.Paddle.Checkout.open({
+          items: [{ priceId, quantity: 1 }],
+          settings: {
+            displayMode: "overlay",
+            successUrl: `${window.location.origin}/dashboard/settings?tab=billing&success=true`,
+          },
+          customData: user?.uid ? { userId: user.uid } : undefined,
+          customer: customerEmail || user?.email ? { email: customerEmail || user?.email } : undefined,
+        });
+        
+        if (onSuccess) onSuccess();
       } catch (err) {
         toast.error("An unexpected error occurred.");
         console.error('[PricingCards] Could not open checkout:', err);
@@ -258,7 +256,7 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
           All plans include WordPress publishing, social media repurposing, content calendar, and SEO optimization.
         </p>
         <p className="text-xs sm:text-sm text-text-3 mb-2">
-          Payments securely processed by Dodo Payments — our authorised Merchant of Record.
+        Payments securely processed by Paddle.com — our authorised Merchant of Record.
         </p>
         <p className="text-xs sm:text-sm text-text-3">
           Need more?{" "}

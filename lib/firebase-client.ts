@@ -1,16 +1,17 @@
 import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
 import {
-  getAuth,
-  type Auth,
-} from "firebase/auth";
-import {
   getFirestore,
   type Firestore,
 } from "firebase/firestore";
 
 let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
 let db: Firestore | undefined;
+
+declare global {
+  interface Window {
+    Clerk: any;
+  }
+}
 
 export function getFirebaseApp(): FirebaseApp {
   if (app) return app;
@@ -33,10 +34,47 @@ export function getFirebaseApp(): FirebaseApp {
   return app;
 }
 
-export function getFirebaseAuth(): Auth {
-  if (auth) return auth;
-  auth = getAuth(getFirebaseApp());
-  return auth;
+// Map Clerk to the existing Firebase Auth interface so components don't break
+export function getFirebaseAuth(): any {
+  if (typeof window !== "undefined" && window.Clerk) {
+    const user = window.Clerk.user;
+    
+    const mappedUser = user ? {
+      uid: user.id,
+      email: user.primaryEmailAddress?.emailAddress,
+      displayName: user.fullName || "",
+      photoURL: user.imageUrl || "",
+      getIdToken: async () => await window.Clerk.session?.getToken(),
+    } : null;
+
+    return {
+      currentUser: mappedUser,
+      signOut: async () => await window.Clerk.signOut(),
+      onAuthStateChanged: (callback: any) => {
+        // Fire initially
+        callback(mappedUser);
+        
+        // Listen for changes
+        window.Clerk.addListener(({ user: newUser }: any) => {
+          callback(newUser ? {
+            uid: newUser.id,
+            email: newUser.primaryEmailAddress?.emailAddress,
+            displayName: newUser.fullName || "",
+            photoURL: newUser.imageUrl || "",
+            getIdToken: async () => await window.Clerk.session?.getToken(),
+          } : null);
+        });
+        
+        return () => {}; // return dummy unsubscribe
+      }
+    };
+  }
+  
+  return { 
+    currentUser: null,
+    signOut: async () => {},
+    onAuthStateChanged: (cb: any) => { cb(null); return () => {}; }
+  };
 }
 
 export function getFirestoreDb(): Firestore {

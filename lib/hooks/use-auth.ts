@@ -2,53 +2,37 @@
  * Client-side authentication hook
  */
 
-import { useState, useEffect } from "react";
-import { getFirebaseAuth } from "@/lib/firebase-client";
-import type { User } from "firebase/auth";
+import { useUser, useAuth as useClerkAuth } from "@clerk/nextjs";
 
 export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [idToken, setIdToken] = useState<string | null>(null);
+  const { user: clerkUser, isLoaded } = useUser();
+  const { getToken } = useClerkAuth();
 
-  useEffect(() => {
-    const auth = getFirebaseAuth();
-    
-    const unsubscribe = auth.onAuthStateChanged(async (user) => {
-      setUser(user);
-      
-      if (user) {
-        // Get ID token for API requests
-        const token = await user.getIdToken();
-        setIdToken(token);
-      } else {
-        setIdToken(null);
-      }
-      
-      setLoading(false);
-    });
+  const user = clerkUser ? {
+    uid: clerkUser.id,
+    email: clerkUser.primaryEmailAddress?.emailAddress || "",
+    displayName: clerkUser.fullName || "",
+    photoURL: clerkUser.imageUrl || "",
+    getIdToken: async () => await getToken(),
+  } : null;
 
-    return () => unsubscribe();
-  }, []);
-
-  return { user, loading, idToken };
+  return { 
+    user, 
+    loading: !isLoaded,
+    idToken: null // Components usually call user.getIdToken() directly
+  };
 }
 
 /**
  * Get auth headers for API requests
  */
 export async function getAuthHeaders(): Promise<HeadersInit> {
-  const auth = getFirebaseAuth();
-  const user = auth.currentUser;
-
-  if (!user) {
-    return {};
+  if (typeof window !== 'undefined' && window.Clerk && window.Clerk.session) {
+    const token = await window.Clerk.session.getToken();
+    return {
+      "Authorization": `Bearer ${token}`,
+      "Content-Type": "application/json",
+    };
   }
-
-  const token = await user.getIdToken();
-  
-  return {
-    "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json",
-  };
+  return {};
 }

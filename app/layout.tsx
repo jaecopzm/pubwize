@@ -1,5 +1,7 @@
+import { ClerkProvider } from "@clerk/nextjs";
+import { dark } from "@clerk/themes";
 import type { Metadata } from "next";
-import { Manrope, DM_Mono, DM_Serif_Display } from "next/font/google";
+import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -8,43 +10,37 @@ import { SWRProvider } from "@/components/performance/swr-provider";
 import { WebVitalsReporter } from "@/components/performance/web-vitals-reporter";
 import { ResourceHints } from "@/components/performance/resource-hints";
 import { GoogleAnalytics } from "@/components/google-analytics";
+import { PaddleProvider } from "@/components/paddle-provider";
 
-const manrope = Manrope({
-  variable: "--font-manrope",
+const plusJakarta = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800"],
 });
 
-const dmMono = DM_Mono({
-  variable: "--font-dm-mono",
+const jetbrainsMono = JetBrains_Mono({
+  variable: "--font-jetbrains-mono",
   subsets: ["latin"],
   weight: ["400", "500"],
 });
 
-const dmSerif = DM_Serif_Display({
-  variable: "--font-dm-serif",
-  subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
-});
-
 export const metadata: Metadata = {
   title: {
-    default: "Pubwize - AI-Powered SEO Content Platform",
+    default: "Pubwize — AI-Powered SEO Content That Actually Ranks",
     template: "%s | Pubwize"
   },
-  description: "Create rank-ready articles in minutes with AI. From keyword research to WordPress publishing - all in one platform. Start free, no credit card required.",
+  description: "Generate full SEO-optimized articles in under 90 seconds. From keyword research to WordPress publishing — all in one AI-first content platform. Start free today.",
   keywords: [
-    "AI content writing",
-    "SEO content generator",
-    "WordPress publishing",
-    "content marketing",
+    "AI SEO content",
     "AI article writer",
-    "SEO optimization",
-    "content automation",
-    "blog post generator",
-    "keyword research",
-    "content calendar"
+    "SEO content generator",
+    "WordPress AI publishing",
+    "content marketing automation",
+    "AI blog writer",
+    "keyword research tool",
+    "topical authority",
+    "programmatic SEO",
+    "AI content platform",
   ],
   authors: [{ name: "Pubwize" }],
   creator: "Pubwize",
@@ -54,22 +50,22 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: "/",
-    title: "Pubwize - AI-Powered SEO Content Platform",
-    description: "Create rank-ready articles in minutes with AI. From keyword research to WordPress publishing - all in one platform.",
+    title: "Pubwize — AI-Powered SEO Content That Actually Ranks",
+    description: "Generate full SEO-optimized articles in under 90 seconds. From keyword research to WordPress publishing — all in one AI-first content platform.",
     siteName: "Pubwize",
     images: [
       {
         url: "/pubwize-social-img.png",
         width: 1200,
         height: 630,
-        alt: "Pubwize - AI-Powered SEO Content Platform"
+        alt: "Pubwize AI Content Platform"
       }
     ]
   },
   twitter: {
     card: "summary_large_image",
-    title: "Pubwize - AI-Powered SEO Content Platform",
-    description: "Create rank-ready articles in minutes with AI. From keyword research to WordPress publishing - all in one platform.",
+    title: "Pubwize — AI-Powered SEO Content That Actually Ranks",
+    description: "Generate full SEO-optimized articles in under 90 seconds. Start free today.",
     images: ["/pubwize-social-img.png"],
     creator: "@pubwize"
   },
@@ -105,28 +101,32 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${manrope.variable} ${dmMono.variable} ${dmSerif.variable} antialiased`}
-        style={{ fontFamily: 'var(--font-manrope), sans-serif' }}
+    <ClerkProvider appearance={{ baseTheme: dark }}>
+      <html lang="en" suppressHydrationWarning>
+        <body
+        className={`${plusJakarta.variable} ${jetbrainsMono.variable} antialiased`}
+        style={{ fontFamily: 'var(--font-plus-jakarta), "Plus Jakarta Sans", sans-serif' }}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="dark"
+          enableSystem={false}
           disableTransitionOnChange
         >
-          <SWRProvider>
-            <ErrorBoundary>
-              {children}
-            </ErrorBoundary>
-          </SWRProvider>
-          <Toaster position="top-right" expand={false} richColors />
+          <PaddleProvider>
+            <SWRProvider>
+              <ErrorBoundary>
+                {children}
+              </ErrorBoundary>
+            </SWRProvider>
+            <Toaster position="top-right" expand={false} richColors />
+          </PaddleProvider>
         </ThemeProvider>
         <WebVitalsReporter />
         <ResourceHints />
         <GoogleAnalytics />
       </body>
     </html>
+    </ClerkProvider>
   );
 }

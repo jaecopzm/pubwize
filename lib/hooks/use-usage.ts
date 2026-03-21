@@ -18,6 +18,7 @@ export interface UsageData {
     aiImprovementsUsed: number;
     sectionRegenerationsUsed: number;
     rolloverArticles: number;
+    socialGenerationsUsed?: number;
   };
   periodStart: Date;
   periodEnd: Date;

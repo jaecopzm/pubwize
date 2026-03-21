@@ -6,7 +6,7 @@ import { CreditCard, Calendar, AlertCircle, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { createDodoCustomerPortalSession } from "@/app/actions/dodo";
+import { createPaddleCustomerPortalSession } from "@/app/actions/paddle";
 
 interface BillingManagementProps {
   customerId?: string;
@@ -72,7 +72,7 @@ export function BillingManagement({
     if (!customerId) return;
 
     try {
-      const result = await createDodoCustomerPortalSession(customerId);
+      const result = await createPaddleCustomerPortalSession(customerId);
       if (result.success && result.url) {
         window.location.href = result.url;
       } else {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
 import { getFirebaseAuth } from "@/lib/firebase-client";
 import {
   User,
@@ -23,8 +24,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { WordPressConnectionDialog, WordPressSitesList } from "@/components/wordpress";
 import { PricingCards } from "@/components/pricing";
 import { BillingManagement } from "@/components/billing-management";
-import { getDodoPriceId } from "@/lib/dodo";
-import { createDodoCheckoutSession, createDodoCustomerPortalSession } from "@/app/actions/dodo";
+import { getPaddlePriceId } from "@/lib/paddle";
+import { createPaddleCheckoutSession, createPaddleCustomerPortalSession } from "@/app/actions/paddle";
 import { toast } from "sonner";
 import { useTransition } from "react";
 import type { WordPressSite, PlanTier } from "@/lib/types";
@@ -47,8 +48,8 @@ interface CurrentUser {
   planStatus?: string;
   articleCountThisPeriod?: number;
   createdAt?: string;
-  dodoCustomerId?: string;
-  dodoSubscriptionId?: string;
+  paddleCustomerId?: string;
+  paddleSubscriptionId?: string;
   status?: string;
   currentPeriodEnd?: string;
 }
@@ -65,13 +66,6 @@ function SettingsContent() {
   const [loadingSites, setLoadingSites] = useState(false);
   const [showWordPressDialog, setShowWordPressDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [isChangingPassword, setIsChangingPassword] = useState(false);
-  const [isEmailProvider, setIsEmailProvider] = useState(false);
 
   useEffect(() => {
     const auth = getFirebaseAuth();
@@ -82,7 +76,6 @@ function SettingsContent() {
         displayName: currentUser.displayName || undefined,
         createdAt: currentUser.metadata.creationTime,
       });
-      setIsEmailProvider(currentUser.providerData.some(p => p.providerId === "password"));
       fetchUserPlan();
       fetchWordPressSites();
     }
@@ -108,18 +101,27 @@ function SettingsContent() {
       try {
         startTransition(async () => {
           const auth = getFirebaseAuth();
-          // Fix #5: use Firebase UID, not email
           const uid = auth.currentUser?.uid;
           if (!uid) return;
-          const priceId = getDodoPriceId(checkoutPlan as 'starter' | 'pro', checkoutBilling || 'monthly');
-          const result = await createDodoCheckoutSession({ priceId, customerEmail: user.email, userId: uid });
-          if (result.success && result.url) {
-            window.location.href = result.url;
-          } else {
-            toast.error(result.error || "Checkout failed to initialize.");
+          
+          if (!window.Paddle) {
+            toast.error("Payment system not loaded. Please refresh the page.");
+            return;
           }
+
+          const priceId = getPaddlePriceId(checkoutPlan as 'starter' | 'pro', checkoutBilling || 'monthly');
+          
+          window.Paddle.Checkout.open({
+            items: [{ priceId, quantity: 1 }],
+            settings: {
+              displayMode: "overlay",
+              successUrl: `${window.location.origin}/dashboard/settings?tab=billing&success=true`,
+            },
+            customData: { userId: uid },
+            customer: { email: user.email },
+          });
         });
-        router.replace('/dashboard/settings');
+        router.replace('/dashboard/settings?tab=billing');
       } catch (err) {
         console.error("Failed to auto-open checkout", err);
       }
@@ -149,8 +151,8 @@ function SettingsContent() {
           planTier: data.plan || data.planTier || "free",
           planStatus: "active",
           articleCountThisPeriod: data.usage?.articlesUsed || data.articleCountThisPeriod || 0,
-          dodoCustomerId: data.dodoCustomerId,
-          dodoSubscriptionId: data.dodoSubscriptionId,
+          paddleCustomerId: data.paddleCustomerId,
+          paddleSubscriptionId: data.paddleSubscriptionId,
           status: data.status,
           currentPeriodEnd: data.currentPeriodEnd,
         } : null);
@@ -224,14 +226,14 @@ function SettingsContent() {
   const daysUntilReset = Math.ceil((nextMonth.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
   const handleManageSubscription = async () => {
-    if (!user?.dodoCustomerId) {
+    if (!user?.paddleCustomerId) {
       toast.error("Subscription not ready yet. Please refresh the page.");
       return;
     }
 
     startTransition(async () => {
       try {
-        const result = await createDodoCustomerPortalSession(user.dodoCustomerId!);
+        const result = await createPaddleCustomerPortalSession(user.paddleCustomerId!, user.paddleSubscriptionId);
         if (result.success && result.url) {
           window.location.href = result.url;
         } else {
@@ -244,156 +246,90 @@ function SettingsContent() {
     });
   };
 
-  const handleDeleteAccount = async () => {
-    setIsDeleting(true);
-    try {
-      const auth = getFirebaseAuth();
-      const currentUser = auth.currentUser;
-      
-      if (!currentUser) {
-        toast.error("Not authenticated");
-        return;
-      }
 
-      const token = await currentUser.getIdToken();
-      
-      const response = await fetch("/api/user/delete", {
-        method: "DELETE",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-      });
-
-      if (response.ok) {
-        toast.success("Account deleted successfully");
-        await auth.signOut();
-        router.push("/");
-      } else {
-        const data = await response.json();
-        toast.error(data.error || "Failed to delete account");
-      }
-    } catch (error) {
-      console.error("Error deleting account:", error);
-      toast.error("Failed to delete account");
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteDialog(false);
-    }
-  };
-
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords don't match");
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
-    }
-
-    setIsChangingPassword(true);
-    try {
-      const auth = getFirebaseAuth();
-      const currentUser = auth.currentUser;
-      
-      if (!currentUser) {
-        toast.error("Not authenticated");
-        return;
-      }
-
-      const token = await currentUser.getIdToken();
-      
-      const response = await fetch("/api/user/change-password", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ newPassword }),
-      });
-
-      if (response.ok) {
-        toast.success("Password changed successfully");
-        setShowPasswordDialog(false);
-        setNewPassword("");
-        setConfirmPassword("");
-      } else {
-        const data = await response.json();
-        toast.error(data.error || "Failed to change password");
-      }
-    } catch (error) {
-      console.error("Error changing password:", error);
-      toast.error("Failed to change password");
-    } finally {
-      setIsChangingPassword(false);
-    }
-  };
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto aurora-bg noise-overlay min-h-screen">
+    <div className="p-4 md:p-6 lg:p-8 max-w-6xl mx-auto min-h-screen">
       {/* Header */}
-      <div className="mb-6 lg:mb-10 relative z-10">
-        <h1 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-foreground">
-          Account <span className="gradient-gold-teal">Settings</span>
-        </h1>
-        <p className="mt-1 sm:mt-2 text-sm text-muted-foreground">
-          Manage your account and subscription.
-        </p>
-      </div>
+      <motion.div 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="mb-10 relative"
+      >
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-cyan-500/5 blur-3xl -z-10" />
+        <div className="flex items-center gap-3">
+          <motion.div 
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center shadow-lg shadow-primary/20"
+          >
+            <User className="h-6 w-6 text-white" />
+          </motion.div>
+          <div>
+            <h1 className="text-4xl font-black tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+              Account <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">Settings</span>
+            </h1>
+            <p className="text-sm text-muted-foreground font-medium">
+              Manage your account and subscription.
+            </p>
+          </div>
+        </div>
+      </motion.div>
 
       {/* Tabs Navigation */}
-      <div className="mb-6 lg:mb-8 relative z-10">
+      <div className="mb-8 relative z-10">
         <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide pb-1 border-b border-border">
-          <button
-            onClick={() => setActiveTab('account')}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all whitespace-nowrap",
-              activeTab === 'account'
-                ? "bg-card text-foreground border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            )}
-          >
-            <User className="h-4 w-4" />
-            <span className="hidden sm:inline">Account</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('billing')}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all whitespace-nowrap",
-              activeTab === 'billing'
-                ? "bg-card text-foreground border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            )}
-          >
-            <BarChart3 className="h-4 w-4" />
-            <span className="hidden sm:inline">Billing & Usage</span>
-            <span className="sm:hidden">Billing</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('integrations')}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-t-lg transition-all whitespace-nowrap",
-              activeTab === 'integrations'
-                ? "bg-card text-foreground border-b-2 border-primary"
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
-            )}
-          >
-            <Globe className="h-4 w-4" />
-            <span className="hidden sm:inline">Integrations</span>
-          </button>
+          {[
+            { id: 'account', label: 'Account', icon: User },
+            { id: 'billing', label: 'Billing & Usage', shortLabel: 'Billing', icon: BarChart3 },
+            { id: 'integrations', label: 'Integrations', icon: Globe },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <motion.button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as SettingsTab)}
+                whileHover={{ y: -2 }}
+                whileTap={{ scale: 0.98 }}
+                className={cn(
+                  "flex items-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-t-xl transition-all whitespace-nowrap relative",
+                  activeTab === tab.id
+                    ? "bg-card text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                )}
+              >
+                <Icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden">{'shortLabel' in tab ? tab.shortLabel : tab.label}</span>
+                {activeTab === tab.id && (
+                  <motion.div
+                    layoutId="activeTab"
+                    className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-primary to-cyan-500"
+                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
+                  />
+                )}
+              </motion.button>
+            );
+          })}
         </div>
       </div>
 
-      <div className="space-y-6 lg:space-y-8 relative z-10">
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -20 }}
+          transition={{ duration: 0.3 }}
+          className="space-y-6 lg:space-y-8 relative z-10"
+        >
         {/* Account Tab */}
         {activeTab === 'account' && (
           <>
             {/* Account info */}
             <section className="card-premium rounded-xl lg:rounded-2xl border border-border bg-card p-4 lg:p-6">
               <div className="mb-4 lg:mb-5 flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gold/15 text-gold">
+                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
                   <User className="h-4 w-4" />
                 </div>
                 <h2 className="font-display text-base lg:text-lg font-semibold text-foreground">Account Information</h2>
@@ -427,7 +363,7 @@ function SettingsContent() {
                   <div className="text-center sm:text-left">
                     <p className="font-mono-dm text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Status</p>
                     <div className="flex items-center justify-center sm:justify-start gap-1.5">
-                      <CheckCircle2 className="h-4 w-4 text-teal" />
+                      <CheckCircle2 className="h-4 w-4 text-cyan-500" />
                       <span className="text-sm font-semibold text-foreground">Active</span>
                     </div>
                   </div>
@@ -445,7 +381,7 @@ function SettingsContent() {
                   </div>
                   <div className="text-center sm:text-left col-span-2 sm:col-span-1">
                     <p className="font-mono-dm text-[10px] text-muted-foreground uppercase tracking-wider mb-1">Plan</p>
-                    <span className="badge-gold text-[10px] inline-flex">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary text-[10px] inline-flex">
                       {currentTier === "pro" && <Crown className="h-3 w-3 mr-1" />}
                       {currentTier}
                     </span>
@@ -454,54 +390,24 @@ function SettingsContent() {
               </div>
             </section>
 
-            {/* Security Section */}
+            {/* Security Section managed by Clerk */}
             <section className="card-premium rounded-xl lg:rounded-2xl border border-border bg-card p-4 lg:p-6">
               <div className="mb-4 lg:mb-5 flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-lilac/15 text-lilac">
                   <Lock className="h-4 w-4" />
                 </div>
-                <h2 className="font-display text-base lg:text-lg font-semibold text-foreground">Security</h2>
+                <h2 className="font-display text-base lg:text-lg font-semibold text-foreground">Account Security & Data</h2>
               </div>
-              <div className="space-y-4">
-                {isEmailProvider && (
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/30">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-foreground">Password</p>
-                      <p className="font-mono-dm text-xs text-muted-foreground mt-0.5">Change your account password</p>
-                    </div>
-                    <button
-                      onClick={() => setShowPasswordDialog(true)}
-                      className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-foreground hover:border-primary/30 transition-all whitespace-nowrap"
-                    >
-                      Change
-                    </button>
-                  </div>
-                )}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/30 opacity-60">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-foreground">Two-Factor Authentication</p>
-                    <p className="font-mono-dm text-xs text-muted-foreground mt-0.5">Coming soon</p>
-                  </div>
-                  <button disabled className="px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-muted-foreground cursor-not-allowed whitespace-nowrap">
-                    Enable
-                  </button>
-                </div>
-              </div>
-            </section>
-
-            {/* Danger zone */}
-            <section className="card-premium rounded-xl lg:rounded-2xl border border-destructive/30 bg-card p-4 lg:p-6">
-              <h2 className="font-display mb-4 text-base font-semibold text-destructive">Danger Zone</h2>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-foreground">Delete Account</p>
-                  <p className="font-mono-dm text-xs text-muted-foreground">Permanently delete your account and all data. Irreversible.</p>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-lg bg-muted/30">
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-foreground">Manage Authentication</p>
+                  <p className="font-mono-dm text-xs text-muted-foreground mt-0.5">Change password, enable MFA, or delete your account securely via Clerk.</p>
                 </div>
                 <button
-                  onClick={() => setShowDeleteDialog(true)}
-                  className="rounded-lg border border-destructive/40 px-4 py-2 text-sm font-medium text-destructive bg-transparent hover:bg-destructive/10 transition-colors whitespace-nowrap"
+                  onClick={() => window.Clerk?.openUserProfile()}
+                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-all whitespace-nowrap shadow-md shadow-primary/20"
                 >
-                  Delete Account
+                  Manage Privacy
                 </button>
               </div>
             </section>
@@ -516,16 +422,16 @@ function SettingsContent() {
             {currentTier !== 'free' && (
               <section className="card-premium rounded-xl lg:rounded-2xl border border-border bg-card p-4 lg:p-8">
                 <div className="mb-4 lg:mb-6 flex items-start gap-3">
-                  <div className="flex h-10 w-10 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-xl lg:rounded-2xl bg-gold/15 text-gold shadow-inner">
+                  <div className="flex h-10 w-10 lg:h-12 lg:w-12 shrink-0 items-center justify-center rounded-xl lg:rounded-2xl bg-primary/15 text-primary shadow-inner">
                     <Crown className="h-5 w-5 lg:h-6 lg:w-6" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h2 className="font-display text-base lg:text-lg font-bold text-foreground">Subscription</h2>
-                      {user?.dodoCustomerId && (
+                      {user?.paddleCustomerId && (
                         <span className={cn(
                           "text-[10px] font-bold px-2 py-0.5 rounded-full border",
-                          user.status === 'active' ? "bg-teal/10 text-teal border-teal/30" :
+                          user.status === 'active' ? "bg-cyan-500/10 text-cyan-500 border-cyan-500/30" :
                           user.status === 'cancelled' ? "bg-muted text-muted-foreground border-border" :
                           user.status === 'on_hold' ? "bg-destructive/10 text-destructive border-destructive/30" :
                           "bg-muted text-muted-foreground border-border"
@@ -538,43 +444,43 @@ function SettingsContent() {
                       )}
                     </div>
                     <p className="font-mono-dm text-[10px] lg:text-xs text-muted-foreground mt-0.5">
-                      {!user?.dodoCustomerId && 'Processing — this usually takes 10–30 seconds'}
-                      {user?.dodoCustomerId && user.status === 'active' && user.currentPeriodEnd && (() => {
+                      {!user?.paddleCustomerId && 'Processing — this usually takes 10–30 seconds'}
+                      {user?.paddleCustomerId && user.status === 'active' && user.currentPeriodEnd && (() => {
                         const renewDate = new Date(user.currentPeriodEnd);
                         const isStale = renewDate < new Date();
                         return isStale
                           ? 'Renewal date pending sync...'
                           : `Renews ${renewDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`;
                       })()}
-                      {user?.dodoCustomerId && user.status === 'cancelled' && user.currentPeriodEnd &&
+                      {user?.paddleCustomerId && user.status === 'cancelled' && user.currentPeriodEnd &&
                         `Access until ${new Date(user.currentPeriodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`}
-                      {user?.dodoCustomerId && user.status === 'on_hold' && 'Update your payment method to restore access'}
+                      {user?.paddleCustomerId && user.status === 'on_hold' && 'Update your payment method to restore access'}
                     </p>
                   </div>
                 </div>
 
-                {user?.dodoCustomerId ? (
+                {user?.paddleCustomerId ? (
                   <button
                     onClick={handleManageSubscription}
                     disabled={isPending}
-                    className="btn-gold text-xs lg:text-sm px-3 py-2 lg:px-4 w-full disabled:opacity-50 mb-6"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all active:scale-95 text-xs lg:text-sm px-3 py-2 lg:px-4 w-full disabled:opacity-50 mb-6"
                   >
                     {isPending ? 'Loading...' : 'Manage Subscription'}
                   </button>
                 ) : (
-                  <div className="p-4 rounded-lg bg-teal/5 border border-teal/20 mb-6">
+                  <div className="p-4 rounded-lg bg-cyan-500/5 border border-cyan-500/20 mb-6">
                     <div className="flex items-center gap-2 mb-1">
-                      <div className="h-2 w-2 rounded-full bg-teal animate-pulse" />
+                      <div className="h-2 w-2 rounded-full bg-cyan-500 animate-pulse" />
                       <p className="text-sm font-medium text-foreground">Processing your subscription...</p>
                     </div>
                     <p className="text-xs text-muted-foreground">This usually takes 10–30 seconds.</p>
                   </div>
                 )}
 
-                {user?.dodoCustomerId && (
+                {user?.paddleCustomerId && (
                   <BillingManagement
-                    customerId={user.dodoCustomerId}
-                    subscriptionId={user.dodoSubscriptionId}
+                    customerId={user.paddleCustomerId}
+                    subscriptionId={user.paddleSubscriptionId}
                     currentPlan={currentTier}
                     currentPeriodEnd={user.currentPeriodEnd}
                     onCancelSuccess={fetchUserPlan}
@@ -587,15 +493,15 @@ function SettingsContent() {
             <section className="card-premium rounded-xl lg:rounded-2xl border border-border bg-card p-5 lg:p-8">
               <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-teal/15 text-teal shadow-inner">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-cyan-500/15 text-cyan-500 shadow-inner">
                     <FileText className="h-6 w-6" />
                   </div>
                   <div>
                     <h2 className="font-display text-lg lg:text-xl font-bold text-foreground">Usage this period</h2>
                     <div className="flex items-center gap-2 mt-0.5">
                       <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal/40 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-teal/60"></span>
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-500/40 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500/60"></span>
                       </span>
                       <p className="font-mono-dm text-[10px] sm:text-xs text-muted-foreground uppercase tracking-widest font-bold">Resets in {daysUntilReset} {daysUntilReset === 1 ? 'day' : 'days'}</p>
                     </div>
@@ -604,8 +510,8 @@ function SettingsContent() {
                 <div className="flex flex-col items-end gap-1.5">
                   <span
                     className={cn(
-                      "badge-gold py-1.5 px-3",
-                      currentTier === "pro" ? "bg-gold/15 text-gold border-gold/40" : "bg-teal/15 text-teal border-teal/40"
+                      "inline-flex items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary py-1.5 px-3",
+                      currentTier === "pro" ? "bg-primary/15 text-primary border-gold/40" : "bg-cyan-500/15 text-cyan-500 border-cyan-500/40"
                     )}
                   >
                     {currentTier === "pro" && <Crown className="h-3.5 w-3.5 mr-1.5" />}
@@ -713,7 +619,7 @@ function SettingsContent() {
                 </div>
                 <button
                   onClick={() => setShowWordPressDialog(true)}
-                  className="btn-gold text-xs px-3 py-2 w-full sm:w-auto"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all active:scale-95 text-xs px-3 py-2 w-full sm:w-auto"
                 >
                   <Plus className="h-4 w-4" />
                   <span className="hidden sm:inline">Connect Site</span>
@@ -764,7 +670,8 @@ function SettingsContent() {
             </section>
           </>
         )}
-      </div>
+        </motion.div>
+      </AnimatePresence>
 
       {/* WordPress Connection Dialog */}
       <WordPressConnectionDialog
@@ -773,86 +680,6 @@ function SettingsContent() {
         onSuccess={fetchWordPressSites}
       />
 
-      {/* Delete Account Confirmation Dialog */}
-      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-              <AlertTriangle className="h-5 w-5" />
-              Delete Account
-            </AlertDialogTitle>
-            <AlertDialogDescription className="space-y-3">
-              <span className="block">This action cannot be undone. This will permanently delete:</span>
-              <ul className="list-disc list-inside space-y-1 text-sm">
-                <li>Your account and profile</li>
-                <li>All articles and drafts</li>
-                <li>All site configurations</li>
-                <li>All WordPress connections</li>
-                <li>Your subscription (if active)</li>
-              </ul>
-              <span className="block font-semibold text-foreground pt-2">Are you absolutely sure?</span>
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteAccount}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? "Deleting..." : "Delete Account"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      {/* Change Password Dialog */}
-      <AlertDialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2">
-              <Lock className="h-5 w-5" />
-              Change Password
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              Enter your new password below.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">New Password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Enter new password"
-                disabled={isChangingPassword}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-foreground mb-2 block">Confirm Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full px-3 py-2 rounded-lg border border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Confirm new password"
-                disabled={isChangingPassword}
-              />
-            </div>
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isChangingPassword}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleChangePassword}
-              disabled={isChangingPassword || !newPassword || !confirmPassword}
-            >
-              {isChangingPassword ? "Changing..." : "Change Password"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

@@ -52,8 +52,8 @@ export const GET = withRateLimit(async (req: NextRequest) => {
       optimizationCountThisPeriod: usage.aiImprovementsUsed, // Keep for backward compatibility
       periodStart: usage.periodStart || userData?.periodStart,
       periodEnd: usage.periodEnd || userData?.periodEnd,
-      dodoCustomerId: userData?.dodoCustomerId,
-      dodoSubscriptionId: userData?.dodoSubscriptionId,
+      paddleCustomerId: userData?.paddleCustomerId,
+      paddleSubscriptionId: userData?.paddleSubscriptionId,
       status: userData?.status,
       currentPeriodEnd: userData?.currentPeriodEnd,
     };

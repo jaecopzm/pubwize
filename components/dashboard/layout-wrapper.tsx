@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { onAuthStateChanged, signOut, type User } from "firebase/auth";
-import { getFirebaseAuth } from "@/lib/firebase-client";
+import { useUser, useClerk } from "@clerk/nextjs";
 import { AppSidebar } from "./app-sidebar";
 import { SidebarProvider, SidebarInset, SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { Menu, X, PanelLeft, Zap } from "lucide-react";
@@ -94,16 +93,16 @@ function EnhancedSidebarTrigger() {
       {/* First-time hint */}
       {showHint && (
         <div className="absolute -bottom-10 left-0 z-50 animate-in fade-in slide-in-from-top-2 duration-500">
-          <div className="rounded-lg bg-gold/90 px-2 py-1 text-[10px] font-medium text-obsidian shadow-lg whitespace-nowrap">
+          <div className="rounded-lg bg-primary/90 px-2 py-1 text-[10px] font-medium text-primary-foreground shadow-lg whitespace-nowrap">
             Tap to open menu
-            <div className="absolute -top-1 left-3 h-2 w-2 rotate-45 bg-gold/90" />
+            <div className="absolute -top-1 left-3 h-2 w-2 rotate-45 bg-primary/90" />
           </div>
         </div>
       )}
 
       {/* Active indicator */}
       {isOpen && (
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-6 bg-gold rounded-full" />
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-6 bg-primary rounded-full" />
       )}
     </button>
   );
@@ -117,29 +116,26 @@ interface DashboardLayoutWrapperProps {
 export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const { data: usageData } = useUsage();
   const { plan } = useUserPlan();
   const [showWelcome, setShowWelcome] = useState(false);
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-      if (!u) router.push("/auth/signin");
+    if (isLoaded) {
+      if (!user) {
+        router.push("/sign-in");
+        return;
+      }
       
       // Show welcome modal for new users
-      if (u) {
-        const hasSeenWelcome = localStorage.getItem("welcome-seen");
-        if (!hasSeenWelcome) {
-          setTimeout(() => setShowWelcome(true), 500);
-        }
+      const hasSeenWelcome = localStorage.getItem("welcome-seen");
+      if (!hasSeenWelcome) {
+        setTimeout(() => setShowWelcome(true), 500);
       }
-    });
-    return () => unsub();
-  }, [router]);
+    }
+  }, [user, isLoaded, router]);
 
   const handleCloseWelcome = () => {
     setShowWelcome(false);
@@ -147,38 +143,47 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
   };
 
   const handleSignOut = async () => {
-    const auth = getFirebaseAuth();
-    await signOut(auth);
-    router.push("/auth/signin");
+    await signOut();
+    router.push("/sign-in");
   };
 
   /* ── Premium Loading screen ── */
-  if (loading) {
+  if (!isLoaded) {
     return (
-      <div className="dlw-loading">
-        <div className="dlw-loader-wrap">
-          {/* Modern spinner */}
-          <div style={{
-            width: 48,
-            height: 48,
-            border: '3px solid rgba(212, 175, 55, 0.2)',
-            borderTop: '3px solid #D4AF37',
-            borderRadius: '50%',
-            animation: 'spin 0.8s linear infinite',
-            marginBottom: 24
-          }} />
-          
-          {/* Premium messaging */}
-          <div className="dlw-loading-content">
-            <span className="dlw-loading-title">PubWize</span>
-            <span className="dlw-loading-subtitle">Loading workspace...</span>
+      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="flex flex-col items-center gap-6">
+          {/* Animated spinner with gradient */}
+          <div className="relative">
+            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-cyan-500/20 blur-xl animate-pulse" />
+            <div className="relative w-12 h-12 rounded-full border-3 border-transparent bg-gradient-to-r from-primary to-cyan-500 animate-spin"
+              style={{
+                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
+                WebkitMaskComposite: 'xor',
+                maskComposite: 'exclude',
+                padding: '3px'
+              }}
+            />
           </div>
           
-          {/* Subtle dots animation */}
-          <div className="dlw-loading-dots">
-            <span></span>
-            <span></span>
-            <span></span>
+          {/* Premium branding */}
+          <div className="flex flex-col items-center gap-2">
+            <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent" style={{ fontFamily: "'Syne', sans-serif" }}>
+              PubWize
+            </span>
+            <span className="text-sm text-muted-foreground font-medium">Loading workspace...</span>
+          </div>
+          
+          {/* Animated dots */}
+          <div className="flex gap-1.5">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="w-2 h-2 rounded-full bg-primary/60"
+                style={{
+                  animation: `bounce 1.4s ease-in-out ${i * 0.16}s infinite`
+                }}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -189,7 +194,7 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
 
   return (
     <SidebarProvider defaultOpen={false}>
-      <AppSidebar userEmail={user.email ?? undefined} onSignOut={handleSignOut} />
+      <AppSidebar userEmail={user.primaryEmailAddress?.emailAddress} onSignOut={handleSignOut} />
 
       <SidebarInset className="flex flex-col min-h-screen bg-background w-full overflow-x-hidden">
 
@@ -203,7 +208,7 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
         )}
 
         {/* ── Top bar ── */}
-        <header className="dlw-topbar">
+        <header className="dlw-topbar" style={{ position: 'sticky', top: 0, zIndex: 50 }}>
           {/* Enhanced sidebar trigger */}
           <EnhancedSidebarTrigger />
 
@@ -222,8 +227,8 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
                 usageData.usage.articlesUsed >= usageData.limits.articlesPerMonth 
                   ? "bg-destructive/10 text-destructive border border-destructive/20"
                   : usageData.usage.articlesUsed / usageData.limits.articlesPerMonth > 0.8
-                  ? "bg-gold/10 text-gold border border-gold/20"
-                  : "bg-teal/10 text-teal border border-teal/20"
+                  ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                  : "bg-cyan-500/10 text-cyan-500 border border-cyan-500/20"
               )}
             >
               <Zap className="h-3 w-3" />
