@@ -1359,7 +1359,7 @@ export default function LandingPage() {
                 display: "flex", alignItems: "center", gap: 7,
                 fontSize: 12, fontWeight: 600, color: t.sub, letterSpacing: "0.02em",
               }}>
-                <Icon size={14} color={b.color} />
+                <span style={{ color: b.color, display: "flex" }}><Icon size={14} /></span>
                 {b.label}
               </div>
             );
