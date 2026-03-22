@@ -1,5 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import { COLLECTIONS } from '@/lib/firestore/collections';
 import { cache, cacheKeys, cacheTTL } from '@/lib/redis';
 import { invalidateSiteCache } from '@/lib/cache-invalidation';
@@ -9,14 +10,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const token = authHeader.substring(7);
-    const decodedToken = await adminAuth().verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     const { id: siteId } = await params;
     const db = adminDb();
@@ -51,14 +48,10 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const token = authHeader.substring(7);
-    const decodedToken = await adminAuth().verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     const { id: siteId } = await params;
     const body = (await request.json()) as {
@@ -131,14 +124,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const token = authHeader.substring(7);
-    const decodedToken = await adminAuth().verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     const { id: siteId } = await params;
     const db = adminDb();

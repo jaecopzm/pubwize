@@ -3,7 +3,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { adminAuth } from "@/lib/firebase-admin";
+import { auth } from "@clerk/nextjs/server";
 
 export interface AuthUser {
   uid: string;
@@ -11,23 +11,20 @@ export interface AuthUser {
 }
 
 /**
- * Get authenticated user from request
- * Expects Authorization header with Firebase ID token
+ * Get authenticated user from request using Clerk
  */
 export async function getAuthUser(request: NextRequest): Promise<AuthUser | null> {
   try {
-    const authHeader = request.headers.get("authorization");
+    const { userId } = await auth();
     
-    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    if (!userId) {
       return null;
     }
 
-    const token = authHeader.substring(7);
-    const decodedToken = await adminAuth().verifyIdToken(token);
-
+    // Get email from Clerk if needed (optional, can be fetched from Firestore)
     return {
-      uid: decodedToken.uid,
-      email: decodedToken.email || null,
+      uid: userId,
+      email: null, // Email is in Firestore user doc if needed
     };
   } catch (error) {
     console.error("Auth error:", error);

@@ -42,18 +42,18 @@ export function UsageMeter({
 
   return (
     <div className="rounded-xl sm:rounded-2xl border border-border bg-gradient-to-br from-card to-card/50 p-4 sm:p-6 relative overflow-hidden group">
-      <div className="absolute inset-0 bg-gradient-to-br from-gold/5 via-transparent to-teal/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="absolute inset-0 bg-gradient-to-br from-[#6366f1]/5 via-transparent to-[#22d3ee]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
       
       <div className="relative z-10">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-gold/20 to-amber-500/20 flex items-center justify-center">
-              <Zap className="h-4 w-4 text-gold" />
+            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-[#6366f1]/20 to-amber-500/20 flex items-center justify-center">
+              <Zap className="h-4 w-4 text-[#818cf8]" />
             </div>
             <h3 className="text-base sm:text-lg font-black font-display text-foreground">Usage This Month</h3>
           </div>
           {shouldShowWarning && (
-            <div className="flex items-center gap-1.5 text-gold text-xs font-bold">
+            <div className="flex items-center gap-1.5 text-[#818cf8] text-xs font-bold">
               <AlertCircle className="h-4 w-4" />
               <span className="hidden sm:inline">Running low</span>
             </div>
@@ -65,13 +65,13 @@ export function UsageMeter({
           <div className="group/item">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-teal" />
+                <Sparkles className="h-3.5 w-3.5 text-[#22d3ee]" />
                 <span className="text-sm font-bold text-foreground">Articles</span>
               </div>
               <span className="text-sm font-black text-foreground">
                 {articlesUsed} / {limits.articlesPerMonth + rolloverArticles}
                 {rolloverArticles > 0 && (
-                  <span className="text-xs text-teal ml-1">(+{rolloverArticles})</span>
+                  <span className="text-xs text-[#22d3ee] ml-1">(+{rolloverArticles})</span>
                 )}
               </span>
             </div>
@@ -82,7 +82,7 @@ export function UsageMeter({
                     ? 'bg-gradient-to-r from-red-500 to-red-600'
                     : articlePercentage >= 80
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600'
-                    : 'bg-gradient-to-r from-teal to-cyan-500'
+                    : 'bg-gradient-to-r from-[#22d3ee] to-cyan-500'
                 }`}
                 style={{ width: `${articlePercentage}%` }}
               />
@@ -96,7 +96,7 @@ export function UsageMeter({
           <div className="group/item">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Share2 className="h-3.5 w-3.5 text-lilac" />
+                <Share2 className="h-3.5 w-3.5 text-[#a78bfa]" />
                 <span className="text-sm font-bold text-foreground">Social Repurpose</span>
               </div>
               <span className="text-sm font-black text-foreground">
@@ -124,7 +124,7 @@ export function UsageMeter({
           <div className="group/item">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Sparkles className="h-3.5 w-3.5 text-gold" />
+                <Sparkles className="h-3.5 w-3.5 text-[#818cf8]" />
                 <span className="text-sm font-bold text-foreground">AI Improvements</span>
               </div>
               <span className="text-sm font-black text-foreground">
@@ -138,7 +138,7 @@ export function UsageMeter({
                     ? 'bg-gradient-to-r from-red-500 to-red-600'
                     : improvementPercentage >= 80
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600'
-                    : 'bg-gradient-to-r from-gold to-amber-500'
+                    : 'bg-gradient-to-r from-[#6366f1] to-amber-500'
                 }`}
                 style={{ width: `${improvementPercentage}%` }}
               />
@@ -179,9 +179,9 @@ export function UsageMeter({
 
         {/* Upgrade CTA */}
         {shouldShowWarning && plan !== 'pro' && onUpgrade && (
-          <div className="mt-6 p-4 rounded-xl border border-gold/30 bg-gradient-to-br from-gold/10 to-amber-500/10">
+          <div className="mt-6 p-4 rounded-xl border border-[#6366f1]/30 bg-gradient-to-br from-[#6366f1]/10 to-[#6366f1]/5">
             <div className="flex items-start gap-3">
-              <TrendingUp className="h-5 w-5 text-gold shrink-0 mt-0.5" />
+              <TrendingUp className="h-5 w-5 text-[#818cf8] shrink-0 mt-0.5" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-foreground mb-1">
                   Running low on credits?
@@ -191,7 +191,7 @@ export function UsageMeter({
                 </p>
                 <button
                   onClick={onUpgrade}
-                  className="text-xs font-bold text-gold hover:underline"
+                  className="text-xs font-bold text-[#818cf8] hover:underline"
                 >
                   View Plans →
                 </button>

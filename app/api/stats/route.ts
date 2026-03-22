@@ -1,17 +1,14 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 
 export async function GET(req: NextRequest) {
   try {
-    const authHeader = req.headers.get("authorization") ?? "";
-    const [, token] = authHeader.split(" ");
-
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { userId: uid } = await auth();
+    
+    if (!uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const decoded = await adminAuth().verifyIdToken(token);
-    const uid = decoded.uid;
 
     const db = adminDb();
 

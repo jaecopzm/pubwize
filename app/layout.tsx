@@ -1,7 +1,8 @@
 import { ClerkProvider } from "@clerk/nextjs";
 import { dark } from "@clerk/themes";
 import type { Metadata } from "next";
-import { Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
+import { Plus_Jakarta_Sans, Roboto, Syne, JetBrains_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -12,17 +13,51 @@ import { ResourceHints } from "@/components/performance/resource-hints";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { PaddleProvider } from "@/components/paddle-provider";
 
-const plusJakarta = Plus_Jakarta_Sans({
-  variable: "--font-plus-jakarta",
+const jakarta = Plus_Jakarta_Sans({
+  variable: "--font-jakarta",
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
+});
+
+const roboto = Roboto({
+  variable: "--font-roboto",
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+});
+
+const syne = Syne({
+  variable: "--font-syne",
+  subsets: ["latin"],
+  weight: ["700", "800"],
 });
 
 const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-jetbrains-mono",
+  variable: "--font-jetbrains",
   subsets: ["latin"],
   weight: ["400", "500"],
 });
+
+const satoshi = localFont({
+  src: [
+    {
+      path: '../public/fonts/satoshi-400.woff2',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/satoshi-500.woff2',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../public/fonts/satoshi-700.woff2',
+      weight: '700',
+      style: 'normal',
+    }
+  ],
+  variable: '--font-satoshi'
+});
+
+
 
 export const metadata: Metadata = {
   title: {
@@ -104,13 +139,13 @@ export default function RootLayout({
     <ClerkProvider appearance={{ baseTheme: dark }}>
       <html lang="en" suppressHydrationWarning>
         <body
-        className={`${plusJakarta.variable} ${jetbrainsMono.variable} antialiased`}
-        style={{ fontFamily: 'var(--font-plus-jakarta), "Plus Jakarta Sans", sans-serif' }}
+        className={`${satoshi.variable} ${jakarta.variable} ${roboto.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans antialiased`}
+        style={{ fontFamily: 'var(--font-satoshi), sans-serif' }}
       >
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem={true}
           disableTransitionOnChange
         >
           <PaddleProvider>

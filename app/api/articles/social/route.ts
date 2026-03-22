@@ -1,5 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { generateSocialMedia, aiUserContext } from "@/lib/ai-providers";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import type { SocialMediaData } from "@/lib/types";
@@ -12,8 +13,10 @@ export async function POST(request: NextRequest) {
     }
 
     const token = authHeader.split("Bearer ")[1];
-    const decoded = await adminAuth().verifyIdToken(token);
-    const uid = decoded.uid;
+    const { userId: uid } = await auth();
+    if (!uid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     // Check usage limits
     const db = adminDb();

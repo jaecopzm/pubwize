@@ -5,7 +5,6 @@ import { motion } from "framer-motion";
 import { PLANS, formatPrice, type PlanTier } from "@/lib/pricing";
 import { useState, useTransition } from "react";
 import { getPaddlePriceId } from "@/lib/paddle";
-import { createPaddleCheckoutSession } from "@/app/actions/paddle";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -41,7 +40,7 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
     }
 
     if (!loading && !user) {
-      router.push(`/auth/signup?plan=${planId}&billing=${billingCycle}`);
+      router.push(`/sign-up?plan=${planId}&billing=${billingCycle}`);
       return;
     }
 
@@ -73,44 +72,59 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold mb-2">
-          Choose Your <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">Plan</span>
-        </h2>
-        <p className="text-sm text-muted-foreground">Start free, upgrade anytime. Cancel whenever.</p>
-      </div>
-
+    <div style={{ width: "100%", maxWidth: "1160px", margin: "0 auto" }}>
       {/* Billing Toggle */}
-      <div className="flex items-center justify-center gap-2 mb-8">
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", marginBottom: "48px" }}>
         <button
           onClick={() => setBillingCycle('monthly')}
-          className={`px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-            billingCycle === 'monthly'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+          style={{
+            padding: "10px 24px",
+            borderRadius: "10px",
+            fontSize: "14px",
+            fontWeight: 600,
+            border: "none",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            background: billingCycle === 'monthly' ? "linear-gradient(135deg, #6366f1, #818cf8)" : "rgba(255,255,255,0.05)",
+            color: billingCycle === 'monthly' ? "#fff" : "#94a3b8",
+          }}
         >
           Monthly
         </button>
         <button
           onClick={() => setBillingCycle('annual')}
-          className={`relative px-6 py-2 rounded-lg text-sm font-semibold transition-all ${
-            billingCycle === 'annual'
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+          style={{
+            position: "relative",
+            padding: "10px 24px",
+            borderRadius: "10px",
+            fontSize: "14px",
+            fontWeight: 600,
+            border: "none",
+            cursor: "pointer",
+            transition: "all 0.2s",
+            background: billingCycle === 'annual' ? "linear-gradient(135deg, #6366f1, #818cf8)" : "rgba(255,255,255,0.05)",
+            color: billingCycle === 'annual' ? "#fff" : "#94a3b8",
+          }}
         >
           Annual
-          <span className="absolute -top-2 -right-2 bg-emerald-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+          <span style={{
+            position: "absolute",
+            top: "-8px",
+            right: "-8px",
+            background: "#4ade80",
+            color: "#fff",
+            fontSize: "10px",
+            fontWeight: 700,
+            padding: "2px 8px",
+            borderRadius: "999px",
+          }}>
             Save 17%
           </span>
         </button>
       </div>
 
       {/* Pricing Cards */}
-      <div className="grid md:grid-cols-3 gap-4">
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "20px" }}>
         {(Object.keys(PLANS) as PlanTier[]).map((planId, index) => {
           const plan = PLANS[planId];
           const isCurrentPlan = currentPlan === planId;
@@ -123,46 +137,65 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className={`relative rounded-2xl border p-6 transition-all hover:shadow-xl ${
-                plan.popular
-                  ? 'border-primary/50 bg-gradient-to-br from-primary/5 to-transparent shadow-lg scale-105'
-                  : 'border-border bg-card hover:border-primary/30'
-              }`}
+              style={{
+                position: "relative",
+                borderRadius: "20px",
+                border: plan.popular ? "1px solid rgba(99,102,241,0.5)" : "1px solid rgba(255,255,255,0.06)",
+                padding: "32px",
+                background: plan.popular ? "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(34,211,238,0.05))" : "#0d0d1e",
+                transform: plan.popular ? "scale(1.05)" : "scale(1)",
+                boxShadow: plan.popular ? "0 20px 60px rgba(99,102,241,0.2)" : "none",
+                transition: "all 0.3s",
+              }}
             >
               {/* Popular Badge */}
               {plan.popular && (
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                  <div className="flex items-center gap-1.5 bg-gradient-to-r from-primary to-cyan-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-                    <Crown className="h-3 w-3" />
-                    POPULAR
-                  </div>
+                <div style={{
+                  position: "absolute",
+                  top: "-12px",
+                  left: "50%",
+                  transform: "translateX(-50%)",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  background: "linear-gradient(135deg, #6366f1, #22d3ee)",
+                  color: "#fff",
+                  padding: "4px 16px",
+                  borderRadius: "999px",
+                  fontSize: "11px",
+                  fontWeight: 700,
+                  letterSpacing: "0.05em",
+                  textTransform: "uppercase",
+                }}>
+                  <Crown style={{ width: "12px", height: "12px" }} />
+                  POPULAR
                 </div>
               )}
 
               {/* Icon */}
-              <div className="mb-4">
+              <div style={{ marginBottom: "20px" }}>
                 {planId === 'free' && (
-                  <div className="h-12 w-12 rounded-xl bg-cyan-500/10 flex items-center justify-center">
-                    <Gift className="h-6 w-6 text-cyan-500" />
+                  <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "rgba(34,211,238,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Gift style={{ width: "24px", height: "24px", color: "#22d3ee" }} />
                   </div>
                 )}
                 {planId === 'starter' && (
-                  <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                    <Zap className="h-6 w-6 text-primary" />
+                  <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "rgba(99,102,241,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Zap style={{ width: "24px", height: "24px", color: "#6366f1" }} />
                   </div>
                 )}
                 {planId === 'pro' && (
-                  <div className="h-12 w-12 rounded-xl bg-violet-500/10 flex items-center justify-center">
-                    <Crown className="h-6 w-6 text-violet-500" />
+                  <div style={{ width: "48px", height: "48px", borderRadius: "12px", background: "rgba(167,139,250,0.1)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <Crown style={{ width: "24px", height: "24px", color: "#a78bfa" }} />
                   </div>
                 )}
               </div>
 
               {/* Plan Name & Price */}
-              <h3 className="text-2xl font-bold mb-1">{plan.name}</h3>
-              <div className="flex items-baseline gap-1 mb-4">
-                <span className="text-4xl font-bold">{formatPrice(price)}</span>
-                {price > 0 && <span className="text-sm text-muted-foreground">/mo</span>}
+              <h3 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px", color: "#f8fafc", fontFamily: "'Syne', sans-serif" }}>{plan.name}</h3>
+              <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "24px" }}>
+                <span style={{ fontSize: "48px", fontWeight: 900, color: "#f8fafc", fontFamily: "'Syne', sans-serif", letterSpacing: "-0.03em" }}>{formatPrice(price)}</span>
+                {price > 0 && <span style={{ fontSize: "14px", color: "#94a3b8" }}>/mo</span>}
               </div>
 
               {/* CTA Button */}
@@ -171,17 +204,28 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
                 whileTap={{ scale: 0.98 }}
                 onClick={() => handleSelectPlan(planId)}
                 disabled={isCurrentPlan || (isPaid && isPending)}
-                className={`w-full py-3 rounded-xl font-semibold text-sm mb-6 transition-all ${
-                  plan.popular
-                    ? 'bg-gradient-to-r from-primary to-cyan-500 text-white shadow-lg shadow-primary/25'
+                style={{
+                  width: "100%",
+                  padding: "14px 20px",
+                  borderRadius: "12px",
+                  fontWeight: 700,
+                  fontSize: "15px",
+                  marginBottom: "24px",
+                  border: "none",
+                  cursor: isCurrentPlan ? "not-allowed" : "pointer",
+                  transition: "all 0.2s",
+                  background: plan.popular
+                    ? "linear-gradient(135deg, #6366f1, #22d3ee)"
                     : isCurrentPlan
-                    ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/30 cursor-not-allowed'
-                    : 'bg-card border-2 border-border hover:border-primary'
-                } disabled:opacity-50`}
+                    ? "rgba(74,222,128,0.1)"
+                    : "rgba(255,255,255,0.05)",
+                  color: plan.popular ? "#fff" : isCurrentPlan ? "#4ade80" : "#94a3b8",
+                  opacity: (isCurrentPlan || (isPaid && isPending)) ? 0.5 : 1,
+                }}
               >
                 {isPending && isPaid && !isCurrentPlan ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  <span style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                    <span style={{ width: "16px", height: "16px", border: "2px solid currentColor", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
                     Loading...
                   </span>
                 ) : isCurrentPlan ? (
@@ -194,36 +238,37 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
               </motion.button>
 
               {/* Key Features */}
-              <div className="space-y-3">
+              <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
                 {PLAN_HIGHLIGHTS[planId].map((feature, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-500 shrink-0" />
-                    <span className="text-sm text-muted-foreground">{feature}</span>
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Check style={{ width: "16px", height: "16px", color: "#4ade80", flexShrink: 0 }} />
+                    <span style={{ fontSize: "14px", color: "#94a3b8" }}>{feature}</span>
                   </div>
                 ))}
                 {planId === 'pro' && (
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="h-4 w-4 text-primary shrink-0" />
-                    <span className="text-sm text-muted-foreground">Advanced analytics</span>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <Sparkles style={{ width: "16px", height: "16px", color: "#6366f1", flexShrink: 0 }} />
+                    <span style={{ fontSize: "14px", color: "#94a3b8" }}>Advanced analytics</span>
                   </div>
                 )}
               </div>
-
-              {/* View All Features Link */}
-              <button className="mt-4 text-xs text-primary hover:underline">
-                View all features →
-              </button>
             </motion.div>
           );
         })}
       </div>
 
       {/* Footer */}
-      <div className="mt-8 text-center">
-        <p className="text-xs text-muted-foreground">
+      <div style={{ marginTop: "32px", textAlign: "center" }}>
+        <p style={{ fontSize: "13px", color: "#64748b" }}>
           All plans include WordPress publishing, SEO optimization, and social media tools.
         </p>
       </div>
+
+      <style>{`
+        @keyframes spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
     </div>
   );
 }

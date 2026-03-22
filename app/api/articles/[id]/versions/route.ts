@@ -1,5 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import { createSnapshot, getSnapshots } from '@/lib/services/version-history';
 
 /**
@@ -12,17 +13,13 @@ export async function GET(
 ) {
   try {
     // Verify authentication
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.substring(7);
-    const decodedToken = await adminAuth().verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     const { id: articleId } = await params;
     const db = adminDb();
@@ -78,17 +75,13 @@ export async function POST(
 ) {
   try {
     // Verify authentication
-    const authHeader = request.headers.get('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
+    const { userId } = await auth();
+    if (!userId) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
       );
     }
-
-    const token = authHeader.substring(7);
-    const decodedToken = await adminAuth().verifyIdToken(token);
-    const userId = decodedToken.uid;
 
     const { id: articleId } = await params;
     const db = adminDb();

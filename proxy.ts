@@ -1,34 +1,23 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 
-/**
- * Proxy for route protection and security
- * Runs on Edge Runtime for maximum performance
- */
+const isPublicRoute = createRouteMatcher([
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/',
+  '/pricing',
+  '/contact',
+  '/terms',
+  '/privacy',
+  '/refunds',
+  '/blog(.*)',
+  '/api/webhooks(.*)',
+]);
 
-export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Security headers for all routes
-  const response = NextResponse.next();
-  
-  // Add security headers
-  response.headers.set('X-Frame-Options', 'DENY');
-  response.headers.set('X-Content-Type-Options', 'nosniff');
-  response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  
-  // Protected dashboard routes - check for auth
-  if (pathname.startsWith('/dashboard')) {
-    // Note: Firebase auth verification happens client-side and in API routes
-    // This proxy just adds security headers and can be extended
-    // for additional edge-level checks
-    
-    return response;
+export const proxy = clerkMiddleware(async (auth, request) => {
+  if (!isPublicRoute(request)) {
+    await auth.protect();
   }
-
-  return response;
-}
+});
 
 // Configure which routes use this proxy
 export const config = {

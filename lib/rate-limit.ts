@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { rateLimiters } from './redis';
 
 export type RateLimitType = keyof typeof rateLimiters;
@@ -26,7 +27,7 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   try {
     // Get identifier (user ID from auth or IP address)
-    const identifier = getIdentifier(request);
+    const identifier = await getIdentifier(request);
     
     // Check rate limit
     const limiter = rateLimiters[type];
@@ -82,15 +83,23 @@ export async function checkRateLimit(
  * Get identifier for rate limiting
  * Prefers user ID from auth, falls back to IP address
  */
-function getIdentifier(request: NextRequest): string {
-  // Try to get user ID from Authorization header
+async function getIdentifier(request: NextRequest): Promise<string> {
+  // Try to get user ID from Clerk
+  try {
+    const { userId } = await auth();
+    if (userId) {
+      return `user:${userId}`;
+    }
+  } catch (err) {
+    // Graceful fallback
+  }
+
+  // Try to get user ID from Authorization header directly (fallback for generic clients)
   const authHeader = request.headers.get('authorization');
   if (authHeader) {
-    // Extract token and use as identifier (simplified)
-    // In production, you might want to decode the JWT to get user ID
     const token = authHeader.replace('Bearer ', '');
     if (token) {
-      return `user:${token.substring(0, 20)}`; // Use first 20 chars as identifier
+      return `user:${token.substring(0, 20)}`; 
     }
   }
 

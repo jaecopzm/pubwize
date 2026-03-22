@@ -97,7 +97,7 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
     <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border">
 
       {/* ── Brand Header ── */}
-      <SidebarHeader style={{ borderBottom: "1px solid var(--sidebar-border)", padding: "14px 10px 12px" }}>
+      <SidebarHeader style={{ borderBottom: "1px solid var(--sidebar-border)", padding: "12px 10px", minHeight: "60px", display: "flex", alignItems: "center" }}>
         {/* When collapsed: center logo only */}
         <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center hidden">
           <img src="/pubwize-logo.png" alt="Pubwize" className="h-8 w-auto flex-shrink-0" />

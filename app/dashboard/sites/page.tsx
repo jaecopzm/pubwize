@@ -193,19 +193,13 @@ export default function SitesPage() {
         animate={{ opacity: 1, y: 0 }}
         className="mb-8 relative"
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-transparent to-primary/5 blur-3xl -z-10" />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-cyan-500/5 blur-3xl -z-10" />
         <div className="flex flex-col gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <motion.div 
-                whileHover={{ scale: 1.05, rotate: 5 }}
-                className="h-12 w-12 rounded-2xl bg-gradient-to-br from-violet-500 to-primary flex items-center justify-center shadow-lg shadow-violet-500/20"
-              >
-                <Globe className="h-6 w-6 text-white" />
-              </motion.div>
               <div>
-                <h1 className="text-4xl font-black tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
-                  Your <span className="bg-gradient-to-r from-violet-500 to-primary bg-clip-text text-transparent">Sites</span>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
+                  Your <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">Sites</span>
                 </h1>
                 <p className="text-sm text-muted-foreground font-medium">
                   {sites.length} {sites.length === 1 ? 'site' : 'sites'} configured
@@ -232,7 +226,7 @@ export default function SitesPage() {
           {[
             { icon: Globe, label: 'Sites', value: stats.total, color: 'text-cyan-500' },
             { icon: BarChart3, label: 'Articles', value: stats.totalArticles, color: 'text-primary' },
-            { icon: TrendingUp, label: 'Niches', value: stats.niches, color: 'text-violet-500' },
+            { icon: TrendingUp, label: 'Niches', value: stats.niches, color: 'text-primary' },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}
@@ -341,26 +335,26 @@ export default function SitesPage() {
           ))}
         </div>
       ) : sites.length === 0 ? (
-        <div className="rounded-xl lg:rounded-2xl border border-dashed border-border p-8 lg:p-12 text-center card-premium relative z-10">
-          <div className="mx-auto flex h-14 w-14 lg:h-16 lg:w-16 items-center justify-center rounded-2xl bg-emerald-500/10">
-            <Globe className="h-7 w-7 lg:h-8 lg:w-8 text-emerald-500" />
+        <div className="rounded-xl lg:rounded-2xl border border-dashed border-border p-6 sm:p-8 lg:p-12 text-center card-premium relative z-10">
+          <div className="mx-auto flex h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 items-center justify-center rounded-2xl bg-primary/10">
+            <Globe className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-primary" />
           </div>
-          <h3 className="mt-4 lg:mt-6 text-base lg:text-lg font-bold font-display text-foreground">No sites yet</h3>
-          <p className="mt-2 text-sm text-muted-foreground">
+          <h3 className="mt-3 sm:mt-4 lg:mt-6 text-sm sm:text-base lg:text-lg font-bold font-display text-foreground">No sites yet</h3>
+          <p className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-sm mx-auto">
             Create your first site to start generating articles.
           </p>
           <button
-            className="btn-gold mt-4 lg:mt-6"
+            className="btn-gold mt-3 sm:mt-4 lg:mt-6 text-sm sm:text-base px-4 py-2"
             onClick={() => router.push("/dashboard/sites/new")}
           >
-            <Plus className="h-4 w-4" />
+            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Create Site
           </button>
         </div>
       ) : filteredSites.length === 0 ? (
-        <div className="card-premium p-8 text-center relative z-10">
-          <Search className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">No sites match your search</p>
+        <div className="card-premium p-6 sm:p-8 text-center relative z-10">
+          <Search className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30 mx-auto mb-2 sm:mb-3" />
+          <p className="text-xs sm:text-sm text-muted-foreground">No sites match your search</p>
         </div>
       ) : viewMode === 'list' ? (
         <div className="space-y-3 relative z-10">

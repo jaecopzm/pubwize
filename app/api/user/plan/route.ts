@@ -1,5 +1,6 @@
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { cache, cacheKeys, cacheTTL } from "@/lib/redis";
 import { withRateLimit } from "@/lib/rate-limit";
 import { sendWelcomeEmail } from "@/lib/email/email-service";
@@ -7,15 +8,11 @@ import { checkAccountCreationAbuse } from "@/lib/abuse-prevention";
 
 export const GET = withRateLimit(async (req: NextRequest) => {
   try {
-    const authHeader = req.headers.get("authorization") || "";
-    const [, token] = authHeader.split(" ");
-
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const { userId: uid } = await auth();
+    
+    if (!uid) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
-
-    const decoded = await adminAuth().verifyIdToken(token);
-    const uid = decoded.uid;
 
     // Try to get from cache first
     const cacheKey = cacheKeys.userPlan(uid);
@@ -108,7 +105,8 @@ export const POST = withRateLimit(async (req: NextRequest) => {
     if (!abuseCheck.allowed) {
       // Delete the Firebase Auth user that was just created
       try {
-        await adminAuth().deleteUser(userId);
+        const client = await clerkClient();
+        await client.users.deleteUser(userId);
       } catch (err) {
         console.error('Failed to delete abusive user:', err);
       }

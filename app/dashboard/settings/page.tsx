@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { getFirebaseAuth } from "@/lib/firebase-client";
+import { useUser } from "@clerk/nextjs";
 import {
   User,
   CheckCircle2,
@@ -60,6 +60,7 @@ function SettingsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const { user: clerkUser, isLoaded } = useUser();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [wordPressSites, setWordPressSites] = useState<WordPressSite[]>([]);
@@ -68,19 +69,17 @@ function SettingsContent() {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
 
   useEffect(() => {
-    const auth = getFirebaseAuth();
-    const currentUser = auth.currentUser;
-    if (currentUser) {
+    if (isLoaded && clerkUser) {
       setUser({
-        email: currentUser.email || "",
-        displayName: currentUser.displayName || undefined,
-        createdAt: currentUser.metadata.creationTime,
+        email: clerkUser.primaryEmailAddress?.emailAddress || "",
+        displayName: clerkUser.fullName || undefined,
+        createdAt: new Date(clerkUser.createdAt).toISOString(),
       });
       fetchUserPlan();
       fetchWordPressSites();
     }
-    setLoading(false);
-  }, []);
+    setLoading(!isLoaded);
+  }, [isLoaded, clerkUser]);
 
   // Handle auto-checkout from signup redirect
   useEffect(() => {
@@ -100,9 +99,7 @@ function SettingsContent() {
       setActiveTab('billing');
       try {
         startTransition(async () => {
-          const auth = getFirebaseAuth();
-          const uid = auth.currentUser?.uid;
-          if (!uid) return;
+          if (!clerkUser?.id) return;
           
           if (!window.Paddle) {
             toast.error("Payment system not loaded. Please refresh the page.");
@@ -117,7 +114,7 @@ function SettingsContent() {
               displayMode: "overlay",
               successUrl: `${window.location.origin}/dashboard/settings?tab=billing&success=true`,
             },
-            customData: { userId: uid },
+            customData: { userId: clerkUser.id },
             customer: { email: user.email },
           });
         });
@@ -130,12 +127,9 @@ function SettingsContent() {
 
   const fetchUserPlan = async () => {
     try {
-      const auth = getFirebaseAuth();
-      const user = auth.currentUser;
+      if (!clerkUser) return;
 
-      if (!user) return;
-
-      const token = await user.getIdToken();
+      const token = await window.Clerk?.session?.getToken();
 
       const response = await fetch("/api/user/plan", {
         headers: {
@@ -165,14 +159,11 @@ function SettingsContent() {
   const fetchWordPressSites = async () => {
     setLoadingSites(true);
     try {
-      const auth = getFirebaseAuth();
-      const user = auth.currentUser;
-
-      if (!user) {
+      if (!clerkUser) {
         return;
       }
 
-      const token = await user.getIdToken();
+      const token = await window.Clerk?.session?.getToken();
 
       const response = await fetch("/api/wordpress/sites", {
         headers: {
@@ -259,14 +250,8 @@ function SettingsContent() {
       >
         <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-cyan-500/5 blur-3xl -z-10" />
         <div className="flex items-center gap-3">
-          <motion.div 
-            whileHover={{ scale: 1.05, rotate: 5 }}
-            className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary to-cyan-500 flex items-center justify-center shadow-lg shadow-primary/20"
-          >
-            <User className="h-6 w-6 text-white" />
-          </motion.div>
           <div>
-            <h1 className="text-4xl font-black tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
               Account <span className="bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent">Settings</span>
             </h1>
             <p className="text-sm text-muted-foreground font-medium">

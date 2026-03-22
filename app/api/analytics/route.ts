@@ -1,5 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase-admin';
+import { adminDb } from '@/lib/firebase-admin';
 import { withRateLimit } from '@/lib/rate-limit';
 import { PLANS } from '@/lib/pricing';
 import type { PlanTier } from '@/lib/types';
@@ -13,8 +14,10 @@ export const GET = withRateLimit(async (req: NextRequest) => {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = await adminAuth().verifyIdToken(token);
-    const uid = decoded.uid;
+    const { userId: uid } = await auth();
+    if (!uid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const db = adminDb();
     const userDoc = await db.collection('users').doc(uid).get();

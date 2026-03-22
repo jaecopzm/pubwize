@@ -220,11 +220,8 @@ export default function ArticlesPage() {
         <div className="flex flex-col gap-6">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-[#6366f1] to-[#22d3ee] flex items-center justify-center shadow-lg shadow-[#6366f1]/20">
-                <FileText className="h-6 w-6 text-white" />
-              </div>
               <div>
-                <h1 className="text-4xl font-black tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>
+                <h1 className="text-2xl sm:text-3xl lg:text-4xl font-black tracking-tight" style={{ fontFamily: "'DM Serif Display', serif" }}>
                   <span className="text-foreground">Content</span>{" "}
                   <span className="bg-gradient-to-r from-[#6366f1] to-[#22d3ee] bg-clip-text text-transparent">Library</span>
                 </h1>

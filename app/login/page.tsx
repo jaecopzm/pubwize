@@ -4,14 +4,14 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 /**
- * Redirect from old /login route to new /auth/signin route
+ * Redirect from old /login route to new /sign-in route
  * This ensures backward compatibility for any bookmarks or external links
  */
 export default function LoginRedirect() {
   const router = useRouter();
   
   useEffect(() => {
-    router.replace("/auth/signin");
+    router.replace("/sign-in");
   }, [router]);
 
   return (

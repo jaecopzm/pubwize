@@ -7,6 +7,7 @@ import { getPaddlePriceId } from "@/lib/paddle";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useTheme } from "next-themes";
 
 interface PricingCardsProps {
   currentPlan?: PlanTier;
@@ -18,6 +19,7 @@ interface PricingCardsProps {
 export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail, onSuccess }: PricingCardsProps) {
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
   const [isPending, startTransition] = useTransition();
+  const { theme } = useTheme();
   const { user, loading } = useAuth();
   const router = useRouter();
 
@@ -39,7 +41,7 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
 
     if (!loading && !user) {
       console.log('Redirecting to signup with plan:', planId);
-      router.push(`/auth/signup?plan=${planId}&billing=${billingCycle}`);
+      router.push(`/sign-up?plan=${planId}&billing=${billingCycle}`);
       return;
     }
 

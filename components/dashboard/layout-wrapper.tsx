@@ -167,7 +167,7 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
           
           {/* Premium branding */}
           <div className="flex flex-col items-center gap-2">
-            <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent" style={{ fontFamily: "'Syne', sans-serif" }}>
+            <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent" style={{ fontFamily: "'DM Serif Display', serif" }}>
               PubWize
             </span>
             <span className="text-sm text-muted-foreground font-medium">Loading workspace...</span>
@@ -196,19 +196,10 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
     <SidebarProvider defaultOpen={false}>
       <AppSidebar userEmail={user.primaryEmailAddress?.emailAddress} onSignOut={handleSignOut} />
 
-      <SidebarInset className="flex flex-col min-h-screen bg-background w-full overflow-x-hidden">
-
-        {/* Usage warning banner */}
-        {usageData && (
-          <UsageWarningBanner
-            articlesUsed={usageData.usage.articlesUsed}
-            articlesLimit={usageData.limits.articlesPerMonth}
-            planTier={usageData.plan}
-          />
-        )}
+      <SidebarInset className="flex flex-col h-screen bg-background w-full overflow-x-hidden overflow-y-hidden">
 
         {/* ── Top bar ── */}
-        <header className="dlw-topbar" style={{ position: 'sticky', top: 0, zIndex: 50 }}>
+        <header className="dlw-topbar flex-shrink-0">
           {/* Enhanced sidebar trigger */}
           <EnhancedSidebarTrigger />
 
@@ -251,6 +242,13 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
 
         {/* ── Page content ── */}
         <div className="dlw-content">
+          {usageData && (
+            <UsageWarningBanner
+              articlesUsed={usageData.usage.articlesUsed}
+              articlesLimit={usageData.limits.articlesPerMonth}
+              planTier={usageData.plan}
+            />
+          )}
           {children}
         </div>
 

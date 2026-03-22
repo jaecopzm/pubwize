@@ -1,5 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { aiUserContext, logAIUsage } from "@/lib/ai-providers";
@@ -19,8 +20,10 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
         const token = authHeader.split(" ")[1];
-        const decoded = await adminAuth().verifyIdToken(token);
-        const uid = decoded.uid;
+        const { userId: uid } = await auth();
+    if (!uid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
         // Check usage limits
         const db = adminDb();

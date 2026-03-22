@@ -1,5 +1,6 @@
+import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, adminDb } from "@/lib/firebase-admin";
+import { adminDb } from "@/lib/firebase-admin";
 import type { OptimizationData } from "@/lib/types";
 import { optimizeDraft, getInternalLinkSuggestions, getQualityMetricsWithOpenRouter } from "@/lib/ai-providers";
 
@@ -14,8 +15,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const decoded = await adminAuth().verifyIdToken(token);
-    const uid = decoded.uid;
+    const { userId: uid } = await auth();
+    if (!uid) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const body = (await req.json()) as { articleId?: string };
     const { articleId } = body;

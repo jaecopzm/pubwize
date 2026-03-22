@@ -13,10 +13,10 @@ export default function PricingPage() {
     console.log('handleSelectFreePlan called with:', plan, isAnnual);
     try {
       if (plan === 'free') {
-        console.log('Navigating to /auth/signup');
-        window.location.href = '/auth/signup';
+        console.log('Navigating to /sign-up');
+        window.location.href = '/sign-up';
       } else {
-        const url = `/auth/signup?plan=${plan}&billing=${isAnnual ? 'annual' : 'monthly'}`;
+        const url = `/sign-up?plan=${plan}&billing=${isAnnual ? 'annual' : 'monthly'}`;
         console.log('Navigating to:', url);
         window.location.href = url;
       }
@@ -66,7 +66,7 @@ export default function PricingPage() {
               Start free, upgrade anytime. No credit card required.
             </p>
             <button
-              onClick={() => router.push('/auth/signup')}
+              onClick={() => router.push('/sign-up')}
               className="btn-gold text-sm sm:text-base md:text-lg px-6 sm:px-8 py-2.5 sm:py-3 w-full sm:w-auto"
             >
               Start Free Today

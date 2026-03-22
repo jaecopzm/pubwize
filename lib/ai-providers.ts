@@ -400,7 +400,7 @@ Return JSON with this exact shape:
 }
 
 "headings" MUST contain 8-12 items for proper article structure.
-"informationGain" should list unique points or perspectives not found in the SERP data.
+"informationGain" should list unique, contrarian points, specific hypotheticals, or hidden pain points completely missed by competitors.
 "eeatOpportunities" should suggest how to demonstrate Experience, Expertise, Authoritativeness, and Trustworthiness for this topic.
 
 Response must be valid JSON only.`;
@@ -440,6 +440,8 @@ export async function generateOutline(params: { brief: BriefData; keyword: strin
 CRITICAL REQUIREMENT:
 - The FIRST section (H1) MUST be the article's title.
 - The title MUST contain the target keyword: "${params.keyword}".
+- Structure the outline using "Progressive Disclosure": answer the user's most burning question immediately, then dive into advanced nuances later.
+- Ensure the outline flow naturally supports emotional "Bucket Brigade" transition sections.
 
 Return JSON with this shape:
 {
@@ -510,16 +512,16 @@ Your goal is to write content that feels human, expert-led, and provides signifi
 - MAXIMUM: ${Math.ceil(targetWords * 1.05)} words
 - Each section needs ~${Math.floor(targetWords / params.outline.sections.length)} words (${params.outline.sections.length} sections total)
 - Write COMPLETE sections with depth and examples - don't cut corners
-- If you're under ${Math.floor(targetWords * 0.95)} words, ADD MORE DETAIL to existing sections
+- To reach the word count, DO NOT repeat yourself or add fluff. Instead, dive deeper using concrete hypothetical scenarios, counter-narratives (e.g., "While most experts say X, the reality is Y"), and rare edge-cases.
 - NEVER exceed the maximum
 
 CONTENT STRUCTURE & WRITING STYLE:
-1. Use proper Markdown hierarchy (# for H1, ## for H2, ### for H3).
-2. Write for readability: Use short paragraphs (2-3 sentences), bold key terms sparingly, and use bulleted/numbered lists for steps.
-3. Natural Language Flow: Vary sentence length. Mix simple and compound sentences.
-4. AVOID AI CLICHES: Do NOT use phrases like "In today's digital landscape," "In conclusion," "Moreover," "Furthermore," "Firstly/Secondly," or "Crucial to note."
-5. EEAT Implementation: Use an authoritative yet accessible voice.
-6. Featured Snippet Optimization: Ensure direct answers to questions are concise (40-60 words) and placed prominently.
+1. Use proper Markdown hierarchy (# for H1, ## for H2, ### for H3). DO NOT use "Conclusion" as a header—use an actionable exit like "Your Next Steps for X" or "The Bottom Line".
+2. Write for readability: Use short paragraphs (2-3 sentences), and use bulleted/numbered lists for steps.
+3. Natural Language Flow & Rhythm: Vary sentence length aggressively. Mix punchy, short sentences (to create rhythm) with medium, nuanced explanations. 
+4. AVOID AI CLICHES: Do NOT use phrases like "In today's digital landscape," "In conclusion," "Moreover," "Furthermore," "Firstly/Secondly," "Dive into," or "Crucial to note."
+5. BUCKET BRIGADES & HOOKS: Use short, punchy transition phrases (e.g., "Here's the truth:", "But wait, there's a catch.", "Let me explain why:") to keep the reader addicted to the page.
+6. PREMIUM FORMATTING & PACING: Use Markdown blockquotes (\`> \`) for "Expert Pro Tips" or "Key Takeaways" to break up text visually. Bold *meaningful, insightful phrases*, not just isolated keywords, to help skimmers.
 7. CRITICAL FORMATTING: Use exactly ONE blank line between paragraphs and sections. NEVER use multiple consecutive blank lines.
 
 CRITICAL KEYWORD REQUIREMENTS:
