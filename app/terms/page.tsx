@@ -28,7 +28,7 @@ export default function TermsPage() {
           <section>
             <h2 className="text-2xl font-bold mb-4 text-foreground">1. Acceptance of Terms</h2>
             <p className="text-muted-foreground leading-relaxed">
-              By accessing and using Pubwize ("we," "our," "us"), you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.
+              By accessing and using Pubwize (operated by DraftRapid) ("we," "our," "us"), you agree to be bound by these Terms of Service. If you do not agree, please do not use our services.
             </p>
           </section>
 

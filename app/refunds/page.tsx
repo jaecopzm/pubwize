@@ -39,7 +39,10 @@ export default function RefundsPage() {
           <section>
             <h2 className="text-2xl font-bold mb-4 text-foreground">14-Day Money-Back Guarantee</h2>
             <p className="text-muted-foreground leading-relaxed">
-              We offer a 14-day money-back guarantee for all new paid subscriptions. If you&apos;re not satisfied with Pubwize within the first 14 days of your initial purchase, we&apos;ll provide a full refund — no questions asked.
+              We offer a 14-day money-back guarantee for your first subscription payment only. If you&apos;re not satisfied with Pubwize within the first 14 days of your initial subscription purchase, you may request a full refund.
+            </p>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              This guarantee applies only to the first payment of a new subscription. Renewal payments, additional purchases, and subscriptions that have been previously refunded are not eligible.
             </p>
           </section>
 
@@ -53,11 +56,19 @@ export default function RefundsPage() {
           <section>
             <h2 className="text-2xl font-bold mb-4 text-foreground">Eligibility</h2>
             <p className="text-muted-foreground leading-relaxed">
-              To be eligible for a refund:
+              To be eligible for a refund under our 14-day money-back guarantee:
             </p>
             <ul className="list-disc pl-6 mt-2 space-y-2 text-muted-foreground">
-              <li>The refund request must be made within 14 days of your initial subscription purchase</li>
-              <li>This applies to first-time subscribers only</li>
+              <li>The refund request must be made within 14 days of your first subscription payment</li>
+              <li>This applies to first-time subscribers only (your first payment for a subscription)</li>
+              <li>Renewal charges and subsequent payments are not eligible for refunds</li>
+              <li>Only one refund per customer is permitted</li>
+              <li>Accounts found to be abusing the refund policy may be denied</li>
+            </ul>
+            <p className="text-muted-foreground leading-relaxed mt-3">
+              Refunds are processed at the sole discretion of Paddle.com, our Merchant of Record, in accordance with their refund policy and applicable consumer protection laws.
+            </p>
+          </section>
               <li>Renewal charges are not eligible for refunds</li>
               <li>Accounts found to be abusing the refund policy may be denied</li>
             </ul>
