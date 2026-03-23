@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Zap, Crown, Gift, Clock, Shield } from "lucide-react";
+import { Check, Zap, Crown, Gift, Shield } from "lucide-react";
 import { PLANS, formatPrice, getAnnualSavings, type PlanTier } from "@/lib/pricing";
 import { useState, useTransition } from "react";
 import { getPaddlePriceId } from "@/lib/paddle";
@@ -85,10 +85,6 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
         {/* Trust signals */}
         <div className="flex items-center justify-center gap-4 sm:gap-6 mt-4 flex-wrap">
           <span className="flex items-center gap-1.5 text-xs sm:text-sm text-text-3">
-            <Clock className="h-3.5 w-3.5 text-teal" />
-            7-day free trial on paid plans
-          </span>
-          <span className="flex items-center gap-1.5 text-xs sm:text-sm text-text-3">
             <Shield className="h-3.5 w-3.5 text-gold" />
             14-day money-back guarantee
           </span>
@@ -141,7 +137,7 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
               {/* Popular Badge */}
               {plan.popular && (
                 <div className="absolute -top-3 sm:-top-4 left-1/2 -translate-x-1/2">
-                  <div className="flex items-center gap-1 sm:gap-1.5 bg-gold text-obsidian px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-lg">
+                  <div className="flex items-center gap-1 sm:gap-1.5 bg-gold text-white px-3 sm:px-4 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold shadow-lg">
                     <Crown className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                     <span>MOST POPULAR</span>
                   </div>
@@ -198,13 +194,6 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
                     {formatPrice(price)} billed annually · Save {formatPrice(savings)}
                   </p>
                 )}
-                {/* 7-day trial pill for paid plans */}
-                {isPaid && !isCurrentPlan && (
-                  <p className="flex items-center gap-1 text-[10px] sm:text-xs text-teal/80 mt-2">
-                    <Clock className="h-3 w-3" />
-                    7-day free trial included
-                  </p>
-                )}
               </div>
 
               {/* CTA Button */}
@@ -212,10 +201,10 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
                 onClick={() => handleSelectPlan(planId)}
                 disabled={isCurrentPlan || (isPaid && isPending)}
                 className={`w-full py-2.5 sm:py-3 lg:py-3.5 rounded-lg sm:rounded-xl font-semibold text-xs sm:text-sm lg:text-base transition-all mb-3 sm:mb-4 ${plan.popular
-                  ? 'bg-gold text-obsidian hover:bg-gold/90 shadow-lg hover:shadow-xl hover:-translate-y-0.5'
+                  ? 'bg-gold text-white hover:bg-gold/90 shadow-lg hover:shadow-xl hover:-translate-y-0.5'
                   : isCurrentPlan
                     ? 'bg-teal/10 text-teal border border-teal/30 cursor-not-allowed'
-                    : 'bg-card border border-border hover:border-gold/50 hover:bg-gold/5'
+                    : 'bg-card border border-border hover:border-gold/50 hover:bg-gold/5 text-foreground'
                   } disabled:opacity-50 active:scale-95 touch-manipulation`}
               >
                 {isPending && isPaid && !isCurrentPlan ? (
@@ -227,7 +216,7 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
                   ? 'Current Plan'
                   : planId === 'free'
                     ? 'Get Started Free'
-                    : 'Start Free Trial'}
+                    : 'Get Started'}
               </button>
 
               {/* 14-day guarantee note under paid CTA */}

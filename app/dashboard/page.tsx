@@ -358,10 +358,10 @@ export default function DashboardOverviewPage() {
       {/* Stats Grid */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-8">
         {/* Usage Card */}
-        <div className="sm:col-span-2 group relative rounded-2xl border border-border p-6 overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-[1.02] bg-card hover:border-[rgba(99,102,241,0.4)]">
+        <div className="sm:col-span-2 group relative rounded-2xl border border-border p-6 overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-[1.02] bg-card hover:border-[rgba(99,102,241,0.4)] flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-br from-[#6366f1]/5 via-transparent to-[#22d3ee]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
           
-          <div className="relative z-10 flex items-center gap-6">
+          <div className="relative z-10 flex items-center gap-6 flex-1">
             {/* Progress Ring */}
             <div className="relative flex h-28 w-28 shrink-0 items-center justify-center">
               <svg className="h-full w-full -rotate-90" viewBox="0 0 100 100">
@@ -448,38 +448,34 @@ export default function DashboardOverviewPage() {
         </div>
 
         {/* Total Articles Card */}
-        <div className="group relative rounded-2xl border border-border p-6 overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 bg-card hover:border-[rgba(99,102,241,0.4)]">
+        <div className="group relative rounded-2xl border border-border p-6 overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 bg-card hover:border-[rgba(99,102,241,0.4)] flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-br from-[#22d3ee]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10">
+          <div className="relative z-10 flex flex-col flex-1">
             <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-xl bg-[#22d3ee]/15 border border-[#22d3ee]/30 flex items-center justify-center">
-                <FileText className="h-6 w-6 text-[#22d3ee]" />
-              </div>
+              <FileText className="h-6 w-6 text-[#22d3ee]" />
               <TrendingUp className="h-5 w-5 text-[#22d3ee] opacity-50" />
             </div>
             <p className="font-mono text-xs font-bold uppercase tracking-widest text-muted-foreground mb-2">Total Articles</p>
             <p className="text-4xl font-black text-foreground">{animatedTotal}</p>
-            <p className="text-xs text-muted-foreground mt-2">
+            <p className="text-xs text-muted-foreground mt-auto pt-2">
               <span className="text-[#22d3ee] font-bold">+{stats.articlesThisMonth}</span> this month
             </p>
           </div>
         </div>
 
         {/* Total Sites Card */}
-        <div className="group relative rounded-2xl border border-border p-6 overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 bg-card hover:border-[rgba(99,102,241,0.4)]">
+        <div className="group relative rounded-2xl border border-border p-6 overflow-hidden transition-all duration-300 hover:shadow-xl hover:scale-105 bg-card hover:border-[rgba(99,102,241,0.4)] flex flex-col">
           <div className="absolute inset-0 bg-gradient-to-br from-[#a78bfa]/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10">
+          <div className="relative z-10 flex flex-col flex-1">
             <div className="flex items-center justify-between mb-4">
-              <div className="h-12 w-12 rounded-xl bg-[#a78bfa]/15 border border-[#a78bfa]/30 flex items-center justify-center">
-                <Globe className="h-6 w-6 text-[#a78bfa]" />
-              </div>
+              <Globe className="h-6 w-6 text-[#a78bfa]" />
               <Sparkles className="h-5 w-5 text-[#818cf8] opacity-50" />
             </div>
             <p className="font-mono text-[10px] sm:text-xs font-bold uppercase tracking-widest text-muted-foreground mb-1 sm:mb-2">Connected Sites</p>
             <p className="text-2xl sm:text-4xl font-black text-foreground">{animatedSites}</p>
             <button
               onClick={() => router.push("/dashboard/sites")}
-              className="text-[10px] sm:text-xs text-[#a78bfa] hover:underline font-bold mt-1 sm:mt-2"
+              className="text-[10px] sm:text-xs text-[#a78bfa] hover:underline font-bold mt-auto pt-2"
             >
               Manage sites →
             </button>
@@ -498,18 +494,16 @@ export default function DashboardOverviewPage() {
           <button
             key={stat.label}
             onClick={() => router.push(`/dashboard/articles?status=${stat.label.toLowerCase()}`)}
-            className="group relative rounded-lg sm:rounded-xl border p-3 sm:p-4 text-left transition-all duration-300 hover:shadow-lg hover:scale-105 bg-gradient-to-br from-card to-card/50 overflow-hidden"
+            className="group relative rounded-lg sm:rounded-xl border p-3 sm:p-4 text-left transition-all duration-300 hover:shadow-lg hover:scale-105 bg-gradient-to-br from-card to-card/50 overflow-hidden flex flex-col"
           >
             <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity", stat.bgColor)} />
-            <div className="relative z-10">
+            <div className="relative z-10 flex flex-col flex-1">
               <div className="flex items-center justify-between mb-2 sm:mb-3">
-                <div className={cn("h-8 w-8 sm:h-10 sm:w-10 rounded-lg flex items-center justify-center", stat.bgColor)}>
-                  <stat.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", stat.textColor)} />
-                </div>
+                <stat.icon className={cn("h-5 w-5 sm:h-6 sm:w-6", stat.textColor)} />
                 <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </div>
               <p className="text-2xl sm:text-3xl font-black text-foreground mb-0.5 sm:mb-1">{stat.count}</p>
-              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground font-bold">{stat.label}</p>
+              <p className="font-mono text-[10px] sm:text-xs uppercase tracking-widest text-muted-foreground font-bold mt-auto">{stat.label}</p>
             </div>
           </button>
         ))}
@@ -679,14 +673,15 @@ export default function DashboardOverviewPage() {
         <div className="space-y-4 sm:space-y-6 min-w-0">
           {/* Needs Repurposing Widget */}
           <div className="rounded-xl sm:rounded-2xl border p-4 sm:p-6 card-premium bg-[#6366f1]/5 border-[#6366f1]/20 flex flex-col">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#6366f1]/15 border border-[#6366f1]/30">
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#6366f1]/15 border border-[#6366f1]/30 shrink-0">
                   <Share2 className="h-4 w-4 text-[#818cf8]" />
                 </div>
-                <h3 className="font-display font-bold text-sm sm:text-base text-foreground">Needs Repurposing</h3>
+                <h3 className="font-display font-bold text-sm sm:text-base text-foreground truncate">Needs Repurposing</h3>
               </div>
-              <span className="badge-gold text-[10px]">Action Required</span>            </div>
+              <span className="badge-gold text-[10px] whitespace-nowrap shrink-0">Action Required</span>
+            </div>
             <div className="flex-1 space-y-3">
               {allArticles.filter(a => (a.status === 'optimized' || a.status === 'draft_generated') && !a.socialAssets).slice(0, 2).map((art, idx) => (
                 <div key={idx} className="flex items-center justify-between p-3 rounded-xl bg-card border border-border group hover:border-[#6366f1]/30 transition-all cursor-pointer" onClick={() => router.push(`/dashboard/articles/${art.id}`)}>
@@ -699,7 +694,7 @@ export default function DashboardOverviewPage() {
               ))}
               {allArticles.filter(a => (a.status === 'optimized' || a.status === 'draft_generated') && !a.socialAssets).length === 0 && (
                 <div className="h-24 flex flex-center items-center justify-center text-center">
-                  <p className="text-xs text-muted-foreground italic">All published articles are fully repurposed! 🎉</p>
+                  <p className="text-xs text-muted-foreground italic">All published articles are fully repurposed!</p>
                 </div>
               )}
             </div>

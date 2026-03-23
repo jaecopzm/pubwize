@@ -1270,7 +1270,7 @@ export default function LandingPage() {
               { value: "90s", label: "Generation time" },
               { value: "AI", label: "Powered engine" },
               { value: "SEO", label: "Optimized" },
-              { value: "1-Click", label: "WordPress" },
+              { value: "1‑Click", label: "WordPress" },
             ].map((s) => (
               <div key={s.label} style={{ textAlign: "center", padding: "12px 8px" }}>
                 <div style={{ fontFamily: "'Syne',sans-serif", fontSize: "clamp(28px,3.5vw,36px)", fontWeight: 900, color: t.text, letterSpacing: "-0.02em" }}>
@@ -1696,7 +1696,7 @@ export default function LandingPage() {
           </div>
           {/* Bottom bar */}
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }} className="footer-bottom">
-            <span style={{ fontSize: 13, color: t.muted }}>© 2026 Pubwize</span>
+            <span style={{ fontSize: 13, color: t.muted }}>© 2026 Pubwize · DraftRapid</span>
             <span style={{ fontSize: 13, color: t.muted }}>v2.0</span>
           </div>
         </div>
@@ -1760,7 +1760,7 @@ export default function LandingPage() {
             transition={{ type: "spring", damping: 28, stiffness: 260 }}
             style={{
               position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 998,
-              background: "rgba(9,9,18,0.9)",
+              background: t.surface,
               backdropFilter: "blur(24px) saturate(180%)",
               borderTop: `1px solid ${t.border}`,
               padding: "12px clamp(16px,4vw,24px)",

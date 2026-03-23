@@ -85,8 +85,8 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
             border: "none",
             cursor: "pointer",
             transition: "all 0.2s",
-            background: billingCycle === 'monthly' ? "linear-gradient(135deg, #6366f1, #818cf8)" : "rgba(255,255,255,0.05)",
-            color: billingCycle === 'monthly' ? "#fff" : "#94a3b8",
+            background: billingCycle === 'monthly' ? "linear-gradient(135deg, #6366f1, #818cf8)" : "transparent",
+            color: billingCycle === 'monthly' ? "#fff" : "var(--muted-foreground)",
           }}
         >
           Monthly
@@ -102,8 +102,8 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
             border: "none",
             cursor: "pointer",
             transition: "all 0.2s",
-            background: billingCycle === 'annual' ? "linear-gradient(135deg, #6366f1, #818cf8)" : "rgba(255,255,255,0.05)",
-            color: billingCycle === 'annual' ? "#fff" : "#94a3b8",
+            background: billingCycle === 'annual' ? "linear-gradient(135deg, #6366f1, #818cf8)" : "transparent",
+            color: billingCycle === 'annual' ? "#fff" : "var(--muted-foreground)",
           }}
         >
           Annual
@@ -140,9 +140,9 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
               style={{
                 position: "relative",
                 borderRadius: "20px",
-                border: plan.popular ? "1px solid rgba(99,102,241,0.5)" : "1px solid rgba(255,255,255,0.06)",
+                border: plan.popular ? "1px solid rgba(99,102,241,0.5)" : "1px solid var(--border)",
                 padding: "32px",
-                background: plan.popular ? "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(34,211,238,0.05))" : "#0d0d1e",
+                background: plan.popular ? "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(34,211,238,0.05))" : "var(--card)",
                 transform: plan.popular ? "scale(1.05)" : "scale(1)",
                 boxShadow: plan.popular ? "0 20px 60px rgba(99,102,241,0.2)" : "none",
                 transition: "all 0.3s",
@@ -192,10 +192,10 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
               </div>
 
               {/* Plan Name & Price */}
-              <h3 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px", color: "#f8fafc", fontFamily: "'Syne', sans-serif" }}>{plan.name}</h3>
+              <h3 style={{ fontSize: "24px", fontWeight: 800, marginBottom: "8px", color: "var(--foreground)", fontFamily: "'Syne', sans-serif" }}>{plan.name}</h3>
               <div style={{ display: "flex", alignItems: "baseline", gap: "4px", marginBottom: "24px" }}>
-                <span style={{ fontSize: "48px", fontWeight: 900, color: "#f8fafc", fontFamily: "'Syne', sans-serif", letterSpacing: "-0.03em" }}>{formatPrice(price)}</span>
-                {price > 0 && <span style={{ fontSize: "14px", color: "#94a3b8" }}>/mo</span>}
+                <span style={{ fontSize: "48px", fontWeight: 900, color: "var(--foreground)", fontFamily: "'Syne', sans-serif", letterSpacing: "-0.03em" }}>{formatPrice(price)}</span>
+                {price > 0 && <span style={{ fontSize: "14px", color: "var(--muted-foreground)" }}>/mo</span>}
               </div>
 
               {/* CTA Button */}
@@ -218,9 +218,10 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
                     ? "linear-gradient(135deg, #6366f1, #22d3ee)"
                     : isCurrentPlan
                     ? "rgba(74,222,128,0.1)"
-                    : "rgba(255,255,255,0.05)",
-                  color: plan.popular ? "#fff" : isCurrentPlan ? "#4ade80" : "#94a3b8",
+                    : "var(--card)",
+                  color: plan.popular ? "#fff" : isCurrentPlan ? "#4ade80" : "var(--foreground)",
                   opacity: (isCurrentPlan || (isPaid && isPending)) ? 0.5 : 1,
+                  boxShadow: !plan.popular && !isCurrentPlan ? "0 0 0 1px var(--border)" : "none",
                 }}
               >
                 {isPending && isPaid && !isCurrentPlan ? (
@@ -233,7 +234,7 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
                 ) : planId === 'free' ? (
                   'Start Free'
                 ) : (
-                  'Start Trial'
+                  'Get Started'
                 )}
               </motion.button>
 
@@ -242,13 +243,13 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
                 {PLAN_HIGHLIGHTS[planId].map((feature, i) => (
                   <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <Check style={{ width: "16px", height: "16px", color: "#4ade80", flexShrink: 0 }} />
-                    <span style={{ fontSize: "14px", color: "#94a3b8" }}>{feature}</span>
+                    <span style={{ fontSize: "14px", color: "var(--muted-foreground)" }}>{feature}</span>
                   </div>
                 ))}
                 {planId === 'pro' && (
                   <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                     <Sparkles style={{ width: "16px", height: "16px", color: "#6366f1", flexShrink: 0 }} />
-                    <span style={{ fontSize: "14px", color: "#94a3b8" }}>Advanced analytics</span>
+                    <span style={{ fontSize: "14px", color: "var(--muted-foreground)" }}>Advanced analytics</span>
                   </div>
                 )}
               </div>
@@ -259,7 +260,7 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
 
       {/* Footer */}
       <div style={{ marginTop: "32px", textAlign: "center" }}>
-        <p style={{ fontSize: "13px", color: "#64748b" }}>
+        <p style={{ fontSize: "13px", color: "var(--muted-foreground)" }}>
           All plans include WordPress publishing, SEO optimization, and social media tools.
         </p>
       </div>

@@ -97,15 +97,12 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
     <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border">
 
       {/* ── Brand Header ── */}
-      <SidebarHeader style={{ borderBottom: "1px solid var(--sidebar-border)", padding: "12px 10px", minHeight: "60px", display: "flex", alignItems: "center" }}>
-        {/* When collapsed: center logo only */}
-        <div className="group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:items-center group-data-[collapsible=icon]:justify-center hidden">
-          <img src="/pubwize-logo.png" alt="Pubwize" className="h-8 w-auto flex-shrink-0" />
-        </div>
-
-        {/* When expanded: logo + text layout */}
-        <div className="group-data-[collapsible=icon]:hidden flex items-center justify-center gap-2">
-          <img src="/PubWize.png" alt="Pubwize" className="h-9 w-auto flex-shrink-0 max-w-full" />
+      <SidebarHeader style={{ padding: "12px 0", minHeight: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div className="flex items-center gap-3 group-data-[collapsible=icon]:gap-0">
+          <img src="/pubwize-icon.png" alt="Pubwize" className="h-9 w-9 flex-shrink-0" />
+          <span className="group-data-[collapsible=icon]:hidden" style={{ fontFamily: "var(--font-syne)", fontSize: "20px", fontWeight: 800, color: "var(--sidebar-foreground)", letterSpacing: "-0.02em" }}>
+            Pubwize
+          </span>
         </div>
       </SidebarHeader>
 

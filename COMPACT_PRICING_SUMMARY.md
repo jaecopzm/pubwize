@@ -115,7 +115,6 @@
 4. **Conversion Focused**
    - Clear CTAs
    - Popular plan stands out
-   - Trial messaging prominent
 
 ## 🔄 Migration Path
 
@@ -154,9 +153,8 @@ The new compact cards are now the default export from `/components/pricing/index
 
 1. **Test conversion rates** - Compare with old design
 2. **Add feature comparison table** - Below cards for detail-seekers
-3. **A/B test messaging** - "Start Trial" vs "Get Started"
-4. **Add testimonials** - Social proof near pricing
-5. **Implement FAQ** - Common pricing questions
+3. **Add testimonials** - Social proof near pricing
+4. **Implement FAQ** - Common pricing questions
 
 ## 💡 Future Enhancements
 
