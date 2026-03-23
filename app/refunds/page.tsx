@@ -69,10 +69,6 @@ export default function RefundsPage() {
               Refunds are processed at the sole discretion of Paddle.com, our Merchant of Record, in accordance with their refund policy and applicable consumer protection laws.
             </p>
           </section>
-              <li>Renewal charges are not eligible for refunds</li>
-              <li>Accounts found to be abusing the refund policy may be denied</li>
-            </ul>
-          </section>
 
           <section>
             <h2 className="text-2xl font-bold mb-4 text-foreground">Statutory Withdrawal Rights</h2>
