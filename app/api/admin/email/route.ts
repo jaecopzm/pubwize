@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { prisma } from "@/lib/prisma";
 import { verifyAdminRequest } from "@/lib/admin-auth";
 import { resend, EMAIL_CONFIG } from "@/lib/email/resend-client";
 
@@ -9,41 +9,40 @@ export async function POST(req: NextRequest) {
   const admin = await verifyAdminRequest(req);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { subject, html, segment, customEmails } = await req.json() as {
+  const { subject, html, segment, customEmails } = (await req.json()) as {
     subject: string;
     html: string;
     segment: Segment;
     customEmails?: string[];
   };
 
-  if (!subject?.trim() || !html?.trim())
+  if (!subject?.trim() || !html?.trim()) {
     return NextResponse.json({ error: "subject and html required" }, { status: 400 });
+  }
 
   let recipients: string[] = [];
 
   if (segment === "custom") {
     recipients = (customEmails ?? []).filter(Boolean);
   } else {
-    const db = adminDb();
-    let query: FirebaseFirestore.Query = db.collection("users").select("email", "planTier", "emailPreferences");
+    const users = await prisma.user.findMany({
+      where: {
+        ...(segment === "paid" ? { planStatus: "active" } : {}),
+      },
+      select: { email: true, planTier: true, emailPreferences: true },
+    });
 
-    if (segment === "paid") query = query.where("planStatus", "==", "active");
-
-    const snap = await query.get();
-    for (const doc of snap.docs) {
-      const d = doc.data();
-      if (!d.email) continue;
-      if (segment === "free" && d.planTier !== "free" && d.planTier !== "none") continue;
-      // Respect unsubscribe
-      if (d.emailPreferences?.marketing === false) continue;
-      recipients.push(d.email);
+    for (const u of users) {
+      if (!u.email) continue;
+      if (segment === "free" && u.planTier !== "free" && u.planTier !== "none") continue;
+      const prefs = u.emailPreferences as any;
+      if (prefs?.marketing === false) continue;
+      recipients.push(u.email);
     }
   }
 
-  if (recipients.length === 0)
-    return NextResponse.json({ error: "No recipients" }, { status: 400 });
+  if (recipients.length === 0) return NextResponse.json({ error: "No recipients" }, { status: 400 });
 
-  // Resend supports up to 100 per batch call
   const BATCH = 100;
   let sent = 0;
   let failed = 0;
@@ -52,14 +51,7 @@ export async function POST(req: NextRequest) {
     const chunk = recipients.slice(i, i + BATCH);
     try {
       await resend.batch.send(
-        chunk.map((to) => ({
-          from: EMAIL_CONFIG.from,
-          to,
-          subject,
-          html,
-          replyTo: EMAIL_CONFIG.replyTo,
-          tags: [{ name: "type", value: "admin_broadcast" }],
-        }))
+        chunk.map((to) => ({ from: EMAIL_CONFIG.from, to, subject, html, replyTo: EMAIL_CONFIG.replyTo, tags: [{ name: "type", value: "admin_broadcast" }] }))
       );
       sent += chunk.length;
     } catch {

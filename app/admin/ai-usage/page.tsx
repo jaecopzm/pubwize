@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { 
   Zap, 
   Search, 
@@ -28,9 +27,8 @@ export default function AdminAIUsagePage() {
   const [loading, setLoading] = useState(true);
 
   async function load(uid?: string) {
-    const token = await getFirebaseAuth().currentUser?.getIdToken();
     const url = `/api/admin/ai-usage${uid ? `?uid=${uid}` : ""}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(url, { });
     if (res.ok) {
       setData(await res.json());
     }

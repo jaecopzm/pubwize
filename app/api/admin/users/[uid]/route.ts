@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { prisma } from "@/lib/prisma";
 import { verifyAdminRequest } from "@/lib/admin-auth";
 
 export async function GET(
@@ -10,21 +10,16 @@ export async function GET(
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { uid } = await params;
-  const db = adminDb();
 
-  const [userSnap, articlesSnap, sitesSnap] = await Promise.all([
-    db.collection("users").doc(uid).get(),
-    db.collection("articles").where("ownerId", "==", uid).orderBy("createdAt", "desc").limit(20).get(),
-    db.collection("sites").where("ownerId", "==", uid).get(),
+  const [user, articles, sites] = await Promise.all([
+    prisma.user.findUnique({ where: { id: uid } }),
+    prisma.article.findMany({ where: { ownerId: uid }, orderBy: { createdAt: "desc" }, take: 20 }),
+    prisma.site.findMany({ where: { ownerId: uid } }),
   ]);
 
-  if (!userSnap.exists) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!user) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  return NextResponse.json({
-    user: { uid, ...userSnap.data() },
-    articles: articlesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
-    sites: sitesSnap.docs.map((d) => ({ id: d.id, ...d.data() })),
-  });
+  return NextResponse.json({ user: { uid, ...user }, articles, sites });
 }
 
 export async function PATCH(
@@ -37,12 +32,10 @@ export async function PATCH(
   const { uid } = await params;
   const body = await req.json();
 
-  const allowed = ["planTier", "planStatus"] as const;
-  const update: Record<string, unknown> = { updatedAt: new Date().toISOString() };
-  for (const key of allowed) {
-    if (key in body) update[key] = body[key];
-  }
+  const data: any = {};
+  if ("planTier" in body) data.planTier = body.planTier;
+  if ("planStatus" in body) data.planStatus = body.planStatus;
 
-  await adminDb().collection("users").doc(uid).update(update);
+  await prisma.user.update({ where: { id: uid }, data });
   return NextResponse.json({ ok: true });
 }

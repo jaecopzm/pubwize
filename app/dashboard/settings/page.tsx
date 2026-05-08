@@ -133,7 +133,6 @@ function SettingsContent() {
 
       const response = await fetch("/api/user/plan", {
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });
@@ -167,7 +166,6 @@ function SettingsContent() {
 
       const response = await fetch("/api/wordpress/sites", {
         headers: {
-          "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json",
         },
       });

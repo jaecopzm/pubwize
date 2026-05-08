@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Sparkles, Zap, Target, BookOpen, TrendingUp, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 
 interface AIImprovePanelProps {
   content: string;
@@ -43,20 +42,10 @@ export function AIImprovePanel({ content, keyword, onContentUpdate, onUpgradeReq
     setImproving(type);
     
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      
-      if (!idToken) {
-        toast.error('Please sign in to continue');
-        setImproving(null);
-        return;
-      }
-
       const response = await fetch('/api/articles/ai-improve', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({ content, keyword, improvementType: type }),
       });

@@ -93,9 +93,9 @@ For production, visit [https://pubwize.com](https://pubwize.com).
 ## Tech Stack
 
 - **Framework**: Next.js 16 (App Router)
-- **Authentication**: Firebase Auth
-- **Database**: Firestore
-- **AI**: Google Gemini
+- **Authentication**: Clerk
+- **Database**: Neon Postgres + Prisma ORM
+- **AI**: Google Gemini + OpenRouter
 - **UI**: Tailwind CSS + shadcn/ui
 - **Icons**: Lucide React
 - **Language**: TypeScript

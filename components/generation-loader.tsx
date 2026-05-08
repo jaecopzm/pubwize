@@ -83,7 +83,7 @@ export function GenerationLoader({ step, message, keyword }: GenerationLoaderPro
         </motion.div>
       </div>
 
-      {/* Primary message */}
+      {/* Primary message with estimated time */}
       <motion.h3 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
@@ -91,6 +91,17 @@ export function GenerationLoader({ step, message, keyword }: GenerationLoaderPro
       >
         {message || `Generating ${step}...`}
       </motion.h3>
+
+      {/* Estimated time */}
+      {estimatedTime && (
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="mb-2 text-[10px] sm:text-xs text-muted-foreground/70 text-center"
+        >
+          Usually takes ~{estimatedTime} seconds
+        </motion.p>
+      )}
 
       {/* Current phase label */}
       <AnimatePresence mode="wait">

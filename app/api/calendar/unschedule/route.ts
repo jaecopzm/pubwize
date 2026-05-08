@@ -1,43 +1,23 @@
 import { auth } from "@clerk/nextjs/server";
-import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { FieldValue } from 'firebase-admin/firestore';
-import { COLLECTIONS } from '@/lib/firestore/collections';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { articleId } = await request.json();
+    if (!articleId) return NextResponse.json({ error: "articleId is required" }, { status: 400 });
 
-    if (!articleId) {
-      return NextResponse.json({ error: 'articleId is required' }, { status: 400 });
-    }
+    const article = await prisma.article.findUnique({ where: { id: articleId } });
+    if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    if (article.ownerId !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    const db = adminDb();
-    const articleRef = db.collection(COLLECTIONS.ARTICLES).doc(articleId);
-    const articleDoc = await articleRef.get();
-
-    if (!articleDoc.exists) {
-      return NextResponse.json({ error: 'Article not found' }, { status: 404 });
-    }
-
-    const article = articleDoc.data();
-    if (article?.ownerId !== userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
-    }
-
-    await articleRef.update({
-      scheduledDate: FieldValue.delete(),
-      updatedAt: FieldValue.serverTimestamp(),
-    });
-
+    await prisma.article.update({ where: { id: articleId }, data: { scheduledDate: null } });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error unscheduling article:', error);
-    return NextResponse.json({ error: 'Failed to unschedule article' }, { status: 500 });
+    console.error("Error unscheduling article:", error);
+    return NextResponse.json({ error: "Failed to unschedule article" }, { status: 500 });
   }
 }

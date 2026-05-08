@@ -1,99 +1,42 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { prisma } from "@/lib/prisma";
 import { generateSocialMedia, aiUserContext } from "@/lib/ai-providers";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
-import type { SocialMediaData } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
   try {
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const token = authHeader.split("Bearer ")[1];
     const { userId: uid } = await auth();
-    if (!uid) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Check usage limits
-    const db = adminDb();
-    const usageCheck = await canPerformAction(db, uid, 'socialGeneration');
-    
+    const usageCheck = await canPerformAction(null, uid, "socialGeneration");
     if (!usageCheck.allowed) {
-      return NextResponse.json(
-        { 
-          error: usageCheck.reason || "Social media generation limit reached",
-          upgradeRequired: true,
-          current: usageCheck.current,
-          limit: usageCheck.limit
-        },
-        { status: 403 }
-      );
+      return NextResponse.json({ error: usageCheck.reason || "Social media generation limit reached", upgradeRequired: true, current: usageCheck.current, limit: usageCheck.limit }, { status: 403 });
     }
 
-    const body = await request.json();
-    const { articleId } = body;
+    const { articleId } = await request.json();
+    if (!articleId) return NextResponse.json({ error: "Missing articleId" }, { status: 400 });
 
-    if (!articleId) {
-      return NextResponse.json(
-        { error: "Missing articleId" },
-        { status: 400 }
-      );
+    const article = await prisma.article.findUnique({ where: { id: articleId } });
+    if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    if (article.ownerId !== uid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
+    const draft = article.draft as any;
+    const settings = article.settings as any;
+    if (!draft?.content || !article.keyword) {
+      return NextResponse.json({ error: "Article must have draft content and keyword" }, { status: 400 });
     }
 
-    const articleRef = db.collection("articles").doc(articleId);
-    const articleSnap = await articleRef.get();
+    const socialMediaData = await aiUserContext.run(uid, () =>
+      generateSocialMedia({ content: draft.content, keyword: article.keyword, tone: settings?.tone || "professional" })
+    );
 
-    if (!articleSnap.exists) {
-      return NextResponse.json(
-        { error: "Article not found" },
-        { status: 404 }
-      );
-    }
-
-    const articleData = articleSnap.data() as {
-      ownerId?: string;
-      keyword?: string;
-      draft?: { content?: string };
-      settings?: { tone?: string };
-    };
-
-    if (articleData.ownerId !== uid) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (!articleData.draft?.content || !articleData.keyword) {
-      return NextResponse.json(
-        { error: "Article must have draft content and keyword" },
-        { status: 400 }
-      );
-    }
-
-    // Generate social media content
-    const socialMediaData = await aiUserContext.run(uid, () => generateSocialMedia({
-      content: articleData.draft.content,
-      keyword: articleData.keyword,
-      tone: articleData.settings?.tone || "professional",
-    }));
-
-    // Save to Firestore
-    await articleRef.update({
-      socialMedia: socialMediaData,
-      updatedAt: new Date(),
-    });
-
-    // Increment usage counter
-    await incrementUsage(db, uid, 'socialGeneration');
+    await prisma.article.update({ where: { id: articleId }, data: { optimizations: { ...(article.optimizations as any), socialMedia: socialMediaData } as any } });
+    await incrementUsage(null, uid, "socialGeneration");
 
     return NextResponse.json(socialMediaData);
   } catch (error) {
     console.error("Social media generation error:", error);
-    return NextResponse.json(
-      { error: "Failed to generate social media content" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to generate social media content" }, { status: 500 });
   }
 }

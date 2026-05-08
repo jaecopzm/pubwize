@@ -155,15 +155,9 @@ export async function getCoreWebVitals() {
   if (typeof window === 'undefined') return null;
   
   try {
-    const { onCLS, onFID, onFCP, onLCP, onTTFB } = await import('web-vitals');
+    const { onCLS, onFCP, onLCP, onTTFB } = await import('web-vitals');
     
-    return {
-      onCLS,
-      onFID,
-      onFCP,
-      onLCP,
-      onTTFB,
-    };
+    return { onCLS, onFCP, onLCP, onTTFB };
   } catch (error) {
     console.error('Failed to load web-vitals:', error);
     return null;

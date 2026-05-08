@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, X, Clock, Grid3x3, List, Search, TrendingUp, BarChart3 } from 'lucide-react';
-import { getFirebaseAuth } from '@/lib/firebase-client';
 import type { CalendarEvent } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
@@ -41,20 +40,9 @@ export default function CalendarPage() {
   async function fetchEvents() {
     try {
       setLoading(true);
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      
-      if (!idToken) {
-        toast.error('Authentication required');
-        return;
-      }
-
       const response = await fetch(
         `/api/calendar?year=${year}&month=${month + 1}`,
         {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
         }
       );
 
@@ -74,14 +62,8 @@ export default function CalendarPage() {
 
   async function fetchUnscheduledArticles() {
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      
-      if (!idToken) return;
 
-      const response = await fetch('/api/articles', {
-        headers: { Authorization: `Bearer ${idToken}` },
-      });
+      const response = await fetch('/api/articles', {});
 
       if (response.ok) {
         const data = await response.json();
@@ -97,15 +79,10 @@ export default function CalendarPage() {
 
   async function scheduleArticle(articleId: string, date: Date) {
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      
-      if (!idToken) return;
 
       const response = await fetch('/api/calendar/schedule', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${idToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ articleId, date: date.toISOString() }),
@@ -124,15 +101,10 @@ export default function CalendarPage() {
 
   async function unscheduleArticle(articleId: string) {
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      
-      if (!idToken) return;
 
       const response = await fetch('/api/calendar/unschedule', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${idToken}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ articleId }),

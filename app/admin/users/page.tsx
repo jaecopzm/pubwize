@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { 
   Users, 
   Search, 
@@ -39,15 +38,9 @@ export default function AdminUsersPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
 
-  async function getToken() {
-    return getFirebaseAuth().currentUser?.getIdToken();
-  }
-
   async function fetchUsers(cursor?: string) {
-    const token = await getToken();
-    if (!token) return;
     const url = `/api/admin/users${cursor ? `?cursor=${cursor}` : ""}`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+    const res = await fetch(url);
     if (!res.ok) return;
     const data = await res.json();
     setUsers((prev) => cursor ? [...prev, ...data.users] : data.users);
@@ -59,10 +52,8 @@ export default function AdminUsersPage() {
 
   async function deleteSingle(uid: string) {
     if (!confirm("Delete this user and all their data?")) return;
-    const token = await getToken();
     await fetch(`/api/admin/users/${uid}/delete`, {
       method: "DELETE",
-      headers: { Authorization: `Bearer ${token}` },
     });
     setUsers((prev) => prev.filter((u) => u.uid !== uid));
     setSelected((prev) => { const s = new Set(prev); s.delete(uid); return s; });
@@ -72,10 +63,9 @@ export default function AdminUsersPage() {
     const uids = [...selected];
     if (!confirm(`Delete ${uids.length} users and all their data? This cannot be undone.`)) return;
     setDeleting(true);
-    const token = await getToken();
     await fetch("/api/admin/users/batch-delete", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ uids }),
     });
     setUsers((prev) => prev.filter((u) => !selected.has(u.uid)));

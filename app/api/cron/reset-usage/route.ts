@@ -1,49 +1,35 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { resetMonthlyUsage } from '@/lib/usage-tracking';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { resetMonthlyUsage } from "@/lib/usage-tracking";
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   try {
-    // Verify cron secret to prevent unauthorized access
-    const authHeader = req.headers.get('authorization');
+    const authHeader = req.headers.get("authorization");
     const cronSecret = process.env.CRON_SECRET;
-
     if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const db = adminDb();
-    const usersSnapshot = await db.collection('users').get();
-
+    const users = await prisma.user.findMany({ select: { id: true } });
     let resetCount = 0;
     const errors: string[] = [];
 
-    for (const userDoc of usersSnapshot.docs) {
+    for (const user of users) {
       try {
-        await resetMonthlyUsage(db, userDoc.id);
+        await resetMonthlyUsage(null, user.id);
         resetCount++;
       } catch (error) {
-        console.error(`Failed to reset usage for user ${userDoc.id}:`, error);
-        errors.push(userDoc.id);
+        console.error(`Failed to reset usage for user ${user.id}:`, error);
+        errors.push(user.id);
       }
     }
 
-    console.log(`[Cron] Reset usage for ${resetCount} users. Errors: ${errors.length}`);
-
-    return NextResponse.json({
-      success: true,
-      resetCount,
-      errorCount: errors.length,
-      errors: errors.slice(0, 10), // Only return first 10 errors
-    });
+    return NextResponse.json({ success: true, resetCount, errorCount: errors.length, errors: errors.slice(0, 10) });
   } catch (error) {
-    console.error('[Cron] Usage reset failed:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error("[Cron] Usage reset failed:", error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

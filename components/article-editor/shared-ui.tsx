@@ -37,7 +37,6 @@ export function StatPill({ label, value }: { label: string; value: any }) {
     );
 }
 
-// ── Generate CTA button ──────────────────────────────────────────────
 export function GenerateCTA({
     onClick,
     loading,
@@ -56,16 +55,16 @@ export function GenerateCTA({
     if (done)
         return (
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 rounded-xl border border-[rgba(34,211,238,0.3)] bg-[rgba(34,211,238,0.1)] px-5 py-3.5 text-sm font-semibold flex-1 text-[#22d3ee]">
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3.5 text-sm font-semibold flex-1 text-emerald-400 shadow-sm shadow-emerald-500/5">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                     <span className="truncate">{doneLabel}</span>
                 </div>
                 {onRegenerate && (
                     <button
                         onClick={onRegenerate}
-                        className="group relative flex items-center justify-center gap-2 rounded-xl border border-[rgba(99,102,241,0.3)] bg-[rgba(99,102,241,0.05)] px-4 py-3.5 text-sm font-semibold text-[#818cf8] transition-all hover:bg-[rgba(99,102,241,0.1)] hover:border-[rgba(99,102,241,0.5)] hover:shadow-lg hover:shadow-[#6366f1]/20 hover:-translate-y-0.5 overflow-hidden"
+                        className="group relative flex items-center justify-center gap-2 rounded-xl border border-[#6366f1]/30 bg-[#6366f1]/10 px-4 py-3.5 text-sm font-semibold text-[#818cf8] transition-all hover:bg-[#6366f1]/20 hover:border-[#6366f1]/50 hover:shadow-lg hover:shadow-[#6366f1]/20 hover:-translate-y-0.5 overflow-hidden"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-[rgba(99,102,241,0)] via-[rgba(99,102,241,0.1)] to-[rgba(99,102,241,0)] translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#6366f1]/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
                         <Sparkles className="h-4 w-4 shrink-0 relative z-10 group-hover:rotate-12 transition-transform" />
                         <span className="relative z-10">Regenerate</span>
                     </button>
@@ -77,14 +76,21 @@ export function GenerateCTA({
         <button
             onClick={onClick}
             disabled={loading}
-            className="btn-gold group relative w-full flex items-center justify-center gap-2 py-3 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden"
+            className="group relative w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#818cf8] py-3.5 text-sm font-bold text-white shadow-lg shadow-[#6366f1]/25 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transition-all hover:scale-[1.01] hover:shadow-[#6366f1]/40 active:scale-[0.99]"
         >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+            
             {loading ? (
-                <>
-                    <Loader2 className="h-4 w-4 animate-spin relative z-10" />
-                    <span className="relative z-10">Generating…</span>
-                </>
+                <div className="flex flex-col items-center gap-1.5 relative z-10 w-full px-8">
+                    <div className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span>Working on it...</span>
+                    </div>
+                    {/* Subtle progress bar inside button */}
+                    <div className="w-full h-1 rounded-full bg-white/20 overflow-hidden mt-1">
+                        <div className="h-full bg-white/60 animate-progress-indefinite rounded-full" />
+                    </div>
+                </div>
             ) : (
                 <>
                     <Sparkles className="h-4 w-4 relative z-10 group-hover:rotate-12 group-hover:scale-110 transition-transform" />

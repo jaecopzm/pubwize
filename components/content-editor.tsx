@@ -6,7 +6,6 @@ import { calculateSEOScore, getScoreColor, getScoreBgColor, type SEOScore } from
 import { CheckCircle2, AlertCircle, TrendingUp, FileText, Eye, Edit3, Save, X, Sparkles, Loader2, Zap, Crown, Image as ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { useUserPlan } from "@/lib/hooks/use-user-plan";
 import { ImageSelector } from "@/components/image-selector";
 import { SerpPreview } from "@/components/serp-preview-live";
@@ -105,15 +104,11 @@ export function ContentEditor({ content, keyword, siteDomain, onSave, readOnly =
 
     try {
       setOptimizing(true);
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) throw new Error("Unable to get ID token");
 
       const res = await fetch("/api/articles/optimize-seo", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
         },
         body: JSON.stringify({
           content: editedContent,

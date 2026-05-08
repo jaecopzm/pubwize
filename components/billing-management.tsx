@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { CreditCard, Calendar, AlertCircle, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
@@ -39,17 +38,10 @@ export function BillingManagement({
 
   const fetchBillingData = async () => {
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) return;
 
       const [methodsRes, invoicesRes] = await Promise.all([
-        fetch(`/api/billing/payment-methods?customerId=${customerId}`, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        }),
-        fetch(`/api/billing/invoices?customerId=${customerId}`, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        }),
+        fetch(`/api/billing/payment-methods?customerId=${customerId}`, {}),
+        fetch(`/api/billing/invoices?customerId=${customerId}`, {}),
       ]);
 
       if (methodsRes.ok) {
@@ -88,14 +80,10 @@ export function BillingManagement({
 
     setCanceling(true);
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) return;
 
       const res = await fetch("/api/billing/cancel-subscription", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${idToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ subscriptionId }),

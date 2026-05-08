@@ -90,7 +90,7 @@ export async function withRetry<T>(
 export async function generateWithProgress<T>(
   endpoint: string,
   body: any,
-  idToken: string,
+  _idToken: string,
   options: GenerationOptions = {}
 ): Promise<T> {
   const { onProgress } = options;
@@ -100,10 +100,7 @@ export async function generateWithProgress<T>(
 
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${idToken}`,
-      },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
 

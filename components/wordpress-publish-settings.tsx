@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Settings, Tag, FolderTree, Eye, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 
 interface WordPressPublishSettingsProps {
   articleId: string;
@@ -59,19 +58,11 @@ export function WordPressPublishSettings({
 
   async function fetchWordPressData() {
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-
-      if (!idToken) return;
 
       // Fetch categories and tags from WordPress
       const [categoriesRes, tagsRes] = await Promise.all([
-        fetch(`/api/wordpress/categories?siteId=${wordPressSiteId}`, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        }),
-        fetch(`/api/wordpress/tags?siteId=${wordPressSiteId}`, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        }),
+        fetch(`/api/wordpress/categories?siteId=${wordPressSiteId}`, {}),
+        fetch(`/api/wordpress/tags?siteId=${wordPressSiteId}`, {}),
       ]);
 
       if (categoriesRes.ok) {

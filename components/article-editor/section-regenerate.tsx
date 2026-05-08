@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { RefreshCw, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 
 interface SectionRegenerateProps {
   sectionHeading: string;
@@ -26,20 +25,10 @@ export function SectionRegenerate({
     setIsRegenerating(true);
 
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      
-      if (!idToken) {
-        toast.error('Please sign in to continue');
-        setIsRegenerating(false);
-        return;
-      }
-
       const response = await fetch('/api/articles/regenerate-section', {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({
           sectionHeading,

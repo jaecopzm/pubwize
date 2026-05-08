@@ -189,11 +189,16 @@ function analyzeKeywordUsage(content: string, keyword: string): KeywordScore {
 
   // Calculate score
   let score = 0;
-  if (count >= 3) score += 30;
+  if (count >= 3) score += 20;
+  if (count >= 6) score += 10;
   if (inTitle) score += 20;
   if (inFirstParagraph) score += 20;
   if (inHeadings > 0) score += 15;
   if (densityOptimal) score += 15;
+  
+  // Bonus for placement in first 100 words
+  const first100Words = words > 100 ? plainText.split(/\s+/).slice(0, 100).join(' ').toLowerCase() : plainText.toLowerCase();
+  if (first100Words.includes(lowerKeyword)) score += 5;
 
   return {
     score: Math.min(score, 100),
@@ -260,9 +265,12 @@ function analyzeStructure(content: string): StructureScore {
 
   let score = 0;
   if (h1Count === 1) score += 20;
-  if (headings.length >= 3) score += 20;
-  if (paragraphs.length >= 5) score += 20;
-  if (words >= 800) score += 20;
+  if (headings.length >= 3) score += 15;
+  if (headings.length >= 5) score += 5;
+  if (paragraphs.length >= 5) score += 15;
+  if (paragraphs.length >= 10) score += 5;
+  if (words >= 600) score += 10;
+  if (words >= 1000) score += 10;
   if (words >= 1500) score += 10;
   if (images >= 1) score += 10;
 

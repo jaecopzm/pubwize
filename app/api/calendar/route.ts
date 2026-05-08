@@ -1,108 +1,55 @@
 import { auth } from "@clerk/nextjs/server";
-import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
-import { COLLECTIONS } from '@/lib/firestore/collections';
-import { withRateLimit } from '@/lib/rate-limit';
-import { cache, cacheKeys, cacheTTL } from '@/lib/redis';
-import { logger } from '@/lib/logger';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { withRateLimit } from "@/lib/rate-limit";
+import { cache, cacheKeys, cacheTTL } from "@/lib/redis";
+import { logger } from "@/lib/logger";
 
-/**
- * GET /api/calendar?year=2024&month=1
- * Get calendar events for a specific month
- */
 async function getCalendarHandler(request: NextRequest) {
-  const startTime = Date.now();
-  
   try {
-    // Verify authentication
     const { userId } = await auth();
-    if (!userId) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    // Get query parameters
     const { searchParams } = new URL(request.url);
-    const year = searchParams.get('year');
-    const month = searchParams.get('month');
+    const year = searchParams.get("year");
+    const month = searchParams.get("month");
 
-    if (!year || !month) {
-      return NextResponse.json(
-        { error: 'year and month query parameters are required' },
-        { status: 400 }
-      );
-    }
+    if (!year || !month) return NextResponse.json({ error: "year and month are required" }, { status: 400 });
 
     const yearNum = parseInt(year);
     const monthNum = parseInt(month);
-
     if (isNaN(yearNum) || isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
-      return NextResponse.json(
-        { error: 'Invalid year or month' },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Invalid year or month" }, { status: 400 });
     }
 
-    // Check cache first
     const cacheKey = cacheKeys.calendarEvents(userId, yearNum, monthNum);
     const cached = await cache.get<any>(cacheKey);
-    
-    if (cached) {
-      logger.cache('hit', cacheKey, { userId, year: yearNum, month: monthNum });
-      logger.response('GET', '/api/calendar', 200, Date.now() - startTime, { cached: true });
-      return NextResponse.json(cached);
-    }
+    if (cached) return NextResponse.json(cached);
 
-    logger.cache('miss', cacheKey, { userId, year: yearNum, month: monthNum });
-
-    const db = adminDb();
     const startDate = new Date(yearNum, monthNum - 1, 1);
     const endDate = new Date(yearNum, monthNum, 0, 23, 59, 59, 999);
 
-    const articlesRef = db.collection(COLLECTIONS.ARTICLES);
-    const q = articlesRef
-      .where('ownerId', '==', userId)
-      .where('scheduledDate', '>=', startDate)
-      .where('scheduledDate', '<=', endDate);
-
-    const snapshot = await q.get();
-    
-    const events = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      const scheduledTimestamp = data.scheduledDate;
-      
-      return {
-        id: doc.id,
-        articleId: doc.id,
-        title: data.keyword || 'Untitled Article',
-        status: data.status,
-        authorId: data.ownerId,
-        authorName: 'Author',
-        scheduledDate: scheduledTimestamp?.toDate() || new Date(),
-      };
+    const articles = await prisma.article.findMany({
+      where: { ownerId: userId, scheduledDate: { gte: startDate, lte: endDate } },
     });
 
-    const result = {
-      events,
-      year: yearNum,
-      month: monthNum,
-    };
+    const events = articles.map((a) => ({
+      id: a.id,
+      articleId: a.id,
+      title: a.keyword || "Untitled Article",
+      status: a.status,
+      authorId: a.ownerId,
+      authorName: "Author",
+      scheduledDate: a.scheduledDate,
+    }));
 
-    // Cache the result
+    const result = { events, year: yearNum, month: monthNum };
     await cache.set(cacheKey, result, cacheTTL.calendarEvents);
-    logger.cache('set', cacheKey, { userId, year: yearNum, month: monthNum });
-
-    logger.response('GET', '/api/calendar', 200, Date.now() - startTime);
     return NextResponse.json(result);
   } catch (error) {
-    logger.error('Error fetching calendar events', error, { userId: 'unknown' });
-    return NextResponse.json(
-      { error: 'Failed to fetch calendar events' },
-      { status: 500 }
-    );
+    logger.error("Error fetching calendar events", error);
+    return NextResponse.json({ error: "Failed to fetch calendar events" }, { status: 500 });
   }
 }
 
-export const GET = withRateLimit(getCalendarHandler, 'read');
+export const GET = withRateLimit(getCalendarHandler, "read");

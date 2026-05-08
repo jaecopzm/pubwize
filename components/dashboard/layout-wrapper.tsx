@@ -14,6 +14,7 @@ import { WelcomeModal } from "@/components/welcome-modal";
 import { UsageWarningBanner } from "@/components/usage-warning-banner";
 import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
 import { ExitIntentPopup } from "@/components/exit-intent-popup";
+import { CommandPalette } from "@/components/command-palette";
 
 
 
@@ -256,6 +257,7 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
 
       <WelcomeModal isOpen={showWelcome} onClose={handleCloseWelcome} />
       <ExitIntentPopup planTier={plan} />
+      <CommandPalette />
     </SidebarProvider>
   );
 }

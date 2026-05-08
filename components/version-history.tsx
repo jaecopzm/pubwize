@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { History, RotateCcw, X, Clock } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
@@ -26,12 +25,8 @@ export function VersionHistory({ articleId, onRestore }: VersionHistoryProps) {
   const fetchVersions = async () => {
     setLoading(true);
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
 
-      const res = await fetch(`/api/articles/versions?articleId=${articleId}`, {
-        headers: { Authorization: `Bearer ${idToken}` },
-      });
+      const res = await fetch(`/api/articles/versions?articleId=${articleId}`, {});
 
       if (res.ok) {
         const data = await res.json();

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { Clock, History, User, RotateCcw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { getFirebaseAuth } from '@/lib/firebase-client';
 import type { VersionSnapshot } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -34,18 +33,7 @@ export function VersionHistoryPanel({
   async function fetchSnapshots() {
     try {
       setLoading(true);
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      
-      if (!idToken) {
-        toast.error('Authentication required');
-        return;
-      }
-
       const response = await fetch(`/api/articles/${articleId}/versions`, {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
       });
 
       if (!response.ok) {
@@ -69,21 +57,10 @@ export function VersionHistoryPanel({
 
     try {
       setRestoringId(snapshotId);
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      
-      if (!idToken) {
-        toast.error('Authentication required');
-        return;
-      }
-
       const response = await fetch(
         `/api/articles/${articleId}/versions/${snapshotId}/restore`,
         {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
+          method: 'POST'
         }
       );
 

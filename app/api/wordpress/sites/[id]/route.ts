@@ -1,29 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
-import { getWordPressSitePath } from "@/lib/firestore/collections";
+import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
-// DELETE - Disconnect a WordPress site
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth(request);
-    const userId = user.uid;
-
     const { id: siteId } = await params;
-    const sitePath = getWordPressSitePath(userId, siteId);
 
-    // Delete the site
-    await adminDb().doc(sitePath).delete();
+    const site = await prisma.wordPressSite.findUnique({ where: { id: siteId } });
+    if (!site || site.userId !== user.uid) {
+      return NextResponse.json({ error: "Site not found" }, { status: 404 });
+    }
 
+    await prisma.wordPressSite.delete({ where: { id: siteId } });
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof Response) return error;
     console.error("Error disconnecting WordPress site:", error);
-    return NextResponse.json(
-      { error: "Failed to disconnect site" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to disconnect site" }, { status: 500 });
   }
 }

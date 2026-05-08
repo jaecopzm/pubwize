@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateAIResponse, aiUserContext } from "@/lib/ai-providers";
-import { adminDb } from "@/lib/firebase-admin";
+
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { withErrorHandler, QuotaExceededError, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
@@ -14,8 +14,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     const uid = auth.uid!;
 
     // 2. Check usage quota
-    const db = adminDb();
-    const usageCheck = await canPerformAction(db, uid, "sectionRegenerations");
+    
+    const usageCheck = await canPerformAction(null, uid, "sectionRegenerations");
 
     if (!usageCheck.allowed) {
         throw new QuotaExceededError(
@@ -67,7 +67,7 @@ Return ONLY the question text, no quotes or additional formatting.`;
     }
 
     // 6. Increment usage counter
-    await incrementUsage(db, uid, "sectionRegenerations");
+    await incrementUsage(null, uid, "sectionRegenerations");
 
     // 7. Return success
     return NextResponse.json({ newValue });

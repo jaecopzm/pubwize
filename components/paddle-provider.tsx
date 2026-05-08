@@ -16,7 +16,6 @@ export function PaddleProvider({ children }: { children: React.ReactNode }) {
     if (paddleLoaded && window.Paddle) {
       const token = process.env.NEXT_PUBLIC_PADDLE_CLIENT_TOKEN;
       const environment = process.env.NEXT_PUBLIC_PADDLE_ENV || "sandbox";
-      
       if (!token) {
         console.warn("NEXT_PUBLIC_PADDLE_CLIENT_TOKEN not configured");
         return;

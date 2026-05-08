@@ -94,7 +94,7 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
   const usagePercent = totalLimit > 0 ? Math.round((articlesUsed / totalLimit) * 100) : 0;
 
   return (
-    <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border">
+    <Sidebar collapsible="icon" {...props} className="border-r border-sidebar-border transition-all duration-200 ease-out">
 
       {/* ── Brand Header ── */}
       <SidebarHeader style={{ padding: "12px 0", minHeight: "60px", display: "flex", alignItems: "center", justifyContent: "center" }}>

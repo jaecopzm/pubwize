@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminDb } from '@/lib/firebase-admin';
+
 import { generateAIStream, aiUserContext } from '@/lib/ai-providers';
 import { withErrorHandler, assertValid } from '@/lib/error-handler';
 import { authenticateRequest, checkRateLimit, validateRequestBody } from '@/lib/api-security';
@@ -16,8 +16,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const uid = auth.uid!;
 
   // 2. Check usage limits
-  const db = adminDb();
-  const usageCheck = await canPerformAction(db, uid, 'aiImprovements');
+  
+  const usageCheck = await canPerformAction(null, uid, 'aiImprovements');
   
   if (!usageCheck.allowed) {
     return NextResponse.json(
@@ -63,13 +63,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // 5. Verify article ownership
-  const articleRef = db.collection('articles').doc(articleId);
-  const articleDoc = await articleRef.get();
-
-  assertValid(articleDoc.exists, 'Article not found');
-
-  const article = articleDoc.data();
-  assertValid(article?.ownerId === uid, 'You don\'t have permission to access this article');
+  const { prisma } = await import('@/lib/prisma');
+  const article = await prisma.article.findUnique({ where: { id: articleId } });
+  assertValid(!!article, 'Article not found');
+  assertValid(article!.ownerId === uid, "You don't have permission to access this article");
 
   // 6. Stream AI fixes using Groq
   const systemPrompt = `You are an SEO expert. Your job is to fix content based on specific SEO suggestions.
@@ -112,13 +109,15 @@ Fix this content based on the suggestions above.`;
       }
 
       // Update the article with fixed content
-      await articleRef.update({
-        'draft.content': fixedContent,
-        updatedAt: new Date(),
+      const { prisma } = await import('@/lib/prisma');
+      const existingDraft = (article?.draft as any) || {};
+      await prisma.article.update({
+        where: { id: articleId },
+        data: { draft: { ...existingDraft, content: fixedContent } as any },
       });
 
       // Increment usage counter
-      await incrementUsage(db, uid, 'aiImprovements');
+      await incrementUsage(null, uid, 'aiImprovements');
 
       await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
     } catch (err) {

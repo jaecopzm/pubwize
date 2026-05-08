@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { Globe, Loader2, ExternalLink, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 
 interface WordPressPublishButtonProps {
   articleId: string;
@@ -33,18 +32,9 @@ export function WordPressPublishButton({
 
     setPublishing(true);
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-
-      if (!idToken) {
-        toast.error("Authentication required");
-        return;
-      }
-
       const response = await fetch("/api/wordpress/publish", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${idToken}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({

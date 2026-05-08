@@ -272,16 +272,16 @@ export function formatPrice(price: number): string {
 }
 
 /**
- * Get user's current plan from Firestore
+ * Get user's current plan from database
  */
-export async function getUserPlan(db: any, uid: string): Promise<PlanDetails> {
+export async function getUserPlan(_db: any, uid: string): Promise<PlanDetails> {
   try {
-    const userSnap = await db.collection('users').doc(uid).get();
-    const userData = userSnap.data();
-    const planTier = (userData?.planTier as PlanTier) || 'free';
+    const { prisma } = await import("@/lib/prisma");
+    const user = await prisma.user.findUnique({ where: { id: uid }, select: { planTier: true } });
+    const planTier = (user?.planTier as PlanTier) || "free";
     return PLANS[planTier];
   } catch (error) {
-    console.error('Error fetching user plan:', error);
+    console.error("Error fetching user plan:", error);
     return PLANS.free;
   }
 }

@@ -1,9 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb, FieldValue } from "@/lib/firebase-admin";
-import {
-  GenerateBriefRequestBody,
-  GenerateBriefResponse,
-} from "@/lib/types";
+import { prisma } from "@/lib/prisma";
+import { GenerateBriefRequestBody, GenerateBriefResponse } from "@/lib/types";
 import { generateBrief, aiUserContext } from "@/lib/ai-providers";
 import { fetchSerpContext } from "@/lib/serper";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
@@ -11,44 +8,31 @@ import { withErrorHandler, QuotaExceededError, assertValid, ExternalServiceError
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
 import { validateKeyword } from "@/lib/validation";
 
-export const dynamic = 'force-dynamic';
-export const maxDuration = 300; // 5 minutes (max for Vercel Pro)
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  // 1. Authenticate
   const auth = await authenticateRequest(req);
   assertValid(auth.success, auth.error || "Authentication failed");
   const uid = auth.uid!;
 
-  console.log("[Dev] Recompiled brief API route - using fresh OpenRouter logic");
-
-  // 2. Rate limit (30 req/min for AI operations)
   const rateLimit = checkRateLimit(uid, 30, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
-      {
-        status: 429,
-        headers: { "Retry-After": String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)) }
-      }
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)) } }
     );
   }
 
-  // 3. Validate request body
   const body = (await req.json()) as GenerateBriefRequestBody;
   const validation = validateRequestBody(body, ["keyword", "siteId"], ["tone", "targetWordCount"]);
   assertValid(validation.valid, validation.error || "Invalid request");
 
   const { keyword, siteId } = body;
+  assertValid(validateKeyword(keyword).valid, validateKeyword(keyword).error || "Invalid keyword");
 
-  // 4. Validate keyword
-  const keywordValidation = validateKeyword(keyword);
-  assertValid(keywordValidation.valid, keywordValidation.error || "Invalid keyword");
-
-  // 5. Check usage quota
-  const db = adminDb();
-  const usageCheck = await canPerformAction(db, uid, "articles");
-
+  // Check usage quota
+  const usageCheck = await canPerformAction(null, uid, "articles");
   if (!usageCheck.allowed) {
     throw new QuotaExceededError(
       usageCheck.reason || "Article limit reached",
@@ -58,114 +42,74 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  // 6. Initialize user if needed
-  const userRef = db.collection("users").doc(uid);
-  const userSnap = await userRef.get();
-
-  let userData = userSnap.data() as {
-    planTier?: string;
-    niche?: string;
-    targetCountry?: string;
-    language?: string;
-    brandVoice?: { adjectives?: string[] };
-  } | undefined;
-
-  if (!userSnap.exists) {
-    const now = new Date();
-    const inThirtyDays = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-    userData = {
-      planTier: "free",
-    };
-
-    await userRef.set({
-      ...userData,
-      createdAt: now,
-      updatedAt: now,
-      usage: {
-        articlesUsed: 0,
-        aiImprovementsUsed: 0,
-        sectionRegenerationsUsed: 0,
-        researchQueriesUsed: 0,
-        rolloverArticles: 0,
-        periodStart: now,
-        periodEnd: inThirtyDays,
+  // Ensure user exists
+  let user = await prisma.user.findUnique({ where: { id: uid } });
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        id: uid,
+        email: "",
+        planTier: "free",
+        periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
       },
     });
   }
 
-  // 7. Validate site ownership
-  const siteRef = db.collection("sites").doc(siteId);
-  const siteSnap = await siteRef.get();
+  // Validate site ownership
+  const site = await prisma.site.findUnique({ where: { id: siteId } });
+  assertValid(!!site, "Site not found");
+  assertValid(site!.ownerId === uid, "You don't have permission to access this site");
 
-  assertValid(siteSnap.exists, "Site not found");
-
-  const siteData = siteSnap.data() as {
-    ownerId?: string;
-    niche?: string;
-    targetCountry?: string;
-    language?: string;
-    brandVoice?: { adjectives?: string[] };
-  };
-
-  assertValid(siteData.ownerId === uid, "You don't have permission to access this site");
-
-  // 8. Fetch SERP context for Pro users
-  let serpContext = undefined;
-  if (userData?.planTier === "pro") {
+  // Fetch SERP context for Pro users
+  let serpContext;
+  if (user.planTier === "pro") {
     try {
-      serpContext = await fetchSerpContext(keyword, siteData.targetCountry ?? "us");
-    } catch (serpErr) {
-      console.warn("SERP fetch failed, falling back to standard brief:", serpErr);
+      const siteData = site!.brandVoice as any;
+      serpContext = await fetchSerpContext(keyword, siteData?.targetCountry ?? "us");
+    } catch {
+      // non-fatal
     }
   }
 
-  // 9. Generate brief
+  const siteData = site!.brandVoice as any;
   let brief;
   try {
-    brief = await aiUserContext.run(uid, () => generateBrief({
-      keyword,
-      siteContext: {
-        niche: siteData.niche,
-        targetCountry: siteData.targetCountry,
-        language: siteData.language,
-        brandVoice: siteData.brandVoice || undefined,
-      },
-      serpContext,
-    }));
+    brief = await aiUserContext.run(uid, () =>
+      generateBrief({
+        keyword,
+        siteContext: {
+          niche: (site as any).niche,
+          targetCountry: (site as any).targetCountry,
+          language: (site as any).language,
+          brandVoice: siteData || undefined,
+        },
+        serpContext,
+      })
+    );
   } catch (err) {
-    console.error("OpenRouter brief generation failed:", err);
     throw new ExternalServiceError("AI generation service", err);
   }
 
-  // 10. Create article
-  const articleRef = db.collection("articles").doc();
-
-  await articleRef.set({
-    ownerId: uid,
-    siteId,
-    keyword,
-    status: "brief_generated",
-    intent: brief.intent,
-    articleType: brief.articleType,
-    brief,
-    outline: null,
-    draft: null,
-    optimizations: null,
-    settings: {
-      tone: body.tone ?? "neutral",
-      targetWordCount: body.targetWordCount ?? null,
+  const article = await prisma.article.create({
+    data: {
+      ownerId: uid,
+      siteId,
+      keyword,
+      status: "brief_generated",
+      intent: brief.intent,
+      articleType: brief.articleType,
+      brief: brief as any,
+      settings: {
+        tone: body.tone ?? "neutral",
+        targetWordCount: body.targetWordCount ?? null,
+      } as any,
     },
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
   });
 
-  // 11. Increment usage counter
-  await incrementUsage(db, uid, "articles");
+  await incrementUsage(null, uid, "articles");
 
-  // 12. Return success
   const response: GenerateBriefResponse = {
-    articleId: articleRef.id,
+    articleId: article.id,
     brief,
     intent: brief.intent,
     articleType: brief.articleType,

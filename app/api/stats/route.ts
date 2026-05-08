@@ -1,64 +1,34 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   try {
     const { userId: uid } = await auth();
-    
-    if (!uid) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const db = adminDb();
+    const user = await prisma.user.findUnique({ where: { id: uid } });
+    const plan = user?.planTier || "free";
 
-    // Get user data for plan tier
-    const userDoc = await db.collection("users").doc(uid).get();
-    const userData = userDoc.exists ? userDoc.data() : null;
-    const plan = userData?.planTier || userData?.plan || "free";
-
-    // Get total articles count
-    const articlesSnapshot = await db
-      .collection("articles")
-      .where("ownerId", "==", uid)
-      .count()
-      .get();
-
-    // Get total sites count
-    const sitesSnapshot = await db
-      .collection("sites")
-      .where("ownerId", "==", uid)
-      .count()
-      .get();
-
-    // Get articles this month from usage data (more accurate)
-    const usage = userData?.usage || {};
-    const articlesThisMonth = usage.articlesUsed || 0;
-
-    // Get last activity (most recent article)
-    const lastArticleSnapshot = await db
-      .collection("articles")
-      .where("ownerId", "==", uid)
-      .orderBy("updatedAt", "desc")
-      .limit(1)
-      .get();
-
-    const lastActivity = lastArticleSnapshot.empty
-      ? null
-      : lastArticleSnapshot.docs[0].data().updatedAt;
+    const [totalArticles, totalSites, lastArticle] = await Promise.all([
+      prisma.article.count({ where: { ownerId: uid } }),
+      prisma.site.count({ where: { ownerId: uid } }),
+      prisma.article.findFirst({
+        where: { ownerId: uid },
+        orderBy: { updatedAt: "desc" },
+        select: { updatedAt: true },
+      }),
+    ]);
 
     return NextResponse.json({
-      totalArticles: articlesSnapshot.data().count,
-      totalSites: sitesSnapshot.data().count,
-      articlesThisMonth,
-      lastActivity,
+      totalArticles,
+      totalSites,
+      articlesThisMonth: user?.articlesUsed || 0,
+      lastActivity: lastArticle?.updatedAt || null,
       planTier: plan,
     });
   } catch (error) {
     console.error("Error fetching stats", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

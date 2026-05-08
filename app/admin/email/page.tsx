@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { 
   Mail, 
   Users, 
@@ -80,11 +79,9 @@ export default function AdminEmailPage() {
     setSending(true);
     setError("");
     setResult(null);
-
-    const token = await getFirebaseAuth().currentUser?.getIdToken();
     const res = await fetch("/api/admin/email", {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         subject,
         html,

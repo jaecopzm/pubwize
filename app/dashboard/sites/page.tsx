@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { Plus, Globe, Pencil, Trash2, TrendingUp, Calendar, Search, Grid3x3, List, BarChart3, ExternalLink, Activity, Sparkles, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
+import { ConfirmDialog } from "@/components/confirm-dialog";
 
 interface Site {
   id: string;
@@ -31,6 +31,11 @@ export default function SitesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [sortBy, setSortBy] = useState<SortBy>('date');
+  const [deleteDialog, setDeleteDialog] = useState<{ isOpen: boolean; siteId: string; siteName: string }>({
+    isOpen: false,
+    siteId: '',
+    siteName: '',
+  });
 
   useEffect(() => {
     fetchSites();
@@ -38,18 +43,8 @@ export default function SitesPage() {
 
   async function fetchSites() {
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) {
-        setLoading(false);
-        return;
-      }
-
       // Fetch sites
       const sitesRes = await fetch("/api/sites", {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
       });
 
       if (!sitesRes.ok) {
@@ -60,9 +55,6 @@ export default function SitesPage() {
 
       // Fetch articles to count per site
       const articlesRes = await fetch("/api/articles", {
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
       });
 
       let articleCounts: Record<string, number> = {};
@@ -85,7 +77,11 @@ export default function SitesPage() {
         siteName: site.siteName,
         niche: site.niche,
         articleCount: articleCounts[site.id] || 0,
-        createdAt: new Date(site.createdAt._seconds * 1000),
+        createdAt: site.createdAt?._seconds 
+          ? new Date(site.createdAt._seconds * 1000)
+          : site.createdAt 
+          ? new Date(site.createdAt)
+          : new Date(),
         status: 'online', // Mocked but visual
       }));
 
@@ -93,7 +89,7 @@ export default function SitesPage() {
 
       // Fetch topic suggestions for Pro users (async, don't block)
       if (plan === 'pro') {
-        fetchTopicSuggestions(sites, idToken);
+        fetchTopicSuggestions(sites);
       }
     } catch (error) {
       console.error("Failed to fetch sites:", error);
@@ -103,7 +99,7 @@ export default function SitesPage() {
     }
   }
 
-  async function fetchTopicSuggestions(sites: Site[], idToken: string) {
+  async function fetchTopicSuggestions(sites: Site[]) {
     // Fetch suggestions for each site (limit to first 3 to avoid rate limits)
     const sitesToFetch = sites.slice(0, 3);
     
@@ -112,7 +108,6 @@ export default function SitesPage() {
         const res = await fetch('/api/sites/suggest-topic', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${idToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({ siteId: site.id }),
@@ -131,31 +126,27 @@ export default function SitesPage() {
   }
 
   async function deleteSite(siteId: string, siteName: string) {
-    if (!confirm(`Delete "${siteName}"? This cannot be undone.`)) return;
-
     try {
       setDeleting(siteId);
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-
-      if (!idToken) return;
 
       const res = await fetch(`/api/sites/${siteId}`, {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${idToken}`,
-        },
+        method: 'DELETE'
       });
 
       if (!res.ok) throw new Error('Failed to delete');
 
       toast.success('Site deleted successfully');
       setSites(sites.filter(s => s.id !== siteId));
+      setDeleteDialog({ isOpen: false, siteId: '', siteName: '' });
     } catch (error) {
       toast.error('Failed to delete site');
     } finally {
       setDeleting(null);
     }
+  }
+
+  function openDeleteDialog(siteId: string, siteName: string) {
+    setDeleteDialog({ isOpen: true, siteId, siteName });
   }
 
   // Filter and sort sites
@@ -307,50 +298,124 @@ export default function SitesPage() {
           viewMode === 'grid' ? "md:grid-cols-2 lg:grid-cols-3" : "grid-cols-1"
         )}>
           {[...Array(3)].map((_, i) => (
-            <div
+            <motion.div
               key={i}
-              className="rounded-xl lg:rounded-2xl border border-border bg-card p-4 lg:p-6"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="rounded-xl lg:rounded-2xl border border-border bg-card p-4 lg:p-6 relative overflow-hidden"
             >
+              {/* Shimmer effect */}
+              <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
+              
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex-1 space-y-2">
-                  <div className="h-5 w-32 rounded shimmer bg-muted" />
-                  <div className="h-4 w-40 rounded shimmer bg-muted" />
+                  <div className="h-5 w-32 rounded-lg bg-muted/50 animate-pulse" />
+                  <div className="h-4 w-40 rounded-lg bg-muted/30 animate-pulse" style={{ animationDelay: '150ms' }} />
                 </div>
-                <div className="h-10 w-10 rounded-xl shimmer bg-muted" />
+                <div className="h-10 w-10 rounded-xl bg-muted/50 animate-pulse" style={{ animationDelay: '300ms' }} />
               </div>
               <div className="mb-4">
-                <div className="h-6 w-20 rounded-full shimmer bg-muted" />
+                <div className="h-6 w-20 rounded-full bg-muted/50 animate-pulse" style={{ animationDelay: '450ms' }} />
               </div>
               <div className="mb-4 pt-4 border-t border-border">
                 <div className="flex justify-between">
-                  <div className="h-4 w-16 rounded shimmer bg-muted" />
-                  <div className="h-4 w-8 rounded shimmer bg-muted" />
+                  <div className="h-4 w-16 rounded-lg bg-muted/30 animate-pulse" style={{ animationDelay: '600ms' }} />
+                  <div className="h-4 w-8 rounded-lg bg-muted/30 animate-pulse" style={{ animationDelay: '750ms' }} />
                 </div>
               </div>
               <div className="flex gap-2">
-                <div className="flex-1 h-9 rounded-xl shimmer bg-muted" />
-                <div className="h-9 w-9 rounded-xl shimmer bg-muted" />
+                <div className="flex-1 h-9 rounded-xl bg-muted/50 animate-pulse" style={{ animationDelay: '900ms' }} />
+                <div className="h-9 w-9 rounded-xl bg-muted/50 animate-pulse" style={{ animationDelay: '1050ms' }} />
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       ) : sites.length === 0 ? (
-        <div className="rounded-xl lg:rounded-2xl border border-dashed border-border p-6 sm:p-8 lg:p-12 text-center card-premium relative z-10">
-          <div className="mx-auto flex h-12 w-12 sm:h-14 sm:w-14 lg:h-16 lg:w-16 items-center justify-center rounded-2xl bg-primary/10">
-            <Globe className="h-6 w-6 sm:h-7 sm:w-7 lg:h-8 lg:w-8 text-primary" />
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="rounded-2xl border-2 border-dashed border-border/50 p-8 sm:p-12 lg:p-16 text-center relative overflow-hidden group"
+        >
+          {/* Animated background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          <div className="relative z-10">
+            {/* Animated icon */}
+            <motion.div 
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", stiffness: 200, delay: 0.1 }}
+              className="mx-auto flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/10 to-cyan-500/10 mb-6 relative"
+            >
+              <motion.div
+                animate={{ rotate: [0, 5, -5, 0] }}
+                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+              >
+                <Globe className="h-8 w-8 sm:h-10 sm:w-10 text-primary" />
+              </motion.div>
+              <div className="absolute inset-0 rounded-2xl bg-primary/20 blur-xl animate-pulse" />
+            </motion.div>
+
+            <motion.h3 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-lg sm:text-xl lg:text-2xl font-bold text-foreground mb-3"
+              style={{ fontFamily: "'DM Serif Display', serif" }}
+            >
+              Your Library is Waiting
+            </motion.h3>
+            
+            <motion.p 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto mb-8 leading-relaxed"
+            >
+              Create your first site to unlock AI-powered content generation. Each site can have its own niche, brand voice, and target audience.
+            </motion.p>
+
+            {/* Feature highlights */}
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-2xl mx-auto"
+            >
+              {[
+                { icon: Sparkles, label: "AI-Powered", desc: "Smart content generation" },
+                { icon: TrendingUp, label: "SEO Optimized", desc: "Rank higher on Google" },
+                { icon: Activity, label: "Multi-Site", desc: "Manage unlimited sites" },
+              ].map((feature, i) => (
+                <motion.div
+                  key={feature.label}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 + i * 0.1 }}
+                  className="p-4 rounded-xl bg-card/50 border border-border/50 hover:border-primary/30 transition-all"
+                >
+                  <feature.icon className="h-5 w-5 text-primary mx-auto mb-2" />
+                  <p className="text-xs font-semibold text-foreground mb-1">{feature.label}</p>
+                  <p className="text-[10px] text-muted-foreground">{feature.desc}</p>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            <motion.button
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7 }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="btn-gold text-sm sm:text-base px-6 py-3"
+              onClick={() => router.push("/dashboard/sites/new")}
+            >
+              <Plus className="h-4 w-4" />
+              Create Your First Site
+            </motion.button>
           </div>
-          <h3 className="mt-3 sm:mt-4 lg:mt-6 text-sm sm:text-base lg:text-lg font-bold font-display text-foreground">No sites yet</h3>
-          <p className="mt-2 text-xs sm:text-sm text-muted-foreground max-w-sm mx-auto">
-            Create your first site to start generating articles.
-          </p>
-          <button
-            className="btn-gold mt-3 sm:mt-4 lg:mt-6 text-sm sm:text-base px-4 py-2"
-            onClick={() => router.push("/dashboard/sites/new")}
-          >
-            <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            Create Site
-          </button>
-        </div>
+        </motion.div>
       ) : filteredSites.length === 0 ? (
         <div className="card-premium p-6 sm:p-8 text-center relative z-10">
           <Search className="h-10 w-10 sm:h-12 sm:w-12 text-muted-foreground/30 mx-auto mb-2 sm:mb-3" />
@@ -407,7 +472,7 @@ export default function SitesPage() {
                     <span className="hidden sm:inline">Edit</span>
                   </button>
                   <button
-                    onClick={() => deleteSite(site.id, site.siteName)}
+                    onClick={() => openDeleteDialog(site.id, site.siteName)}
                     disabled={deleting === site.id}
                     className="flex items-center justify-center rounded-xl border border-border bg-muted/30 px-3 py-2 text-muted-foreground hover:border-destructive/30 hover:text-destructive transition-all disabled:opacity-50"
                   >
@@ -508,7 +573,7 @@ export default function SitesPage() {
                   Edit
                 </button>
                 <button
-                  onClick={() => deleteSite(site.id, site.siteName)}
+                  onClick={() => openDeleteDialog(site.id, site.siteName)}
                   disabled={deleting === site.id}
                   className="flex items-center justify-center rounded-xl border border-border bg-muted/30 px-3.5 py-2.5 text-muted-foreground hover:border-destructive/30 hover:text-destructive active:scale-95 transition-all disabled:opacity-50 touch-manipulation"
                 >
@@ -519,6 +584,19 @@ export default function SitesPage() {
           ))}
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        isOpen={deleteDialog.isOpen}
+        onClose={() => setDeleteDialog({ isOpen: false, siteId: '', siteName: '' })}
+        onConfirm={() => deleteSite(deleteDialog.siteId, deleteDialog.siteName)}
+        title="Delete Site?"
+        description={`Are you sure you want to delete "${deleteDialog.siteName}"? This action cannot be undone and will remove all associated data.`}
+        confirmText="Delete Site"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deleting === deleteDialog.siteId}
+      />
     </div>
   );
 }

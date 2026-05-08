@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Globe } from "lucide-react";
 import { toast } from "sonner";
@@ -22,15 +21,11 @@ export default function NewSitePage() {
     setError(null);
     try {
       setCreating(true);
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) throw new Error("Unable to get ID token");
 
       const res = await fetch("/api/sites", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
         },
         body: JSON.stringify(data),
       });

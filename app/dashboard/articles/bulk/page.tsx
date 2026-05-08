@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { ArrowLeft, Zap, Plus, X, Loader2, CheckCircle2, AlertCircle, Upload, FileText, Settings2, TrendingUp, Sparkles } from "lucide-react";
 import { useSites } from "@/lib/hooks/use-sites";
 import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
@@ -134,9 +133,6 @@ export default function BulkGenerationPage() {
       setTimeRemaining(prev => Math.max(0, prev - 1));
     }, 1000);
 
-    const auth = getFirebaseAuth();
-    const idToken = await auth.currentUser?.getIdToken();
-
     // Generate all articles in parallel with rate limiting
     const promises = bulkArticles.map(async (article, index) => {
       // Stagger requests by 500ms to avoid rate limits
@@ -152,7 +148,6 @@ export default function BulkGenerationPage() {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${idToken}`,
             },
             body: JSON.stringify({
               keyword: article.keyword,
@@ -172,7 +167,6 @@ export default function BulkGenerationPage() {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
-              Authorization: `Bearer ${idToken}`,
             },
             body: JSON.stringify({
               articleId,

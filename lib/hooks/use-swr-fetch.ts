@@ -1,13 +1,6 @@
-/**
- * SWR Data Fetching Hooks
- * Optimized data fetching with caching and revalidation
- */
+import useSWR, { SWRConfiguration } from "swr";
+import { toast } from "sonner";
 
-import useSWR, { SWRConfiguration } from 'swr';
-import { getFirebaseAuth } from '@/lib/firebase-client';
-import { toast } from 'sonner';
-
-// Default SWR configuration
 export const swrConfig: SWRConfiguration = {
   revalidateOnFocus: false,
   revalidateOnReconnect: true,
@@ -18,32 +11,11 @@ export const swrConfig: SWRConfiguration = {
   keepPreviousData: true,
 };
 
-/**
- * Fetcher with Firebase auth
- */
-async function fetcherWithAuth(url: string) {
-  const auth = getFirebaseAuth();
-  const token = await auth.currentUser?.getIdToken();
-
-  if (!token) {
-    throw new Error('Not authenticated');
-  }
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-    },
-  });
+async function fetcher(url: string) {
+  const response = await fetch(url);
 
   if (!response.ok) {
-    // If user not found (404), sign them out immediately
-    if (response.status === 404) {
-      await auth.signOut();
-      toast.error('Account not found. Please sign up again.');
-      window.location.href = '/auth/signin';
-      throw new Error('Account not found');
-    }
-    const error = new Error('API request failed');
+    const error = new Error("API request failed");
     (error as any).status = response.status;
     throw error;
   }
@@ -51,78 +23,35 @@ async function fetcherWithAuth(url: string) {
   return response.json();
 }
 
-/**
- * Hook for fetching articles
- */
 export function useArticles() {
-  const { data, error, isLoading, mutate } = useSWR(
-    '/api/articles',
-    fetcherWithAuth,
-    {
-      ...swrConfig,
-      refreshInterval: 30000, // Refresh every 30 seconds
-    }
-  );
-
-  return {
-    articles: data?.articles || [],
-    isLoading,
-    isError: error,
-    mutate,
-  };
+  const { data, error, isLoading, mutate } = useSWR("/api/articles", fetcher, {
+    ...swrConfig,
+    refreshInterval: 30000,
+  });
+  return { articles: data?.articles || [], isLoading, isError: error, mutate };
 }
 
-/**
- * Hook for fetching single article
- */
 export function useArticle(articleId: string | null) {
   const { data, error, isLoading, mutate } = useSWR(
     articleId ? `/api/articles/${articleId}` : null,
-    fetcherWithAuth,
+    fetcher,
     swrConfig
   );
-
-  return {
-    article: data,
-    isLoading,
-    isError: error,
-    mutate,
-  };
+  return { article: data, isLoading, isError: error, mutate };
 }
 
-/**
- * Hook for fetching sites
- */
 export function useSites() {
-  const { data, error, isLoading, mutate } = useSWR(
-    '/api/sites',
-    fetcherWithAuth,
-    swrConfig
-  );
-
-  return {
-    sites: data?.sites || [],
-    isLoading,
-    isError: error,
-    mutate,
-  };
+  const { data, error, isLoading, mutate } = useSWR("/api/sites", fetcher, swrConfig);
+  return { sites: data?.sites || [], isLoading, isError: error, mutate };
 }
 
-/**
- * Hook for fetching user plan
- */
 export function useUserPlan() {
-  const { data, error, isLoading, mutate } = useSWR(
-    '/api/user/plan',
-    fetcherWithAuth,
-    {
-      ...swrConfig,
-      refreshInterval: 60000, // Refresh every minute
-    }
-  );
-
+  const { data, error, isLoading, mutate } = useSWR("/api/user/plan", fetcher, {
+    ...swrConfig,
+    refreshInterval: 60000,
+  });
   return {
-    plan: data?.plan || 'free',
+    plan: data?.plan || "free",
     usage: data?.usage || { articlesGenerated: 0, limit: 5 },
     periodEnd: data?.periodEnd,
     isLoading,
@@ -131,53 +60,20 @@ export function useUserPlan() {
   };
 }
 
-/**
- * Hook for fetching calendar events
- */
 export function useCalendarEvents(year: number, month: number) {
   const { data, error, isLoading, mutate } = useSWR(
     `/api/calendar?year=${year}&month=${month}`,
-    fetcherWithAuth,
+    fetcher,
     swrConfig
   );
-
-  return {
-    events: data?.events || [],
-    isLoading,
-    isError: error,
-    mutate,
-  };
+  return { events: data?.events || [], isLoading, isError: error, mutate };
 }
 
-/**
- * Hook for fetching WordPress sites
- */
 export function useWordPressSites() {
-  const { data, error, isLoading, mutate } = useSWR(
-    '/api/wordpress/sites',
-    fetcherWithAuth,
-    swrConfig
-  );
-
-  return {
-    sites: data?.sites || [],
-    isLoading,
-    isError: error,
-    mutate,
-  };
+  const { data, error, isLoading, mutate } = useSWR("/api/wordpress/sites", fetcher, swrConfig);
+  return { sites: data?.sites || [], isLoading, isError: error, mutate };
 }
 
-/**
- * Prefetch data for faster navigation
- */
-export function prefetchArticles() {
-  return fetcherWithAuth('/api/articles');
-}
-
-export function prefetchSites() {
-  return fetcherWithAuth('/api/sites');
-}
-
-export function prefetchUserPlan() {
-  return fetcherWithAuth('/api/user/plan');
-}
+export function prefetchArticles() { return fetcher("/api/articles"); }
+export function prefetchSites() { return fetcher("/api/sites"); }
+export function prefetchUserPlan() { return fetcher("/api/user/plan"); }

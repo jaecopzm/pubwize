@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -197,13 +196,9 @@ export function RepurposeButton({
     const handleGenerate = async () => {
         setGenerating(true);
         try {
-            const auth = getFirebaseAuth();
-            const user = auth.currentUser;
-            if (!user) { toast.error("You must be logged in."); return; }
-            const token = await user.getIdToken();
             const response = await fetch("/api/articles/repurpose", {
                 method: "POST",
-                headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ articleId }),
             });
             if (!response.ok) {

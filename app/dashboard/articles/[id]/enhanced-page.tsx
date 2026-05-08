@@ -5,7 +5,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { ArrowLeft, Loader2, Sparkles } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -44,16 +43,7 @@ export default function EnhancedArticleEditorPage() {
   useEffect(() => {
     const fetchArticle = async () => {
       try {
-        const auth = getFirebaseAuth();
-        const idToken = await auth.currentUser?.getIdToken();
-        if (!idToken) {
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch(`/api/articles/${articleId}`, {
-          headers: { Authorization: `Bearer ${idToken}` },
-        });
+        const res = await fetch(`/api/articles/${articleId}`, {});
 
         if (res.ok) {
           const data = await res.json();

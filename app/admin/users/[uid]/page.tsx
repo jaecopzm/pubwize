@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 
 const PLAN_TIERS = ["none", "free", "starter", "pro"];
 const PLAN_STATUSES = ["active", "trialing", "canceled", "past_due"];
@@ -17,11 +16,7 @@ export default function AdminUserDetailPage() {
 
   useEffect(() => {
     async function load() {
-      const token = await getFirebaseAuth().currentUser?.getIdToken();
-      if (!token) return;
-      const res = await fetch(`/api/admin/users/${uid}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`/api/admin/users/${uid}`, {});
       if (!res.ok) return;
       const d = await res.json();
       setData(d);
@@ -33,10 +28,9 @@ export default function AdminUserDetailPage() {
 
   async function savePlan() {
     setSaving(true);
-    const token = await getFirebaseAuth().currentUser?.getIdToken();
     await fetch(`/api/admin/users/${uid}`, {
       method: "PATCH",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ planTier, planStatus }),
     });
     setSaving(false);
@@ -59,10 +53,8 @@ export default function AdminUserDetailPage() {
         <button
           onClick={async () => {
             if (!confirm("Delete this user and all their data? This cannot be undone.")) return;
-            const token = await getFirebaseAuth().currentUser?.getIdToken();
             await fetch(`/api/admin/users/${uid}/delete`, {
               method: "DELETE",
-              headers: { Authorization: `Bearer ${token}` },
             });
             router.push("/admin/users");
           }}

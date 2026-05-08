@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { Image as ImageIcon, Loader2, Plus } from "lucide-react";
 import { toast } from "sonner";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 
 interface ImageRecommendation {
   section: string;
@@ -29,15 +28,11 @@ export function ImageRecommendations({
   const generateRecommendations = async () => {
     setLoading(true);
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) throw new Error("Not authenticated");
 
       const response = await fetch('/api/articles/image-recommendations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${idToken}`
         },
         body: JSON.stringify({ content, keyword }),
       });

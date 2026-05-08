@@ -1,79 +1,49 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { prisma } from "@/lib/prisma";
 import { generateDraftStream, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
 import { validateArticleId } from "@/lib/validation";
-import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
-import type { ArticleDoc } from "@/lib/types";
 
-export const dynamic = 'force-dynamic';
-export const maxDuration = 300; // 5 minutes (max for Vercel Pro)
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
-  // 1. Authenticate
   const auth = await authenticateRequest(req);
   assertValid(auth.success, auth.error || "Authentication failed");
   const uid = auth.uid!;
 
-  // 2. Fetch and validate article
-  const db = adminDb();
-
-  // 3. Rate limit (30 req/min for AI operations)
   const rateLimit = checkRateLimit(uid, 30, 60000);
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests. Please try again later." },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)),
-        },
-      }
-    );
+    return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
 
-  // 3. Validate request body
   const body = await req.json();
   const validation = validateRequestBody(body, ["articleId"]);
   assertValid(validation.valid, validation.error || "Invalid request");
 
   const { articleId, targetWordCount: bodyWordCount } = body;
+  assertValid(validateArticleId(articleId).valid, "Invalid article ID");
 
-  // 4. Validate article ID
-  const idValidation = validateArticleId(articleId);
-  assertValid(idValidation.valid, idValidation.error || "Invalid article ID");
+  const article = await prisma.article.findUnique({ where: { id: articleId } });
+  assertValid(!!article, "Article not found");
+  assertValid(article!.ownerId === uid, "You don't have permission to access this article");
+  assertValid(!!article!.outline, "No outline found. Please generate an outline first.");
 
-  // 5. Fetch and validate article
-  const articleRef = db.collection("articles").doc(articleId);
-  const articleSnap = await articleRef.get();
+  const settings = article!.settings as any;
+  const tone = settings?.tone ?? "neutral";
+  const targetWordCount = bodyWordCount || settings?.targetWordCount || 2000;
+  const optimizations = article!.optimizations as any;
+  const lsiKeywords = optimizations?.lsiKeywords || [];
 
-  assertValid(articleSnap.exists, "Article not found");
+  const site = await prisma.site.findUnique({ where: { id: article!.siteId } });
+  const siteBrandVoice = (site as any)?.brandVoice || null;
 
-  const articleData = articleSnap.data() as ArticleDoc;
-
-  assertValid(articleData.ownerId === uid, "You don't have permission to access this article");
-  assertValid(!!articleData.outline, "No outline found. Please generate an outline first.");
-  assertValid(!!articleData.keyword, "Article missing keyword");
-
-  // 6. Stream draft generation
-  const tone = articleData.settings?.tone ?? "neutral";
-  const targetWordCount = bodyWordCount || articleData.settings?.targetWordCount || 2000;
-  const lsiKeywords = articleData.optimizations?.lsiKeywords || [];
-
-  // Fetch site brand voice (now holds adjectives + optional persona fields)
-  const siteSnap = await db.collection("sites").doc(articleData.siteId).get();
-  const siteBrandVoice = siteSnap.exists ? siteSnap.data()?.brandVoice || null : null;
-
-  // Fetch user's other published articles for internal linking
-  const otherArticlesSnap = await db.collection("articles")
-    .where("ownerId", "==", uid)
-    .where("publishedUrl", "!=", null)
-    .limit(20)
-    .get();
-  const internalLinkArticles = otherArticlesSnap.docs
-    .filter(doc => doc.id !== articleId)
-    .map(doc => ({ keyword: doc.data().keyword as string, publishedUrl: doc.data().publishedUrl as string | null }));
+  const internalLinkArticles = await prisma.article.findMany({
+    where: { ownerId: uid, publishedUrl: { not: null }, NOT: { id: articleId } },
+    select: { keyword: true, publishedUrl: true },
+    take: 20,
+  });
 
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
@@ -82,51 +52,43 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   (async () => {
     try {
-      const generator = aiUserContext.run(uid, () => generateDraftStream({
-        outline: articleData.outline as any,
-        keyword: articleData.keyword!,
-        tone,
-        targetWordCount,
-        lsiKeywords,
-        siteBrandVoice,
-        internalLinkArticles,
-      }));
+      const generator = aiUserContext.run(uid, () =>
+        generateDraftStream({
+          outline: article!.outline as any,
+          keyword: article!.keyword,
+          tone,
+          targetWordCount,
+          lsiKeywords,
+          siteBrandVoice,
+          internalLinkArticles,
+        })
+      );
 
       for await (const chunk of generator) {
         fullContent += chunk;
-        // Send as SSE data event
         await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
       }
 
-      // Save the complete draft to Firestore
-      const draft = { content: fullContent, format: "markdown" };
-      
-      // Calculate word count
       const wordCount = fullContent
-        .replace(/```[\s\S]*?```/g, '') // Remove code blocks
-        .replace(/`[^`]*`/g, '') // Remove inline code
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to text
-        .replace(/[#*_~\[\](){}]/g, '') // Remove markdown chars
-        .replace(/<[^>]+>/g, '') // Remove HTML tags
-        .replace(/\s+/g, ' ') // Normalize whitespace
+        .replace(/```[\s\S]*?```/g, "")
+        .replace(/`[^`]*`/g, "")
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+        .replace(/[#*_~\[\](){}]/g, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/\s+/g, " ")
         .trim()
         .split(/\s+/)
-        .filter(w => w.length > 0).length;
-      
-      const now = new Date();
-      await articleRef.update({
-        draft,
-        wordCount,
-        status: "draft_generated",
-        settings: {
-          ...articleData.settings,
-          targetWordCount,
+        .filter((w) => w.length > 0).length;
+
+      await prisma.article.update({
+        where: { id: articleId },
+        data: {
+          draft: { content: fullContent, format: "markdown" } as any,
+          status: "draft_generated",
+          settings: { ...settings, targetWordCount } as any,
         },
-        updatedAt: now,
       });
 
-
-      // Send a done event with the article ID
       await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true, articleId })}\n\n`));
     } catch (err) {
       console.error("Streaming draft generation failed:", err);
@@ -143,7 +105,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
       Connection: "keep-alive",
-      "X-Accel-Buffering": "no", // Disable Nginx buffering
+      "X-Accel-Buffering": "no",
       "Content-Encoding": "none",
     },
   });

@@ -138,12 +138,34 @@ export function handleApiError(error: any): NextResponse {
     );
   }
 
+  // Handle Prisma/Database errors
+  if (error.message?.includes("Can't reach database") || error.code === "P1001") {
+    return NextResponse.json(
+      {
+        error: "Service temporarily unavailable. Please try again in a moment.",
+        code: "SERVICE_UNAVAILABLE",
+      },
+      { status: 503 }
+    );
+  }
+
+  if (error.code?.startsWith("P")) {
+    // Prisma error codes
+    return NextResponse.json(
+      {
+        error: "Database operation failed. Please try again.",
+        code: "DATABASE_ERROR",
+      },
+      { status: 500 }
+    );
+  }
+
   // Handle unknown errors (don't expose internal details in production)
   const isDevelopment = process.env.NODE_ENV === "development";
 
   return NextResponse.json(
     {
-      error: isDevelopment ? error.message : "Internal server error",
+      error: isDevelopment ? error.message : "Something went wrong. Please try again.",
       code: "INTERNAL_ERROR",
       ...(isDevelopment && error.stack && { stack: error.stack }),
     },

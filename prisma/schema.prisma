@@ -1,0 +1,158 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    String    @id // Clerk user ID
+  email                 String    @unique
+  displayName           String?
+  photoURL              String?
+
+  // Billing
+  planTier              String    @default("free") // free | starter | pro
+  planStatus            String    @default("active") // active | trialing | canceled | past_due
+  paddleCustomerId      String?
+  paddleSubscriptionId  String?
+  subscriptionStatus    String?   // pending | active | trialing | on_hold | paused | cancelled | failed | expired
+  currentPeriodEnd      String?
+  cancelledAt           String?
+
+  // Usage (reset monthly)
+  articlesUsed          Int       @default(0)
+  aiImprovementsUsed    Int       @default(0)
+  sectionRegenerationsUsed Int    @default(0)
+  researchQueriesUsed   Int       @default(0)
+  socialGenerationUsed  Int       @default(0)
+  rolloverArticles      Int       @default(0)
+  periodStart           DateTime  @default(now())
+  periodEnd             DateTime  @default(dbgenerated("NOW() + INTERVAL '30 days'"))
+
+  // Email preferences (JSON)
+  emailPreferences      Json?
+  unsubscribedAt        String?
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  sites                 Site[]
+  articles              Article[]
+  wordPressSites        WordPressSite[]
+  versionSnapshots      VersionSnapshot[]
+}
+
+model Site {
+  id            String    @id @default(cuid())
+  ownerId       String
+  owner         User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  domain        String
+  siteName      String
+  niche         String
+  targetCountry String    @default("global")
+  language      String    @default("en")
+  brandVoice    Json      // SiteBrandVoice
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  articles      Article[]
+}
+
+model Article {
+  id          String    @id @default(cuid())
+  ownerId     String
+  owner       User      @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  siteId      String
+  site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  keyword     String
+  status      String    @default("draft") // draft | brief_generated | outline_generated | draft_generated | optimized
+  intent      String?
+  articleType String?
+
+  // Content (stored as JSON)
+  brief         Json?
+  outline       Json?
+  draft         Json?
+  optimizations Json?
+  settings      Json?
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Scheduling
+  scheduledDate   DateTime?
+
+  // Featured image
+  featuredImage   Json?
+
+  // WordPress
+  wordPressPostId   Int?
+  wordPressSiteId   String?
+  publishedUrl      String?
+
+  // Template
+  templateId      String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  versionSnapshots  VersionSnapshot[]
+  publishHistory    WordPressPublishHistory[]
+}
+
+model WordPressSite {
+  id                String    @id @default(cuid())
+  userId            String
+  user              User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  siteUrl           String
+  siteName          String
+  username          String
+  encryptedPassword String
+  connected         Boolean   @default(true)
+  lastPublished     DateTime?
+  lastValidated     DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  publishHistory    WordPressPublishHistory[]
+}
+
+model WordPressPublishHistory {
+  id          String    @id @default(cuid())
+  articleId   String
+  article     Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  siteId      String
+  wpSite      WordPressSite @relation(fields: [siteId], references: [id], onDelete: Cascade)
+
+  postId      Int?
+  postUrl     String?
+  status      String    // success | failed | pending
+  error       String?
+  retryCount  Int       @default(0)
+
+  publishedAt DateTime  @default(now())
+}
+
+model VersionSnapshot {
+  id          String    @id @default(cuid())
+  articleId   String
+  article     Article   @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  changeDescription String
+  contentType       String  // brief | outline | draft
+  snapshot          Json
+  archived          Boolean @default(false)
+
+  createdAt   DateTime  @default(now())
+}

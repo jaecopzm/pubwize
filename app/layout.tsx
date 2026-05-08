@@ -12,6 +12,7 @@ import { WebVitalsReporter } from "@/components/performance/web-vitals-reporter"
 import { ResourceHints } from "@/components/performance/resource-hints";
 import { GoogleAnalytics } from "@/components/google-analytics";
 import { PaddleProvider } from "@/components/paddle-provider";
+import { CommandPalette } from "@/components/command-palette";
 
 const jakarta = Plus_Jakarta_Sans({
   variable: "--font-jakarta",
@@ -152,6 +153,7 @@ export default function RootLayout({
             <SWRProvider>
               <ErrorBoundary>
                 {children}
+                <CommandPalette />
               </ErrorBoundary>
             </SWRProvider>
             <Toaster position="top-right" expand={false} richColors />

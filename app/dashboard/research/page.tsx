@@ -37,7 +37,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { UpgradeModal } from "@/components/pricing/upgrade-modal";
 import { useRouter } from "next/navigation";
 import { PremiumBadge } from "@/components/ui/premium-badge";
@@ -78,13 +77,8 @@ export default function ResearchPage() {
         // Fetch user plan
         const fetchUserPlan = async () => {
             try {
-                const auth = getFirebaseAuth();
-                const idToken = await auth.currentUser?.getIdToken();
-                if (!idToken) return;
 
-                const response = await fetch("/api/user/plan", {
-                    headers: { Authorization: `Bearer ${idToken}` },
-                });
+                const response = await fetch("/api/user/plan", {});
                 const data = await response.json();
                 if (data.plan) setUserPlan(data.plan);
             } catch (err) {
@@ -104,18 +98,10 @@ export default function ResearchPage() {
         setShowHistory(false);
 
         try {
-            const auth = getFirebaseAuth();
-            const idToken = await auth.currentUser?.getIdToken();
-
-            if (!idToken) {
-                throw new Error("Authentication required");
-            }
-
             const response = await fetch("/api/research/keywords", {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
-                    "Authorization": `Bearer ${idToken}`,
                 },
                 body: JSON.stringify({ query: searchTerm }),
             });
@@ -247,12 +233,9 @@ export default function ResearchPage() {
         setClusterLoading(true);
         setClusterStrategy(null);
         try {
-            const auth = getFirebaseAuth();
-            const idToken = await auth.currentUser?.getIdToken();
-            if (!idToken) throw new Error("Authentication required");
             const response = await fetch("/api/research/cluster", {
                 method: "POST",
-                headers: { "Content-Type": "application/json", "Authorization": `Bearer ${idToken}` },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ seedTopic: clusterSeedTopic }),
             });
             const data = await response.json();

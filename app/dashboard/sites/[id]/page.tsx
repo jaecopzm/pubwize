@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Globe } from "lucide-react";
 import { toast } from "sonner";
@@ -27,16 +26,7 @@ export default function EditSitePage() {
     const fetchSite = async () => {
         setLoading(true);
         try {
-            const auth = getFirebaseAuth();
-            const idToken = await auth.currentUser?.getIdToken();
-            if (!idToken) {
-                throw new Error("Not authenticated");
-            }
-
             const res = await fetch(`/api/sites/${siteId}`, {
-                headers: {
-                    Authorization: `Bearer ${idToken}`,
-                },
             });
 
             if (!res.ok) throw new Error("Failed to fetch site");
@@ -69,15 +59,11 @@ export default function EditSitePage() {
         setSaving(true);
         setError(null);
         try {
-            const auth = getFirebaseAuth();
-            const idToken = await auth.currentUser?.getIdToken();
-            if (!idToken) throw new Error("Not authenticated");
 
             const res = await fetch(`/api/sites/${siteId}`, {
                 method: "PATCH",
                 headers: {
                     "Content-Type": "application/json",
-                    Authorization: `Bearer ${idToken}`,
                 },
                 body: JSON.stringify(data),
             });

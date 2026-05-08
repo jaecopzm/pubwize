@@ -1,35 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { prisma } from "@/lib/prisma";
 import { verifyAdminRequest } from "@/lib/admin-auth";
 
 export async function GET(req: NextRequest) {
   const admin = await verifyAdminRequest(req);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const db = adminDb();
-
   const [recentUsers, recentArticles] = await Promise.all([
-    db.collection("users").orderBy("createdAt", "desc").limit(20).get(),
-    db.collection("articles").orderBy("createdAt", "desc").limit(20).get(),
+    prisma.user.findMany({ orderBy: { createdAt: "desc" }, take: 20, select: { id: true, email: true, createdAt: true } }),
+    prisma.article.findMany({ orderBy: { createdAt: "desc" }, take: 20, select: { id: true, keyword: true, ownerId: true, createdAt: true } }),
   ]);
 
   const events = [
-    ...recentUsers.docs.map((d) => ({
-      type: "signup" as const,
-      id: d.id,
-      label: d.data().email ?? d.id,
-      ts: d.data().createdAt || null,
-    })),
-    ...recentArticles.docs.map((d) => ({
-      type: "article" as const,
-      id: d.id,
-      label: d.data().title || d.data().keyword || "Untitled",
-      userId: d.data().ownerId,
-      ts: d.data().createdAt || null,
-    })),
+    ...recentUsers.map((u) => ({ type: "signup" as const, id: u.id, label: u.email, ts: u.createdAt })),
+    ...recentArticles.map((a) => ({ type: "article" as const, id: a.id, label: a.keyword || "Untitled", userId: a.ownerId, ts: a.createdAt })),
   ]
-    .filter((e) => e.ts && e.ts.seconds)
-    .sort((a, b) => (b.ts?.seconds ?? 0) - (a.ts?.seconds ?? 0))
+    .sort((a, b) => b.ts.getTime() - a.ts.getTime())
     .slice(0, 40);
 
   return NextResponse.json({ events });

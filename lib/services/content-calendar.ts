@@ -1,219 +1,86 @@
 /**
- * Content Calendar Service
- * Handles scheduling and managing article publication dates
+ * Content Calendar Service - Prisma
  */
 
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  getDoc,
-  updateDoc,
-  serverTimestamp,
-  Timestamp,
-  type Firestore,
-} from 'firebase/firestore';
-import type { CalendarEvent, ArticleStatus, FirestoreTimestamp } from '@/lib/types';
-import { COLLECTIONS } from '@/lib/firestore/collections';
+import { prisma } from "@/lib/prisma";
+import type { CalendarEvent, ArticleStatus } from "@/lib/types";
 
-/**
- * Get all calendar events for a specific month
- * Returns articles scheduled for the given year and month
- */
 export async function getEventsForMonth(
-  db: Firestore,
+  _db: unknown,
   userId: string,
   year: number,
-  month: number // 1-12
+  month: number
 ): Promise<CalendarEvent[]> {
-  try {
-    // Calculate start and end dates for the month
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
 
-    const articlesRef = collection(db, COLLECTIONS.ARTICLES);
-    const q = query(
-      articlesRef,
-      where('ownerId', '==', userId),
-      where('scheduledDate', '>=', Timestamp.fromDate(startDate)),
-      where('scheduledDate', '<=', Timestamp.fromDate(endDate))
-    );
+  const articles = await prisma.article.findMany({
+    where: {
+      ownerId: userId,
+      scheduledDate: { gte: startDate, lte: endDate },
+    },
+  });
 
-    const snapshot = await getDocs(q);
-    
-    const events: CalendarEvent[] = snapshot.docs.map((doc) => {
-      const data = doc.data();
-      const scheduledTimestamp = data.scheduledDate as FirestoreTimestamp;
-      
-      return {
-        id: doc.id,
-        articleId: doc.id,
-        title: data.keyword || 'Untitled Article',
-        status: data.status as ArticleStatus,
-        authorId: data.ownerId,
-        authorName: 'Author', // TODO: Fetch from user doc if needed
-        scheduledDate: new Date(scheduledTimestamp.seconds * 1000),
-      };
-    });
-
-    return events;
-  } catch (error) {
-    console.error('Error fetching calendar events:', error);
-    throw new Error(`Failed to fetch calendar events: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  return articles.map((a) => ({
+    id: a.id,
+    articleId: a.id,
+    title: a.keyword || "Untitled Article",
+    status: a.status as ArticleStatus,
+    authorId: a.ownerId,
+    authorName: "Author",
+    scheduledDate: a.scheduledDate!,
+  }));
 }
 
-/**
- * Schedule an article for a specific date
- * Validates that the article is in an appropriate status
- */
 export async function scheduleArticle(
-  db: Firestore,
+  _db: unknown,
   articleId: string,
   userId: string,
   date: Date
 ): Promise<void> {
-  try {
-    const articleRef = doc(db, COLLECTIONS.ARTICLES, articleId);
-    const articleDoc = await getDoc(articleRef);
+  const article = await prisma.article.findUnique({ where: { id: articleId } });
+  if (!article) throw new Error("Article not found");
+  if (article.ownerId !== userId) throw new Error("Unauthorized: You do not own this article");
 
-    if (!articleDoc.exists()) {
-      throw new Error('Article not found');
-    }
-
-    const article = articleDoc.data();
-
-    // Verify ownership
-    if (article?.ownerId !== userId) {
-      throw new Error('Unauthorized: You do not own this article');
-    }
-
-    // Validate article status - only draft and later stages can be scheduled
-    const validStatuses: ArticleStatus[] = [
-      'draft_generated',
-      'optimized',
-    ];
-
-    if (!validStatuses.includes(article.status as ArticleStatus)) {
-      throw new Error(
-        'Cannot schedule article: Article must be in draft or later status'
-      );
-    }
-
-    // Update the article with the scheduled date
-    await updateDoc(articleRef, {
-      scheduledDate: Timestamp.fromDate(date),
-      updatedAt: serverTimestamp(),
-    });
-  } catch (error) {
-    console.error('Error scheduling article:', error);
-    throw new Error(`Failed to schedule article: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  const validStatuses: ArticleStatus[] = ["draft_generated", "optimized"];
+  if (!validStatuses.includes(article.status as ArticleStatus)) {
+    throw new Error("Cannot schedule article: Article must be in draft or later status");
   }
+
+  await prisma.article.update({ where: { id: articleId }, data: { scheduledDate: date } });
 }
 
-/**
- * Remove the scheduled date from an article
- */
 export async function unscheduleArticle(
-  db: Firestore,
+  _db: unknown,
   articleId: string,
   userId: string
 ): Promise<void> {
-  try {
-    const articleRef = doc(db, COLLECTIONS.ARTICLES, articleId);
-    const articleDoc = await getDoc(articleRef);
+  const article = await prisma.article.findUnique({ where: { id: articleId } });
+  if (!article) throw new Error("Article not found");
+  if (article.ownerId !== userId) throw new Error("Unauthorized: You do not own this article");
 
-    if (!articleDoc.exists()) {
-      throw new Error('Article not found');
-    }
-
-    const article = articleDoc.data();
-
-    // Verify ownership
-    if (article?.ownerId !== userId) {
-      throw new Error('Unauthorized: You do not own this article');
-    }
-
-    // Remove the scheduled date
-    await updateDoc(articleRef, {
-      scheduledDate: null,
-      updatedAt: serverTimestamp(),
-    });
-  } catch (error) {
-    console.error('Error unscheduling article:', error);
-    throw new Error(`Failed to unschedule article: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  await prisma.article.update({ where: { id: articleId }, data: { scheduledDate: null } });
 }
 
-/**
- * Update the scheduled date for an article (reschedule)
- */
-export async function updateSchedule(
-  db: Firestore,
-  articleId: string,
-  userId: string,
-  newDate: Date
-): Promise<void> {
-  try {
-    // This is essentially the same as scheduling, but we're being explicit
-    await scheduleArticle(db, articleId, userId, newDate);
-  } catch (error) {
-    console.error('Error updating schedule:', error);
-    throw new Error(`Failed to update schedule: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
-/**
- * Get all unscheduled articles for a user
- * Returns articles that don't have a scheduled date
- */
 export async function getUnscheduledArticles(
-  db: Firestore,
+  _db: unknown,
   userId: string
 ): Promise<CalendarEvent[]> {
-  try {
-    const articlesRef = collection(db, COLLECTIONS.ARTICLES);
-    
-    // Query for articles without a scheduled date
-    const q = query(
-      articlesRef,
-      where('ownerId', '==', userId),
-      where('scheduledDate', '==', null)
-    );
+  const articles = await prisma.article.findMany({
+    where: {
+      ownerId: userId,
+      scheduledDate: null,
+      status: { in: ["draft_generated", "optimized"] },
+    },
+  });
 
-    const snapshot = await getDocs(q);
-    
-    const articles: CalendarEvent[] = snapshot.docs
-      .map((doc) => {
-        const data = doc.data();
-        
-        // Only include articles in draft or later status
-        const validStatuses: ArticleStatus[] = [
-          'draft_generated',
-          'optimized',
-        ];
-        
-        if (!validStatuses.includes(data.status as ArticleStatus)) {
-          return null;
-        }
-        
-        return {
-          id: doc.id,
-          articleId: doc.id,
-          title: data.keyword || 'Untitled Article',
-          status: data.status as ArticleStatus,
-          authorId: data.ownerId,
-          authorName: 'Author',
-          scheduledDate: new Date(), // Placeholder, not actually scheduled
-        };
-      })
-      .filter((article): article is CalendarEvent => article !== null);
-
-    return articles;
-  } catch (error) {
-    console.error('Error fetching unscheduled articles:', error);
-    throw new Error(`Failed to fetch unscheduled articles: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
+  return articles.map((a) => ({
+    id: a.id,
+    articleId: a.id,
+    title: a.keyword || "Untitled Article",
+    status: a.status as ArticleStatus,
+    authorId: a.ownerId,
+    authorName: "Author",
+    scheduledDate: new Date(),
+  }));
 }

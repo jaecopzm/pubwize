@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+
 import { optimizeContentWithSEOSuggestions, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
@@ -13,8 +13,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const uid = auth.uid!;
 
   // 2. Check usage limits
-  const db = adminDb();
-  const usageCheck = await canPerformAction(db, uid, 'aiImprovements');
+  
+  const usageCheck = await canPerformAction(null, uid, 'aiImprovements');
   
   if (!usageCheck.allowed) {
     return NextResponse.json(
@@ -68,7 +68,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // 6. Increment usage counter
-  await incrementUsage(db, uid, 'aiImprovements');
+  await incrementUsage(null, uid, 'aiImprovements');
 
   // 7. Return success
   return NextResponse.json({

@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { motion, useInView, AnimatePresence } from "framer-motion";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { 
   BarChart3, Download, TrendingUp, Zap, FileText, RefreshCw, 
   Clock, Target, DollarSign, Activity, Award, Sparkles, TrendingDown 
@@ -104,12 +103,8 @@ export function AdvancedAnalytics() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
 
-      const res = await fetch('/api/analytics', {
-        headers: { Authorization: `Bearer ${idToken}` },
-      });
+      const res = await fetch('/api/analytics', {});
 
       if (res.ok) {
         const analytics = await res.json();

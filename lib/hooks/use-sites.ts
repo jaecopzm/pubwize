@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 
 interface Site {
   id: string;
@@ -16,18 +15,7 @@ export function useSites() {
   useEffect(() => {
     const fetchSites = async () => {
       try {
-        const auth = getFirebaseAuth();
-        const idToken = await auth.currentUser?.getIdToken();
-        if (!idToken) {
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch("/api/sites", {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
+        const res = await fetch("/api/sites");
 
         if (res.ok) {
           const data = await res.json();

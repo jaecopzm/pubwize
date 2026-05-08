@@ -10,7 +10,6 @@ import Link from "@tiptap/extension-link";
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Sparkles, ChevronDown, Minus, Plus, RefreshCw, AlignLeft, Type, Highlighter, Wand2 } from "lucide-react";
 import { toast } from "sonner";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import { motion, AnimatePresence } from "framer-motion";
 import { BubbleMenu } from "@tiptap/react/menus";
 import { cn } from "@/lib/utils";
@@ -200,12 +199,9 @@ export function RichEditor({
       if (!sectionHeading) { toast.error("Place cursor inside a section to regenerate it"); return; }
       setAiAction(action);
       try {
-        const auth = getFirebaseAuth();
-        const idToken = await auth.currentUser?.getIdToken();
-        if (!idToken) { toast.error("Please sign in"); return; }
         const res = await fetch("/api/articles/regenerate-section", {
           method: "POST",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ sectionHeading, sectionContent, keyword }),
         });
         const data = await res.json();
@@ -228,18 +224,10 @@ export function RichEditor({
     setAiAction(action);
 
     try {
-      const auth = getFirebaseAuth();
-      const idToken = await auth.currentUser?.getIdToken();
-      if (!idToken) {
-        toast.error("Please sign in to continue");
-        return;
-      }
-
       const response = await fetch("/api/articles/ai-improve", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${idToken}`,
         },
         body: JSON.stringify({
           content: selectedText,

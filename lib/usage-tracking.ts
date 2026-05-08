@@ -1,12 +1,16 @@
 /**
- * Usage tracking utilities for pricing enforcement
- * Works with Firebase Admin SDK
+ * Usage tracking utilities - Neon/Prisma
  */
 
-import { FieldValue } from 'firebase-admin/firestore';
-import { PLANS, hasReachedLimit, type PlanTier } from './pricing';
+import { prisma } from "@/lib/prisma";
+import { PLANS, hasReachedLimit, type PlanTier } from "./pricing";
 
-export type UsageType = 'articles' | 'aiImprovements' | 'sectionRegenerations' | 'researchQueries' | 'socialGeneration';
+export type UsageType =
+  | "articles"
+  | "aiImprovements"
+  | "sectionRegenerations"
+  | "researchQueries"
+  | "socialGeneration";
 
 export interface UserUsage {
   articlesUsed: number;
@@ -19,209 +23,129 @@ export interface UserUsage {
   periodEnd: Date;
 }
 
-/**
- * Increment usage counter in Firestore (Admin SDK)
- */
 export async function incrementUsage(
-  db: FirebaseFirestore.Firestore,
+  _db: unknown,
   userId: string,
   type: UsageType
 ): Promise<void> {
-  const userRef = db.collection('users').doc(userId);
+  const field: Record<UsageType, string> = {
+    articles: "articlesUsed",
+    aiImprovements: "aiImprovementsUsed",
+    sectionRegenerations: "sectionRegenerationsUsed",
+    researchQueries: "researchQueriesUsed",
+    socialGeneration: "socialGenerationUsed",
+  };
 
-  const field = type === 'articles' 
-    ? 'usage.articlesUsed'
-    : type === 'aiImprovements'
-    ? 'usage.aiImprovementsUsed'
-    : type === 'researchQueries'
-    ? 'usage.researchQueriesUsed'
-    : type === 'socialGeneration'
-    ? 'usage.socialGenerationUsed'
-    : 'usage.sectionRegenerationsUsed';
-
-  await userRef.update({
-    [field]: FieldValue.increment(1),
-    updatedAt: new Date(),
+  await prisma.user.update({
+    where: { id: userId },
+    data: { [field[type]]: { increment: 1 }, updatedAt: new Date() },
   });
 }
 
-/**
- * Check if user can perform an action based on their plan limits (Admin SDK)
- */
 export async function canPerformAction(
-  db: FirebaseFirestore.Firestore,
+  _db: unknown,
   userId: string,
   type: UsageType
 ): Promise<{ allowed: boolean; reason?: string; current?: number; limit?: number }> {
   try {
-    const userRef = db.collection('users').doc(userId);
-    const userSnap = await userRef.get();
+    const user = await prisma.user.findUnique({ where: { id: userId } });
 
-    if (!userSnap.exists) {
-      return {
-        allowed: false,
-        reason: 'User not found',
-      };
-    }
+    if (!user) return { allowed: false, reason: "User not found" };
 
-    const userData = userSnap.data();
-    if (!userData) {
-      return {
-        allowed: false,
-        reason: 'User data not found',
-      };
-    }
-
-    const plan: PlanTier = userData.plan || 'free';
+    const plan = (user.planTier as PlanTier) || "free";
     const limits = PLANS[plan].limits;
-    const usage = userData.usage || {
-      articlesUsed: 0,
-      aiImprovementsUsed: 0,
-      sectionRegenerationsUsed: 0,
-      researchQueriesUsed: 0,
-      rolloverArticles: 0,
-    };
 
     let current: number;
     let limit: number;
-    let rollover = 0;
+    let rollover = user.rolloverArticles;
 
     switch (type) {
-      case 'articles':
-        current = usage.articlesUsed || 0;
+      case "articles":
+        current = user.articlesUsed;
         limit = limits.articlesPerMonth;
-        rollover = usage.rolloverArticles || 0;
         break;
-      case 'aiImprovements':
-        current = usage.aiImprovementsUsed || 0;
+      case "aiImprovements":
+        current = user.aiImprovementsUsed;
         limit = limits.aiImprovementsPerMonth;
+        rollover = 0;
         break;
-      case 'sectionRegenerations':
-        current = usage.sectionRegenerationsUsed || 0;
+      case "sectionRegenerations":
+        current = user.sectionRegenerationsUsed;
         limit = limits.sectionRegenerationsPerMonth;
+        rollover = 0;
         break;
-      case 'researchQueries':
-        current = usage.researchQueriesUsed || 0;
+      case "researchQueries":
+        current = user.researchQueriesUsed;
         limit = limits.researchQueriesPerMonth;
+        rollover = 0;
         break;
-      case 'socialGeneration':
-        current = usage.socialGenerationUsed || 0;
+      case "socialGeneration":
+        current = user.socialGenerationUsed;
         limit = limits.socialGenerationsPerMonth;
+        rollover = 0;
         break;
     }
 
     if (hasReachedLimit(current, limit, rollover)) {
-      const typeName = type === 'articles' 
-        ? 'articles' 
-        : type === 'aiImprovements'
-        ? 'AI improvements'
-        : type === 'researchQueries'
-        ? 'keyword research queries'
-        : type === 'socialGeneration'
-        ? 'social media generations'
-        : 'section regenerations';
-
-      const nextTier = plan === 'free' ? 'Starter' : 'Pro';
-      const nextLimit = plan === 'free' 
-        ? (type === 'articles' ? 25 : type === 'aiImprovements' ? 75 : 50)
-        : (type === 'articles' ? 60 : 'unlimited');
-
+      const nextTier = plan === "free" ? "Starter" : "Pro";
       return {
         allowed: false,
-        reason: `You've used ${current}/${limit + rollover} ${typeName} this month. Upgrade to ${nextTier} for ${nextLimit === 'unlimited' ? 'unlimited' : nextLimit} ${typeName}!`,
+        reason: `You've used ${current}/${limit + rollover} this month. Upgrade to ${nextTier} for more.`,
         current,
         limit: limit + rollover,
       };
     }
 
-    return { 
-      allowed: true,
-      current,
-      limit: limit + rollover,
-    };
+    return { allowed: true, current, limit: limit + rollover };
   } catch (error) {
-    console.error('Error checking usage limits:', error);
-    return {
-      allowed: false,
-      reason: 'Failed to check usage limits',
-    };
+    console.error("Error checking usage limits:", error);
+    return { allowed: false, reason: "Failed to check usage limits" };
   }
 }
 
-/**
- * Get user's current usage stats (Admin SDK)
- */
 export async function getUserUsage(
-  db: FirebaseFirestore.Firestore,
+  _db: unknown,
   userId: string
 ): Promise<UserUsage | null> {
-  try {
-    const userRef = db.collection('users').doc(userId);
-    const userSnap = await userRef.get();
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return null;
 
-    if (!userSnap.exists) {
-      return null;
-    }
-
-    const userData = userSnap.data();
-    if (!userData) {
-      return null;
-    }
-
-    const usage = userData.usage || {};
-
-    return {
-      articlesUsed: usage.articlesUsed || 0,
-      aiImprovementsUsed: usage.aiImprovementsUsed || 0,
-      sectionRegenerationsUsed: usage.sectionRegenerationsUsed || 0,
-      researchQueriesUsed: usage.researchQueriesUsed || 0,
-      socialGenerationUsed: usage.socialGenerationUsed || 0,
-      rolloverArticles: usage.rolloverArticles || 0,
-      periodStart: usage.periodStart?.toDate() || new Date(),
-      periodEnd: usage.periodEnd?.toDate() || new Date(),
-    };
-  } catch (error) {
-    console.error('Error fetching user usage:', error);
-    return null;
-  }
+  return {
+    articlesUsed: user.articlesUsed,
+    aiImprovementsUsed: user.aiImprovementsUsed,
+    sectionRegenerationsUsed: user.sectionRegenerationsUsed,
+    researchQueriesUsed: user.researchQueriesUsed,
+    socialGenerationUsed: user.socialGenerationUsed,
+    rolloverArticles: user.rolloverArticles,
+    periodStart: user.periodStart,
+    periodEnd: user.periodEnd,
+  };
 }
 
-/**
- * Reset monthly usage (called by cron job) (Admin SDK)
- */
 export async function resetMonthlyUsage(
-  db: FirebaseFirestore.Firestore,
+  _db: unknown,
   userId: string
 ): Promise<void> {
-  const userRef = db.collection('users').doc(userId);
-  const userSnap = await userRef.get();
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return;
 
-  if (!userSnap.exists) {
-    return;
-  }
-
-  const userData = userSnap.data();
-  if (!userData) {
-    return;
-  }
-
-  const plan: PlanTier = userData.plan || 'free';
+  const plan = (user.planTier as PlanTier) || "free";
   const limits = PLANS[plan].limits;
-  const usage = userData.usage || {};
-
-  // Calculate rollover
-  const unusedArticles = Math.max(0, limits.articlesPerMonth - (usage.articlesUsed || 0));
+  const unusedArticles = Math.max(0, limits.articlesPerMonth - user.articlesUsed);
   const rollover = Math.min(unusedArticles, limits.rolloverLimit);
 
-  // Reset usage
-  await userRef.update({
-    'usage.articlesUsed': 0,
-    'usage.aiImprovementsUsed': 0,
-    'usage.sectionRegenerationsUsed': 0,
-    'usage.researchQueriesUsed': 0,
-    'usage.rolloverArticles': rollover,
-    'usage.periodStart': new Date(),
-    'usage.periodEnd': new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30 days
-    updatedAt: new Date(),
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      articlesUsed: 0,
+      aiImprovementsUsed: 0,
+      sectionRegenerationsUsed: 0,
+      researchQueriesUsed: 0,
+      socialGenerationUsed: 0,
+      rolloverArticles: rollover,
+      periodStart: new Date(),
+      periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      updatedAt: new Date(),
+    },
   });
 }

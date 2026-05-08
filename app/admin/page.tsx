@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getFirebaseAuth } from "@/lib/firebase-client";
 import Link from "next/link";
 import { 
   Users, 
@@ -43,8 +42,7 @@ interface ActivityEvent {
 }
 
 async function authedFetch(path: string) {
-  const token = await getFirebaseAuth().currentUser?.getIdToken();
-  const res = await fetch(path, { headers: { Authorization: `Bearer ${token}` } });
+  const res = await fetch(path, { });
   if (!res.ok) throw new Error(`Failed: ${path}`);
   return res.json();
 }

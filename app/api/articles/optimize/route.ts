@@ -1,138 +1,51 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase-admin";
+import { prisma } from "@/lib/prisma";
 import type { OptimizationData } from "@/lib/types";
 import { optimizeDraft, getInternalLinkSuggestions, getQualityMetricsWithOpenRouter } from "@/lib/ai-providers";
 
-export const dynamic = 'force-dynamic';
-export const maxDuration = 300; // 5 minutes (max for Vercel Pro)
+export const dynamic = "force-dynamic";
+export const maxDuration = 300;
+
 export async function POST(req: NextRequest) {
   try {
-    const authHeader = req.headers.get("authorization") ?? "";
-    const [, token] = authHeader.split(" ");
-
-    if (!token) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
     const { userId: uid } = await auth();
-    if (!uid) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!uid) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const body = (await req.json()) as { articleId?: string };
-    const { articleId } = body;
+    const { articleId } = await req.json();
+    if (!articleId) return NextResponse.json({ error: "Missing articleId" }, { status: 400 });
 
-    if (!articleId) {
-      return NextResponse.json(
-        { error: "Missing articleId" },
-        { status: 400 },
-      );
-    }
+    const article = await prisma.article.findUnique({ where: { id: articleId } });
+    if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
+    if (article.ownerId !== uid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const db = adminDb();
-    const articleRef = db.collection("articles").doc(articleId);
-    const articleSnap = await articleRef.get();
+    const draft = article.draft as any;
+    if (!draft?.content) return NextResponse.json({ error: "Article has no draft" }, { status: 400 });
+    if (!article.keyword) return NextResponse.json({ error: "Article missing keyword" }, { status: 400 });
 
-    if (!articleSnap.exists) {
-      return NextResponse.json(
-        { error: "Article not found" },
-        { status: 404 },
-      );
-    }
+    const optimization: OptimizationData = await optimizeDraft({ keyword: article.keyword, content: draft.content });
 
-    const articleData = articleSnap.data() as {
-      ownerId?: string;
-      siteId?: string;
-      keyword?: string;
-      draft?: { content?: string };
-    };
-
-    if (articleData.ownerId !== uid) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
-    if (!articleData.draft?.content) {
-      return NextResponse.json(
-        { error: "Article has no draft" },
-        { status: 400 },
-      );
-    }
-
-    if (!articleData.keyword) {
-      return NextResponse.json(
-        { error: "Article missing keyword" },
-        { status: 400 },
-      );
-    }
-
-    const optimization: OptimizationData = await optimizeDraft({
-      keyword: articleData.keyword,
-      content: articleData.draft.content,
-    });
-
-    // 6.5 Elite Upgrades: Internal Linking & Quality Audit
     try {
-      // Fetch 15 most recent published articles for context
-      const otherArticlesSnap = await db.collection("articles")
-        .where("siteId", "==", articleData.siteId)
-        .where("ownerId", "==", uid)
-        .where("status", "==", "optimized") // consider "optimized" or tracked published status
-        .limit(15)
-        .get();
-
-      const otherArticles = otherArticlesSnap.docs
-        .filter(doc => doc.id !== articleId)
-        .map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            title: data.keyword || "Untitled",
-            publishedUrl: data.publishedUrl || null
-          };
-        });
+      const otherArticles = await prisma.article.findMany({
+        where: { siteId: article.siteId, ownerId: uid, status: "optimized", NOT: { id: articleId } },
+        select: { id: true, keyword: true, publishedUrl: true },
+        take: 15,
+      });
 
       const [internalLinks, qualityMetrics] = await Promise.all([
-        getInternalLinkSuggestions({
-          currentContent: articleData.draft.content,
-          otherArticles
-        }),
-        getQualityMetricsWithOpenRouter({
-          content: articleData.draft.content
-        })
+        getInternalLinkSuggestions({ currentContent: draft.content, otherArticles: otherArticles.map((a) => ({ id: a.id, title: a.keyword || "Untitled", publishedUrl: a.publishedUrl || null })) }),
+        getQualityMetricsWithOpenRouter({ content: draft.content }),
       ]);
 
       optimization.internalLinks = internalLinks;
-      optimization.aiDetection = {
-        score: qualityMetrics.score,
-        riskLevel: qualityMetrics.riskLevel
-      };
+      optimization.aiDetection = { score: qualityMetrics.score, riskLevel: qualityMetrics.riskLevel };
+    } catch {}
 
-      // We could also store more detailed metrics if needed
-    } catch (eliteErr) {
-      console.error("Elite SEO features failed:", eliteErr);
-    }
+    await prisma.article.update({ where: { id: articleId }, data: { optimizations: optimization as any, status: "optimized" } });
 
-    const now = new Date();
-    await articleRef.update({
-      optimizations: optimization,
-      status: "optimized",
-      updatedAt: now,
-    });
-
-    return NextResponse.json(
-      {
-        articleId,
-        optimization,
-      },
-      { status: 200 },
-    );
+    return NextResponse.json({ articleId, optimization });
   } catch (error) {
     console.error("Error in /api/articles/optimize", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
-
