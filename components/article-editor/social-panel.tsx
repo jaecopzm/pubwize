@@ -56,7 +56,7 @@ export function SocialPanel({ socialMedia, articleId, keyword, content, onGenera
 
   if (!socialMedia) {
     return (
-      <div className="space-y-4 sm:space-y-6">
+      <div className="space-y-4">
         <div className="text-center py-12 sm:py-16 px-4">
           <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl" />
@@ -93,61 +93,60 @@ export function SocialPanel({ socialMedia, articleId, keyword, content, onGenera
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="space-y-6"
+      className="space-y-4"
     >
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+      <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold">Social Media Content</h2>
-          <p className="text-sm sm:text-base text-gray-600">Platform-optimized posts ready to share</p>
+          <h2 className="text-lg font-bold">Social Media Content</h2>
+          <p className="text-sm text-gray-600">Platform-optimized posts</p>
         </div>
         <Button 
           onClick={onGenerate} 
           disabled={isGenerating} 
           variant="outline"
           size="sm"
-          className="w-full sm:w-auto"
         >
           {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-          <span className="sm:inline">Regenerate</span>
+          Regenerate
         </Button>
       </div>
 
       <Tabs defaultValue="twitter" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 gap-1 sm:gap-2 h-auto p-1 bg-transparent border-b border-border">
+        <TabsList className="grid w-full grid-cols-4 gap-1 h-auto p-1 bg-transparent border-b border-border">
           {platforms.map(platform => {
             const Icon = platform.icon;
             return (
               <TabsTrigger 
                 key={platform.key} 
                 value={platform.key} 
-                className="flex items-center justify-center gap-2 py-2 sm:py-3 px-2 sm:px-4 rounded-xl border border-transparent data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:shadow-sm transition-all"
+                className="flex items-center justify-center gap-2 py-2 px-2 rounded-xl border border-transparent data-[state=active]:border-border data-[state=active]:bg-card transition-all"
               >
-                <div className={`w-5 h-5 sm:w-5 sm:h-5 ${platform.color}`}>
+                <div className={`w-5 h-5 ${platform.color}`}>
                   <Icon />
                 </div>
-                {platform.label && <span className="hidden sm:inline font-medium">{platform.label}</span>}
+                {platform.label && <span className="hidden sm:inline text-sm">{platform.label}</span>}
               </TabsTrigger>
             );
           })}
         </TabsList>
 
         {platforms.map(platform => (
-          <TabsContent key={platform.key} value={platform.key} className="space-y-3 sm:space-y-4 mt-4 sm:mt-6">
-            <div className="grid gap-3 sm:gap-4">
+          <TabsContent key={platform.key} value={platform.key} className="space-y-3 mt-4">
+            <div className="grid gap-3">
               {platform.posts.map((post, index) => (
                 <Card key={index} className="overflow-hidden border-border bg-card hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3 px-4 sm:px-5 pt-3 sm:pt-4 bg-gradient-to-r from-transparent to-transparent hover:from-muted/30">
+                  <CardHeader className="pb-3 px-4 pt-3 bg-gradient-to-r from-transparent to-transparent hover:from-muted/30">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-xs sm:text-sm font-semibold flex items-center gap-2">
+                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
                         <div className={`w-4 h-4 ${platform.color}`}>
                           <platform.icon />
                         </div>
-                        <span>Post Variant {index + 1}</span>
+                        <span>Post {index + 1}</span>
                       </CardTitle>
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="h-8 w-8 sm:h-9 sm:w-9 p-0 hover:bg-muted"
+                        className="h-8 w-8 p-0 hover:bg-muted"
                         onClick={() => copyToClipboard(post, `${platform.key}-${index}`)}
                       >
                         {copiedIndex === `${platform.key}-${index}` ? (

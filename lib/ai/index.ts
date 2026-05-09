@@ -115,7 +115,7 @@ export async function* generateDraftStream(params: {
       targetWords
     }),
     temperature: 0.5,
-    maxTokens: Math.min(Math.ceil(targetWords * 2.2), 8000),
+    maxTokens: Math.min(Math.ceil(targetWords * 2.5), 6000),
     taskType: 'draft'
   });
 }
@@ -151,7 +151,7 @@ export async function generateSocialMedia(params: {
     systemPrompt: getSocialSystemPrompt(),
     userPrompt: getSocialUserPrompt(params),
     temperature: 0.8,
-    maxTokens: 4000,
+    maxTokens: 8000,
     taskType: 'social',
     expectJSON: true
   });

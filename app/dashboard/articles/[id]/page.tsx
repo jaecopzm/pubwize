@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Loader2, Sparkles, CheckCircle2, FileText, List, PenLine, TrendingUp, Copy, Check, Download, FileCode, FileJson, Plus, Trash2, Code, Share2, Zap, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ReadabilityScoreCard, ReadabilityImprovementPanel } from "@/components/readability";
-import { SERPPreviewCard, SERPMetaEditor } from "@/components/serp-preview";
+import { Button } from "@/components/ui/button";
+import { ArticleHeader } from "@/components/article-editor/article-header";
+import { useDraftGeneration } from "@/components/article-editor/use-draft-generation";
+import { useApiCalls } from "@/components/article-editor/use-api-calls";
 import { WordPressPublishPanel } from "@/components/wordpress";
 import { ExportDialog } from "@/components/export";
 import { ContentEditor } from "@/components/content-editor";
@@ -56,16 +58,14 @@ const STEPS = [
   { id: 1, key: "brief", label: "SEO Brief", icon: FileText, description: "Keyword research & content map" },
   { id: 2, key: "outline", label: "Outline", icon: List, description: "Structure your article" },
   { id: 3, key: "draft", label: "Draft", icon: PenLine, description: "Full AI-written article" },
-  { id: 4, key: "seo", label: "SEO Polish", icon: TrendingUp, description: "Optimise & publish-ready" },
-  { id: 5, key: "social", label: "Social Media", icon: Share2, description: "Repurpose for social platforms" },
+  { id: 4, key: "social", label: "Social & Publish", icon: Share2, description: "Social posts & WordPress" },
 ] as const;
 
 function getActiveStep(article: ArticleState): number {
   if (!article.outline) return 1;      // Show Brief + "Generate Outline" CTA
   if (!article.draft) return 2;        // Show Outline + "Generate Draft" CTA
-  if (!article.optimization) return 3; // Show Draft + "Run SEO" CTA
-  if (!article.socialMedia) return 4;  // Show SEO + "Generate Social" CTA
-  return 5;                             // Show Social results
+  if (!article.socialMedia) return 3;  // Show Draft + "Generate Social" CTA
+  return 4;                             // Show Social results
 }
 
 
@@ -266,6 +266,64 @@ function SEOPanel({ optimization, articleId, keyword, content, featuredImage, br
             </div>
           </div>
         </div>
+
+        {/* Meta Title */}
+        {optimization?.suggestedTitle && (
+          <div className="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent p-4 sm:p-5 shadow-lg hover:shadow-emerald-500/10 transition-all duration-300">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h3 className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-foreground">Meta Title</h3>
+              <span className={cn(
+                "text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0",
+                optimization.suggestedTitle.length <= 60
+                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                  : "bg-amber-400/10 text-amber-400 border-amber-400/20"
+              )}>
+                {optimization.suggestedTitle.length} chars
+              </span>
+            </div>
+            <div className="group flex items-start justify-between gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2.5 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all">
+              <p className="text-xs sm:text-sm leading-snug flex-1 text-foreground/90 break-words font-medium">{optimization.suggestedTitle}</p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(optimization.suggestedTitle || '');
+                  toast.success("Title copied!");
+                }}
+                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 p-1.5 rounded-lg hover:bg-white/10 active:scale-95"
+              >
+                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Meta Description */}
+        {optimization?.suggestedMetaDescription && (
+          <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-cyan-500/5 to-transparent p-4 sm:p-5 shadow-lg hover:shadow-cyan-500/10 transition-all duration-300">
+            <div className="flex items-center justify-between gap-2 mb-3">
+              <h3 className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-foreground">Meta Description</h3>
+              <span className={cn(
+                "text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0",
+                optimization.suggestedMetaDescription.length >= 150 && optimization.suggestedMetaDescription.length <= 160
+                  ? "bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
+                  : "bg-amber-400/10 text-amber-400 border-amber-400/20"
+              )}>
+                {optimization.suggestedMetaDescription.length} chars
+              </span>
+            </div>
+            <div className="group flex items-start justify-between gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2.5 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all">
+              <p className="text-xs sm:text-sm leading-snug flex-1 text-foreground/80 break-words">{optimization.suggestedMetaDescription}</p>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(optimization.suggestedMetaDescription || '');
+                  toast.success("Description copied!");
+                }}
+                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 p-1.5 rounded-lg hover:bg-white/10 active:scale-95"
+              >
+                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Readability Metrics - Hidden for now due to poor scores from AI */}
         {/* TODO: Re-enable once AI generates more readable content (target Flesch 65-70) */}
@@ -600,6 +658,7 @@ export default function ArticleDetailPage() {
 
   const [article, setArticle] = useState<ArticleState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loader, setLoader] = useState(false);
   const [outlineLoading, setOutlineLoading] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
   const [optLoading, setOptLoading] = useState(false);
@@ -608,6 +667,7 @@ export default function ArticleDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [zenMode, setZenMode] = useState(false);
   const { setOpen, setOpenMobile } = useSidebar();
+  const draftContentRef = useRef("");
 
   const toggleZenMode = () => {
     const nextState = !zenMode;
@@ -649,6 +709,28 @@ export default function ArticleDetailPage() {
   const typewriterDraft = useTypewriter(draftAccumulated, 8);
   const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>({ 1: true });
   const [wordCount, setWordCount] = useState(0);
+
+  // Custom hooks for API calls and draft generation
+  const { handleGenerateOutline, handleOptimize, handleGenerateSocial } = useApiCalls({
+    articleId,
+    setLoader,
+    setOutlineLoading,
+    setOptLoading,
+    setSocialLoading,
+    setArticle,
+    setError,
+  });
+
+  const { handleGenerateDraft } = useDraftGeneration({
+    articleId,
+    draftContentRef,
+    setDraftLoading,
+    setError,
+    setDraftAccumulated,
+    setWordCount,
+    setArticle,
+    setCurrentView,
+  });
 
   // Derive progress for current phase
   const phaseProgress = useMemo(() => {
@@ -737,113 +819,6 @@ export default function ArticleDetailPage() {
     }, 1000);
     return () => clearInterval(interval);
   }, [autoPilotRunning, etaSeconds]);
-
-  const callApi = async (
-    url: string,
-    setLoader: (b: boolean) => void,
-    onSuccess: (data: any) => void
-  ) => {
-    setError(null);
-    try {
-      setLoader(true);
-      const res = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ articleId }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        const errorMsg = data.error || "Request failed";
-        toast.error(errorMsg);
-        throw new Error(errorMsg);
-      }
-
-      onSuccess(data);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Something went wrong. Please try again.";
-      setError(errorMessage);
-      console.error("API call failed:", err);
-    } finally {
-      setLoader(false);
-    }
-  };
-
-  const handleGenerateOutline = () =>
-    callApi("/api/articles/outline", setOutlineLoading, (data) => {
-      setArticle((p) => p ? { ...p, outline: data.outline } : null);
-      toast.success("Outline generated!");
-    });
-
-  const handleGenerateDraft = async (wordCount: number) => {
-    setDraftLoading(true);
-    setError(null);
-    try {
-
-      const res = await fetch("/api/articles/draft", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ articleId, targetWordCount: wordCount }),
-      });
-
-      if (!res.ok) {
-        // Non-streaming error response — safe to parse as JSON
-        const err = await res.json();
-        throw new Error(err.error || "Draft generation failed");
-      }
-
-      setArticle((p) => p ? { ...p, draft: { content: "", format: "markdown" } } : null);
-      setCurrentView(3);
-
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedContent = "";
-      let accumulatedRaw = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        accumulatedRaw += decoder.decode(value, { stream: true });
-        const lines = accumulatedRaw.split('\n');
-
-        // Keep the last partial line
-        accumulatedRaw = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmedLine = line.trim();
-          if (!trimmedLine.startsWith("data: ")) continue;
-
-          const dataStr = trimmedLine.slice(6);
-          if (dataStr === "[DONE]") continue;
-
-          try {
-            const payload = JSON.parse(dataStr);
-            if (payload.error) throw new Error(payload.error);
-            if (payload.chunk) {
-              accumulatedContent += payload.chunk;
-              setDraftAccumulated(accumulatedContent);
-              setWordCount(accumulatedContent.trim().split(/\s+/).length);
-              setArticle((p) => p ? { ...p, draft: { content: accumulatedContent, format: "markdown" } } : null);
-            }
-            if (payload.done) {
-              toast.success("Draft generated!");
-            }
-          } catch (parseErr: any) {
-            // Ignore malformed chunks
-          }
-        }
-      }
-    } catch (err: any) {
-      const msg = err.message || "Draft generation failed";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setDraftLoading(false);
-    }
-  };
-
 
   const handleAutoPilot = async () => {
     if (autoPilotRunning || !article) return;
@@ -996,18 +971,6 @@ export default function ArticleDetailPage() {
     }
   };
 
-  const handleOptimize = () =>
-    callApi("/api/articles/optimize", setOptLoading, (data) => {
-      setArticle((p) => p ? { ...p, optimization: data.optimization } : null);
-      toast.success("SEO analysis complete!");
-    });
-
-  const handleGenerateSocial = () =>
-    callApi("/api/articles/social", setSocialLoading, (data) => {
-      setArticle((p) => p ? { ...p, socialMedia: data } : null);
-      toast.success("Social media content generated!");
-    });
-
   // Handle upgrade required
   const handleUpgradeRequired = (reason: string) => {
     setUpgradeReason(reason);
@@ -1106,9 +1069,9 @@ export default function ArticleDetailPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden bg-obsidian-80 backdrop-blur-xl sticky top-0 z-20 border-b border-white/5"
+            className="overflow-hidden bg-obsidian-80 backdrop-blur-xl border-b border-white/5"
           >
-            <div className="flex items-center gap-2 sm:gap-4 px-4 sm:px-8 py-3 sm:py-4">
+            <div className="flex items-center gap-2 sm:gap-4 px-4 sm:px-6 py-2 sm:py-3">
               <button
                 onClick={() => router.push("/dashboard/articles")}
                 className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-text-2 transition-all hover:text-text-1 active:scale-95 touch-manipulation"
@@ -1181,7 +1144,7 @@ export default function ArticleDetailPage() {
                 
                 <div className="flex items-center gap-1 text-[10px] sm:text-xs font-mono-dm text-text-3">
                   <span className="font-medium text-text-1">Step {activeStep}</span>
-                  <span>of 5</span>
+                  <span>of 4</span>
                 </div>
               </div>
             </div>
@@ -1213,45 +1176,34 @@ export default function ArticleDetailPage() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
-              className="overflow-hidden w-full border-b border-white/10 bg-surface-1/50 backdrop-blur-md px-3 sm:px-6 md:px-8 py-2.5 sm:py-3 pb-8 sm:pb-10 shrink-0 sticky top-0 z-40 overflow-x-auto"
+              className="w-full border-b border-white/10 bg-surface-1/50 backdrop-blur-md px-4 py-2 shrink-0 sticky top-0 z-40"
             >
-              <ol className="flex items-center w-full max-w-4xl mx-auto justify-between min-w-max sm:min-w-0">
+              <ol className="flex items-center w-full max-w-4xl mx-auto justify-between">
                 {STEPS.map((step, idx) => {
                   const isDone = activeStep > step.id;
                   const isActive = activeStep === step.id;
-                  const isPending = activeStep < step.id;
                   const Icon = step.icon;
 
                   return (
-                    <li key={step.id} className="flex items-center flex-1 relative min-w-[60px] sm:min-w-0">
-                      <div className="flex flex-col items-center gap-1.5 sm:gap-2 w-full relative z-10">
+                    <li key={step.id} className="flex items-center flex-1 relative">
+                      <div className="flex items-center gap-2 w-full relative z-10">
                         <div
                           className={cn(
-                            "flex h-7 w-7 sm:h-8 sm:w-8 md:h-10 md:w-10 shrink-0 items-center justify-center rounded-full border-2 transition-all duration-500",
-                            isActive ? "border-gold bg-gold/10 text-gold shadow-[0_0_15px_rgba(255,215,0,0.2)]" :
+                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all",
+                            isActive ? "border-gold bg-gold/10 text-gold" :
                               isDone ? "border-teal bg-teal/10 text-teal" :
                                 "border-white/10 bg-surface-2 text-text-3"
                           )}
                         >
-                          {isDone ? (
-                            <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5" />
-                          ) : (
-                            <Icon className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5", isActive && "animate-pulse")} />
-                          )}
+                          {isDone ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
                         </div>
-                        <div className="text-center absolute top-full mt-1.5 sm:mt-2 hidden sm:block">
-                          <p className={cn("text-[10px] sm:text-xs font-bold font-mono-dm uppercase tracking-wider whitespace-nowrap", isActive ? 'text-gold' : isDone ? 'text-teal' : 'text-text-3')}>
-                            {step.label}
-                          </p>
-                        </div>
+                        <p className={cn("text-xs font-bold hidden sm:block", isActive ? 'text-gold' : isDone ? 'text-teal' : 'text-text-3')}>
+                          {step.label}
+                        </p>
                       </div>
-                      {/* Connector line */}
                       {idx < STEPS.length - 1 && (
-                        <div className="absolute top-3.5 sm:top-4 md:top-5 left-[50%] right-[-50%] h-[2px] -z-10 rounded-full overflow-hidden bg-white/5">
-                          <div
-                            className="h-full bg-gradient-to-r from-teal to-gold transition-all duration-1000 ease-in-out"
-                            style={{ width: isDone ? '100%' : '0%' }}
-                          />
+                        <div className="absolute top-3.5 left-[50%] right-[-50%] h-[2px] -z-10 bg-white/5">
+                          <div className="h-full bg-gradient-to-r from-teal to-gold transition-all" style={{ width: isDone ? '100%' : '0%' }} />
                         </div>
                       )}
                     </li>
@@ -1263,27 +1215,9 @@ export default function ArticleDetailPage() {
         </AnimatePresence>
 
         {/* ── Main Content Container ────────────────────────────────── */}
-        <main className={cn(
-          "flex-1 overflow-y-auto transition-all duration-700 pb-24 sm:pb-32",
-          zenMode ? "pt-12" : "px-4 py-8 sm:py-12 sm:px-8 md:px-12"
-        )}>
-          <div className={cn("mx-auto space-y-8 sm:space-y-12 transition-all duration-700", zenMode ? "max-w-5xl px-6" : "max-w-6xl")}>
-            {/* Keyword Intelligence Strip */}
-            {!zenMode && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4 p-3 sm:p-4 rounded-xl border border-white/10 bg-surface-2/30 backdrop-blur-sm -mt-4"
-              >
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] sm:text-xs font-mono-dm text-text-2">
-                  <span className="flex items-center gap-1.5"><strong className="text-text-1">Goal:</strong> {article.settings?.targetWordCount ? `${article.settings.targetWordCount}+ words` : 'Comprehensive Content'}</span>
-                  <span className="hidden sm:inline w-1 h-1 rounded-full bg-white/20"></span>
-                  <span className="flex items-center gap-1.5"><strong className="text-text-1">Voice:</strong> {article.settings?.tone || 'Expert'}</span>
-                  <span className="hidden sm:inline w-1 h-1 rounded-full bg-white/20"></span>
-                  <span className="flex items-center gap-1.5"><strong className="text-text-1">Target:</strong> {renderVal(article.intent)}</span>
-                </div>
-              </motion.div>
-            )}
+        <main className={cn("flex-1 overflow-y-auto pb-16", zenMode ? "pt-6" : "p-3 sm:p-4")}>
+          <div className={cn("mx-auto space-y-4", zenMode ? "max-w-4xl" : "max-w-5xl")}>
+            {/* Keyword Intelligence Strip - Removed for compactness */}
 
             <AnimatePresence mode="popLayout">
               {/* Step 1: Brief */}
@@ -1415,17 +1349,21 @@ export default function ArticleDetailPage() {
                       >
                         {article.draft ? (
                           <DraftPanel
-                            draft={draftLoading || autoPilotRunning ? { ...article.draft, content: typewriterDraft } : article.draft}
+                            draft={draftLoading || autoPilotRunning ? { ...article.draft, content: draftAccumulated } : article.draft}
                             keyword={article.keyword}
                             articleId={article.articleId}
                             siteDomain={article.siteDomain}
                             onOptimize={handleOptimize}
+                            onGenerateSocial={handleGenerateSocial}
+                            onPublish={() => setShowWordPressPublish(true)}
                             loading={optLoading}
                             done={!!article.optimization}
                             hasSeoData={!!article.optimization}
                             targetWordCount={article.settings?.targetWordCount ?? 2000}
                             streaming={draftLoading || autoPilotRunning}
                             onUpgradeRequired={handleUpgradeRequired}
+                            brief={article.brief}
+                            socialLoading={socialLoading}
                           />
                         ) : (
                           <GenerationProgress 
@@ -1440,8 +1378,8 @@ export default function ArticleDetailPage() {
                 </motion.div>
               )}
 
-              {/* Step 4: SEO */}
-              {(article.optimization || autoPilotPhase === 'seo' || activeStep >= 4) && (
+              {/* Step 4: Social Media & Publishing */}
+              {(article.socialMedia || activeStep >= 4) && (
                 <motion.div
                   key="step-4"
                   initial={{ opacity: 0, y: 20 }}
@@ -1450,73 +1388,39 @@ export default function ArticleDetailPage() {
                   className={cn("transition-all duration-700 relative", activeStep >= 4 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}
                 >
                   <div className="absolute -top-8 left-8 bottom-full w-px bg-gradient-to-b from-teal/50 to-transparent -z-10" />
-                  <div className="mb-4 sm:mb-6 pt-6 sm:pt-8 border-t border-white/5 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-foreground">SEO Analysis & Polish</h2>
-                      <p className="mt-1 text-[10px] sm:text-xs md:text-sm text-muted-foreground">Final checks before publishing.</p>
-                    </div>
-                    <button 
-                      onClick={() => setExpandedSteps(prev => ({ ...prev, 4: !prev[4] }))}
-                      className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                    >
-                      {expandedSteps[4] ? <ChevronRight className="rotate-90 transition-transform h-5 w-5" /> : <ChevronRight className="transition-transform h-5 w-5" />}
-                    </button>
+                  <div className="mb-4 pt-6 border-t border-white/5">
+                    <h2 className="text-lg font-bold tracking-tight text-foreground">Social Media & Publishing</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">Generate social posts and publish to WordPress.</p>
                   </div>
                   
-                  <AnimatePresence>
-                    {expandedSteps[4] && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
-                      >
-                        {article.optimization ? (
-                          <SEOPanel
-                            optimization={article.optimization}
-                            articleId={article.articleId}
-                            keyword={article.keyword}
-                            content={article.draft?.content || ''}
-                            featuredImage={(article.draft as any)?.featuredImage}
-                            brief={article.brief}
-                            onGenerateSocial={handleGenerateSocial}
-                            isGeneratingSocial={socialLoading}
-                            onContentUpdate={(content) => setArticle(prev => prev ? {
-                              ...prev,
-                              draft: { ...prev.draft, content }
-                            } : null)}
-                          />
-                        ) : (
-                          <GenerationProgress phase="seo" thinkingText={thinkingText} progress={autoPilotPhase === 'seo' ? 98 : 0} />
-                        )}
-                      </motion.div>
+                  <div className="space-y-6">
+                    {/* Social Media Section */}
+                    <SocialPanel
+                      socialMedia={article.socialMedia}
+                      articleId={article.articleId}
+                      keyword={article.keyword}
+                      content={article.draft?.content || ''}
+                      onGenerate={handleGenerateSocial}
+                      isGenerating={socialLoading}
+                    />
+                    
+                    {/* WordPress Publishing Section */}
+                    {article.socialMedia && (
+                      <div className="pt-4 border-t border-white/5">
+                        <div className="mb-3">
+                          <h3 className="text-base font-bold text-foreground">Publish to WordPress</h3>
+                          <p className="mt-1 text-xs text-muted-foreground">Push your article directly to your WordPress site.</p>
+                        </div>
+                        <Button
+                          onClick={() => setShowWordPressPublish(true)}
+                          className="w-full sm:w-auto"
+                        >
+                          <Share2 className="h-4 w-4 mr-2" />
+                          Publish to WordPress
+                        </Button>
+                      </div>
                     )}
-                  </AnimatePresence>
-                </motion.div>
-              )}
-
-              {/* Step 5: Social Media */}
-              {(article.socialMedia || activeStep >= 5) && (
-                <motion.div
-                  key="step-5"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className={cn("transition-all duration-700 relative", activeStep >= 5 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}
-                >
-                  <div className="absolute -top-8 left-8 bottom-full w-px bg-gradient-to-b from-teal/50 to-transparent -z-10" />
-                  <div className="mb-4 sm:mb-6 pt-6 sm:pt-8 border-t border-white/5">
-                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-foreground">Social Media Repurpose</h2>
-                    <p className="mt-1 text-[10px] sm:text-xs md:text-sm text-muted-foreground">Generate platform-optimized social media posts.</p>
                   </div>
-                  <SocialPanel
-                    socialMedia={article.socialMedia}
-                    articleId={article.articleId}
-                    keyword={article.keyword}
-                    content={article.draft?.content || ''}
-                    onGenerate={handleGenerateSocial}
-                    isGenerating={socialLoading}
-                  />
                 </motion.div>
               )}
             </AnimatePresence>

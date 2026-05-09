@@ -14,13 +14,9 @@ export class GroqProvider extends BaseProvider {
 
   private getModelQueue(request: AIRequest): string[] {
     const g = MODELS.groq as any;
-    const primary = request.expectJSON
-      ? g.json
-      : request.useBulkModel && request.taskType === 'draft'
-        ? g.draftBulk
-        : g.draft;
-
-    return [...new Set([primary, g.fallback1, g.fallback2, g.fallback3].filter(Boolean))];
+    const primary = request.expectJSON ? g.json : g.draft;
+    const fallbacks = [g.fallback1, g.fallback2];
+    return [...new Set([primary, ...fallbacks].filter(Boolean))];
   }
 
   async generate(request: AIRequest, signal?: AbortSignal): Promise<AIResponse> {
@@ -40,9 +36,15 @@ export class GroqProvider extends BaseProvider {
           ],
           temperature: request.temperature ?? 0.7,
           max_completion_tokens: request.maxTokens ?? 4096,
+          ...(request.topP !== undefined && { top_p: request.topP }),
+          ...(request.reasoningEffort !== undefined && { reasoning_effort: request.reasoningEffort }),
         }, { signal });
 
-        const content = this.cleanContent(completion.choices?.[0]?.message?.content ?? "");
+        const content = this.cleanContent(
+          completion.choices?.[0]?.message?.content ?? 
+          completion.choices?.[0]?.message?.reasoning ?? 
+          ""
+        );
 
         if (!content || content.length < 5) {
           errors.push(`${modelName}: empty content`);
@@ -76,23 +78,67 @@ export class GroqProvider extends BaseProvider {
 
   async *stream(request: AIRequest, signal?: AbortSignal): AsyncGenerator<string> {
     const client = getClient();
-    const modelName = request.expectJSON ? MODELS.groq.json : MODELS.groq.draft;
+    const modelQueue = this.getModelQueue(request);
+    
+    console.log(`[Groq] Stream starting with models: ${modelQueue.join(', ')}`);
+    
+    for (const modelName of modelQueue) {
+      if (signal?.aborted) throw new Error("Request aborted");
+      
+      try {
+        console.log(`[Groq] Attempting stream with model: ${modelName}`);
+        console.log(`[Groq] Prompt sizes - system: ${request.systemPrompt.length} chars, user: ${request.userPrompt.length} chars, max_tokens: ${Math.min(request.maxTokens ?? 4096, 8000)}`);
+        
+        const stream = await client.chat.completions.create({
+          model: modelName,
+          messages: [
+            { role: "system", content: request.systemPrompt },
+            { role: "user", content: request.userPrompt }
+          ],
+          temperature: request.temperature ?? 0.7,
+          max_completion_tokens: Math.min(request.maxTokens ?? 4096, 8000),
+          stream: true,
+          ...(request.topP !== undefined && { top_p: request.topP }),
+        }, { signal });
 
-    const stream = await client.chat.completions.create({
-      model: modelName,
-      messages: [
-        { role: "system", content: request.systemPrompt },
-        { role: "user", content: request.userPrompt }
-      ],
-      temperature: request.temperature ?? 0.7,
-      max_completion_tokens: request.maxTokens ?? 4096,
-      stream: true,
-    }, { signal });
-
-    for await (const chunk of stream) {
-      if (signal?.aborted) break;
-      const text = chunk.choices[0]?.delta?.content;
-      if (text) yield text;
+        let chunkCount = 0;
+        let finishReason = null;
+        
+        for await (const chunk of stream) {
+          if (signal?.aborted) break;
+          
+          const choice = chunk.choices[0];
+          const delta = choice?.delta;
+          const text = delta?.content || null;
+          
+          if (choice?.finish_reason) {
+            finishReason = choice.finish_reason;
+          }
+          
+          if (text) {
+            chunkCount++;
+            yield text;
+          }
+        }
+        
+        console.log(`[Groq] Stream completed with ${modelName}, chunks: ${chunkCount}, finish_reason: ${finishReason}`);
+        return; // Success, exit
+        
+      } catch (err: any) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (msg.includes("aborted") || msg.includes("abort")) throw err;
+        
+        const status = err?.status ?? err?.statusCode;
+        const isRetryable = status === 429 || status >= 500;
+        const isLast = modelName === modelQueue[modelQueue.length - 1];
+        
+        if (isRetryable && !isLast) {
+          console.warn(`[Groq] Stream model ${modelName} returned ${status}, trying fallback...`);
+          continue;
+        }
+        
+        throw err;
+      }
     }
   }
 }

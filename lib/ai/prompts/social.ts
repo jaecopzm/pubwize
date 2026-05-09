@@ -36,7 +36,7 @@ export const getSocialUserPrompt = (params: { content: string; keyword: string; 
 Tone: ${params.tone}
 
 Article content to repurpose:
-${params.content.slice(0, 4000)}...
+${params.content.slice(0, 3000)}...
 
 Generate platform-specific social media posts. Return ONLY valid JSON.`;
 };

@@ -39,51 +39,50 @@ export function BriefPanel({
     };
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-4">
             {/* Quality Suggestions */}
             <WorkflowSuggestions step="brief" data={brief} />
             
             {/* Intent & Type badges */}
             <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-lg border border-gold bg-gold/10 px-2 sm:px-3 py-1 sm:py-1.5 text-[9px] sm:text-xs font-semibold font-mono-dm text-gold">
+                <span className="rounded-lg border border-gold bg-gold/10 px-2 py-1 text-xs font-semibold text-gold">
                     Intent: {brief.intent || 'Informational'}
                 </span>
-                <span className="rounded-lg border border-teal bg-teal/10 px-2 sm:px-3 py-1 sm:py-1.5 text-[9px] sm:text-xs font-semibold font-mono-dm text-teal">
+                <span className="rounded-lg border border-teal bg-teal/10 px-2 py-1 text-xs font-semibold text-teal">
                     Type: {brief.articleType || 'Guide'}
                 </span>
                 <button
                     onClick={exportBrief}
-                    className="ml-auto flex items-center gap-1 sm:gap-1.5 rounded-lg border border-gold/30 bg-gold/5 px-2 sm:px-3 py-1 sm:py-1.5 text-[9px] sm:text-xs font-semibold text-gold transition-all hover:bg-gold/10 active:scale-95 touch-manipulation"
+                    className="ml-auto flex items-center gap-1.5 rounded-lg border border-gold/30 bg-gold/5 px-2 py-1 text-xs font-semibold text-gold transition-all hover:bg-gold/10 active:scale-95"
                 >
-                    <Download className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                    <Download className="h-3.5 w-3.5" />
                     <span className="hidden sm:inline">Export</span>
                 </button>
             </div>
 
-            <div className="grid gap-4 sm:gap-5 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
                 {/* Headings */}
-                <div className="space-y-3">
-                    <h3 className="flex items-center gap-2 text-xs sm:text-sm font-semibold font-mono-dm text-text-1">
+                <div className="space-y-2">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-text-1">
                         <span className="inline-block h-2 w-2 rounded-full bg-gold" />
                         <span>Suggested Headings</span>
-                        <span className="ml-auto text-[10px] sm:text-xs font-normal text-text-3">
-                            {brief.headings.length} headings
+                        <span className="ml-auto text-xs font-normal text-text-3">
+                            {brief.headings.length}
                         </span>
                     </h3>
                     <ul className="space-y-2">
                         {brief.headings.map((h, i) => (
-                            <li key={i} className="group flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs sm:text-sm transition-all card-premium">
-                                <span className="mt-0.5 shrink-0 text-[10px] sm:text-xs font-mono-dm text-text-3">H{i === 0 ? 1 : 2}</span>
+                            <li key={i} className="group flex items-start gap-2 rounded-xl border px-3 py-2 text-sm transition-all card-premium">
+                                <span className="mt-0.5 shrink-0 text-xs text-text-3">H{i === 0 ? 1 : 2}</span>
                                 <span className="flex-1 break-words text-text-2">{h}</span>
                                 <button
                                     onClick={() => copyToClipboard(h, i)}
-                                    className="p-1 rounded hover:bg-white/5 active:scale-95 touch-manipulation opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
-                                    title="Copy heading"
+                                    className="p-1 rounded hover:bg-white/5 active:scale-95 opacity-0 group-hover:opacity-100 transition-opacity"
                                 >
                                     {copiedIndex === i ? (
-                                        <Check className="h-3.5 w-3.5 sm:h-3 sm:w-3 text-teal" />
+                                        <Check className="h-3 w-3 text-teal" />
                                     ) : (
-                                        <Copy className="h-3.5 w-3.5 sm:h-3 sm:w-3 text-text-3" />
+                                        <Copy className="h-3 w-3 text-text-3" />
                                     )}
                                 </button>
                             </li>
@@ -92,12 +91,12 @@ export function BriefPanel({
                 </div>
 
                 {/* Questions */}
-                <div className="space-y-3">
-                    <h3 className="flex items-center gap-2 text-xs sm:text-sm font-semibold font-mono-dm text-text-1">
+                <div className="space-y-2">
+                    <h3 className="flex items-center gap-2 text-sm font-semibold text-text-1">
                         <span className="inline-block h-2 w-2 rounded-full bg-teal" />
                         <span>People Also Ask</span>
-                        <span className="ml-auto text-[10px] sm:text-xs font-normal text-text-3">
-                            {brief.questions.length} questions
+                        <span className="ml-auto text-xs font-normal text-text-3">
+                            {brief.questions.length}
                         </span>
                     </h3>
                     <ul className="space-y-2">

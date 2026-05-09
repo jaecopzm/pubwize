@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 /**
  * Typewriter hook — buffers incoming text and reveals it character by character.
@@ -8,20 +8,25 @@ import { useEffect, useState } from "react";
  */
 export function useTypewriter(text: string, speed = 12) {
   const [displayed, setDisplayed] = useState("");
+  const displayedLengthRef = useRef(0);
 
   useEffect(() => {
-    if (text.length <= displayed.length) return;
+    if (text.length <= displayedLengthRef.current) return;
+
     const timer = setTimeout(() => {
-      // Reveal in small bursts (3-5 chars) for a natural feel
-      const burst = Math.min(text.length - displayed.length, Math.floor(Math.random() * 3) + 3);
-      setDisplayed(text.slice(0, displayed.length + burst));
+      const burst = Math.min(text.length - displayedLengthRef.current, Math.floor(Math.random() * 3) + 3);
+      displayedLengthRef.current += burst;
+      setDisplayed(text.slice(0, displayedLengthRef.current));
     }, speed);
-    return () => clearTimeout(timer);
-  }, [text, displayed, speed]);
 
-  // Reset when text is cleared
+    return () => clearTimeout(timer);
+  }, [text, speed]);
+
   useEffect(() => {
-    if (text === "") setDisplayed("");
+    if (text === "") {
+      setDisplayed("");
+      displayedLengthRef.current = 0;
+    }
   }, [text]);
 
   return displayed;

@@ -42,10 +42,26 @@ CONTENT STRUCTURE & WRITING STYLE:
 6. PREMIUM FORMATTING: Use Markdown blockquotes (> ) for "Expert Pro Tips" or "Key Takeaways". Bold meaningful phrases to help skimmers.
 7. CRITICAL FORMATTING: Use exactly ONE blank line between paragraphs and sections.
 
-CRITICAL KEYWORD REQUIREMENTS:
+CRITICAL KEYWORD & SEO REQUIREMENTS:
 - Target keyword: "${keyword}"
-- MUST appear in: H1 title, at least 2-3 subheadings
-- Target density: 1-1.5%
+- MUST appear in: H1 title, at least 2-3 subheadings, first 100 words, last paragraph
+- Target density: 1-1.5% (natural placement, not forced)
+- Use semantic variations and related entities naturally throughout
+- Include specific data, statistics, and examples to demonstrate expertise
+- Add FAQ section if relevant (use ### FAQ format with Q&A pairs)
+- Mention real tools, brands, or resources when relevant for authority
+
+E-E-A-T SIGNALS TO INCLUDE:
+- Personal experience indicators ("In my experience...", "I've found that...")
+- Specific examples with numbers and outcomes
+- Acknowledge limitations and edge cases
+- Reference industry standards or best practices
+- Use "we" and "you" to create connection
+
+FEATURED SNIPPET OPTIMIZATION:
+- For "what is" queries: Start with a clear 40-60 word definition
+- For "how to" queries: Use numbered steps with clear action verbs
+- For comparison queries: Use tables or clear comparison sections
 
 Return ONLY the article content as clean Markdown.${brandVoice}`;
 };
@@ -71,23 +87,24 @@ export const getDraftUserPrompt = (params: {
   return `Target keyword: "${keyword}"
 Tone: ${tone}
 
-🚨 WORD COUNT ENFORCEMENT:
-- Target: ${targetWords} words
-- Minimum: ${Math.floor(targetWords * 0.95)} words
-- Maximum: ${Math.ceil(targetWords * 1.05)} words
-- Per section budget: ~${Math.floor(targetWords / outline.sections.length)} words
-- STOP WRITING if you reach ${Math.ceil(targetWords * 1.05)} words
+🚨 CRITICAL WORD COUNT REQUIREMENT - YOU WILL BE PENALIZED FOR NOT MEETING THIS:
+- EXACT TARGET: ${targetWords} words
+- ABSOLUTE MINIMUM: ${Math.floor(targetWords * 0.95)} words - ANYTHING LESS IS UNACCEPTABLE
+- ABSOLUTE MAXIMUM: ${Math.ceil(targetWords * 1.05)} words - DO NOT EXCEED THIS
+- Per section budget: ~${Math.floor(targetWords / outline.sections.length)} words (${outline.sections.length} sections)
+- STOP WRITING IMMEDIATELY if you reach ${Math.ceil(targetWords * 1.05)} words
+- COUNT YOUR WORDS AS YOU WRITE - This is your PRIMARY success metric
 
 Outline: ${JSON.stringify(outline, null, 2)}
 ${internalLinksBlock}
 
-MANDATORY EXECUTION STEPS:
-1. Write introduction (${Math.floor(targetWords * 0.1)} words) - NO keyword in first paragraph
-2. For EACH section in outline, write ${Math.floor(targetWords / outline.sections.length)} words
-3. Write conclusion (${Math.floor(targetWords * 0.08)} words)
-4. VERIFY you've written AT LEAST ${Math.floor(targetWords * 0.95)} words before finishing
+MANDATORY EXECUTION STEPS (FOLLOW EXACTLY):
+1. Introduction: Write ${Math.floor(targetWords * 0.1)} words - NO keyword in first paragraph
+2. For EACH section in outline: Write ${Math.floor(targetWords / outline.sections.length)} words with depth and examples
+3. Conclusion: Write ${Math.floor(targetWords * 0.08)} words with actionable takeaway
+4. BEFORE FINISHING: Count your total words - you MUST have AT LEAST ${Math.floor(targetWords * 0.95)} words
 
-Include LSI keywords: ${lsiKeywords?.join(', ') || 'none'}
+LSI Keywords to include naturally: ${lsiKeywords?.join(', ') || 'none'}
 
-Write the complete ${targetWords}-word article now.`;
+Write the complete ${targetWords}-word article now. Remember: ${Math.floor(targetWords * 0.95)}-${Math.ceil(targetWords * 1.05)} words is MANDATORY.`;
 };

@@ -14,11 +14,9 @@ export const MODELS = {
   groq: {
     fast: "llama-3.1-8b-instant",
     json: "llama-3.1-8b-instant",
-    draft: "llama-3.3-70b-versatile",
-    draftBulk: "llama-3.3-70b-versatile",
-    fallback1: "llama-3.1-70b-versatile",
-    fallback2: "qwen/qwen3-32b",
-    fallback3: "llama-3.1-8b-instant"
+    draft: "openai/gpt-oss-120b",
+    fallback1: "llama-3.3-70b-versatile",
+    fallback2: "llama-3.1-8b-instant"
   }
 };
 
@@ -27,7 +25,7 @@ export const TASK_PROVIDERS: Record<TaskType, AIProvider[]> = {
   outline: ['groq', 'openrouter', 'gemini'],
   draft: ['groq', 'openrouter', 'gemini'],
   optimize: ['gemini', 'openrouter', 'groq'],
-  social: ['groq', 'openrouter', 'gemini'],
+  social: ['gemini', 'openrouter', 'groq'],
   quick: ['groq', 'gemini', 'openrouter']
 };
 

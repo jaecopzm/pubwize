@@ -17,6 +17,8 @@ export interface AIRequest {
   userId?: string;
   temperature?: number;
   maxTokens?: number;
+  topP?: number;
+  reasoningEffort?: 'none' | 'low' | 'medium' | 'high' | 'default';
   expectJSON?: boolean;
   taskType?: TaskType;
   useBulkModel?: boolean;

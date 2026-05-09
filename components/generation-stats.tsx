@@ -31,12 +31,14 @@ export function GenerationStats() {
     <div className="rounded-xl border border-border/60 bg-card/50 p-4 sm:p-6">
       <div className="mb-3 sm:mb-4 flex items-center justify-between gap-2">
         <h3 className="text-xs sm:text-sm font-semibold text-foreground">Your Generation Stats</h3>
-        <Link
-          href="/dashboard/settings"
-          className="text-[10px] sm:text-xs text-violet-400 hover:text-violet-300 transition-colors shrink-0"
-        >
-          Upgrade →
-        </Link>
+        {planData.planTier === 'free' && (
+          <Link
+            href="/dashboard/settings?tab=billing"
+            className="text-[10px] sm:text-xs text-violet-400 hover:text-violet-300 transition-colors shrink-0"
+          >
+            Upgrade →
+          </Link>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">

@@ -52,6 +52,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   (async () => {
     try {
+      console.log(`[Draft] Starting generation for article ${articleId}, target: ${targetWordCount} words`);
+      
       const generator = aiUserContext.run(uid, () =>
         generateDraftStream({
           outline: article!.outline as any,
@@ -64,13 +66,23 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         })
       );
 
+      let chunkCount = 0;
       for await (const chunk of generator) {
         fullContent += chunk;
+        chunkCount++;
         await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
       }
+      
+      console.log(`[Draft] Generated ${chunkCount} chunks, total length: ${fullContent.length} chars`);
 
-      const wordCount = fullContent
-        .replace(/```[\s\S]*?```/g, "")
+      let finalContent = fullContent.trim();
+      if (finalContent.startsWith("```markdown")) {
+        finalContent = finalContent.replace(/^```markdown\s*\n/, "").replace(/\n```$/, "").trim();
+      } else if (finalContent.startsWith("```")) {
+        finalContent = finalContent.replace(/^```[a-zA-Z]*\s*\n/, "").replace(/\n```$/, "").trim();
+      }
+
+      const wordCount = finalContent
         .replace(/`[^`]*`/g, "")
         .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
         .replace(/[#*_~\[\](){}]/g, "")
@@ -83,7 +95,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       await prisma.article.update({
         where: { id: articleId },
         data: {
-          draft: { content: fullContent, format: "markdown" } as any,
+          draft: { content: finalContent, format: "markdown" } as any,
           status: "draft_generated",
           settings: { ...settings, targetWordCount } as any,
         },

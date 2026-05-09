@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     await prisma.article.update({ where: { id: articleId }, data: { optimizations: { ...(article.optimizations as any), socialMedia: socialMediaData } as any } });
     await incrementUsage(null, uid, "socialGeneration");
 
-    return NextResponse.json(socialMediaData);
+    return NextResponse.json({ socialMedia: socialMediaData });
   } catch (error) {
     console.error("Social media generation error:", error);
     return NextResponse.json({ error: "Failed to generate social media content" }, { status: 500 });

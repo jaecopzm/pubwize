@@ -17,6 +17,7 @@ import { useRecentKeywords } from "@/lib/hooks/use-recent-keywords";
 import { useFormAutosave } from "@/lib/hooks/use-form-autosave";
 import { UpgradeModal } from "@/components/pricing/upgrade-modal";
 import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface BriefState {
   articleId: string;
@@ -34,7 +35,14 @@ const EXAMPLE_KEYWORDS = [
 
 export default function NewArticlePage() {
   return (
-    <Suspense fallback={<div className="flex min-h-screen items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>}>
+    <Suspense fallback={
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="relative">
+          <Loader2 className="h-8 w-8 animate-spin text-primary opacity-30" />
+          <div className="absolute inset-0 bg-primary/10 blur-xl rounded-full" />
+        </div>
+      </div>
+    }>
       <NewArticleContent />
     </Suspense>
   );
@@ -56,50 +64,26 @@ function NewArticleContent() {
   const { formState, updateForm, clearSaved, lastSaved } = useFormAutosave();
   const { plan } = useUserPlan();
 
-  // Load autosaved form state
   useEffect(() => {
-    if (formState.keyword && !keyword) {
-      setKeyword(formState.keyword);
-    }
-    if (formState.siteId && !siteId) {
-      setSiteId(formState.siteId);
-    }
+    if (formState.keyword && !keyword) setKeyword(formState.keyword);
+    if (formState.siteId && !siteId) setSiteId(formState.siteId);
   }, [formState]);
 
-  // Update autosave when form changes
   useEffect(() => {
     updateForm({ keyword, siteId });
   }, [keyword, siteId, updateForm]);
 
-  // Show autosave notification
-  useEffect(() => {
-    if (lastSaved && (keyword || siteId)) {
-      const timeSinceLastSave = Date.now() - lastSaved.getTime();
-      // Only show if it was just saved (within 2 seconds)
-      if (timeSinceLastSave < 2000) {
-        // Silent autosave - no toast needed, just the indicator in header
-      }
-    }
-  }, [lastSaved, keyword, siteId]);
-
-  // Keyboard shortcut for example keywords
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       if (submitting || e.target instanceof HTMLInputElement) return;
-
       const num = parseInt(e.key);
       if (num >= 1 && num <= EXAMPLE_KEYWORDS.length) {
         setKeyword(EXAMPLE_KEYWORDS[num - 1]);
         setShowKeywordHint(true);
         setTimeout(() => setShowKeywordHint(false), 2000);
       }
-
-      // Escape to clear
-      if (e.key === "Escape" && keyword) {
-        setKeyword("");
-      }
+      if (e.key === "Escape" && keyword) setKeyword("");
     };
-
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [submitting, keyword]);
@@ -113,83 +97,38 @@ function NewArticleContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Prevent double submission
-    if (submitting) {
-      console.log("Form already submitting, ignoring duplicate submission");
-      return;
-    }
-    
+    if (submitting) return;
+    setSubmitting(true);
     setError(null);
     setProgressMessage("");
-
-    // Validate input
     const validationError = validateGenerationInput(keyword, siteId);
     if (validationError) {
       setError(validationError);
       toast.error(validationError);
+      setSubmitting(false);
       return;
     }
-
-    console.log("Starting brief generation for:", { keyword: keyword.trim(), siteId });
-
     try {
-      setSubmitting(true);
-      console.log("Auth token obtained, calling API...");
-      setProgressMessage("Generating SEO brief...");
-
+      setProgressMessage("Initializing Engine...");
       const data = await generateWithProgress<BriefState>(
         "/api/articles/brief",
         { keyword: keyword.trim(), siteId },
         "",
-        {
-          maxRetries: 1,
-          timeout: 90000, // 90 seconds for brief generation
-          onProgress: (msg) => {
-            console.log("Progress:", msg);
-            setProgressMessage(msg);
-          },
-        }
+        { maxRetries: 1, timeout: 90000, onProgress: (msg) => setProgressMessage(msg) }
       );
-
-      console.log("Brief generated successfully:", data);
-
-      if (!data.articleId) {
-        throw new Error("No article ID returned from server");
-      }
-
-      // Add to recent keywords
+      if (!data.articleId) throw new Error("No article ID returned");
       addKeyword(keyword.trim());
-
-      // Clear autosaved form
       clearSaved();
-
-      // Show confetti
       setShowConfetti(true);
-
-      toast.success("SEO brief generated! Redirecting...");
-
-      // Redirect after confetti
-      setTimeout(() => {
-        router.push(`/dashboard/articles/${data.articleId}`);
-      }, 1000);
-
+      setTimeout(() => router.push(`/dashboard/articles/${data.articleId}`), 1200);
     } catch (err) {
-      console.error("Brief generation error:", err);
       if (err instanceof GenerationError) {
         setError(err.message);
-        toast.error(err.message);
-        
-        // Show upgrade modal if it's a limit error
-        if (err.isLimitError) {
-          setShowUpgradeModal(true);
-        }
+        if (err.isLimitError) setShowUpgradeModal(true);
       } else if (err instanceof Error) {
         setError(err.message);
-        toast.error(err.message);
       } else {
-        setError("Something went wrong. Please try again.");
-        toast.error("Something went wrong");
+        setError("Something went wrong");
       }
     } finally {
       setSubmitting(false);
@@ -199,419 +138,280 @@ function NewArticleContent() {
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] flex-col aurora-bg noise-overlay">
-      {/* Confetti celebration */}
       <ConfettiCelebration trigger={showConfetti} />
-
-      {/* Keyboard shortcuts modal */}
       <KeyboardShortcutsModal />
 
-      {/* Back nav */}
-      <div className="flex items-center gap-2 border-b border-border px-3 sm:px-6 md:px-8 py-2.5 md:py-3 backdrop-blur-md bg-background/90 sticky top-0 z-50">
-        <button
+      {/* Sharp Sticky Header */}
+      <div className="sticky top-0 z-[100] flex items-center gap-3 border-b border-white/5 px-4 sm:px-6 py-2 backdrop-blur-2xl bg-background/60">
+        <motion.button
+          whileHover={{ x: -1 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => router.back()}
-          className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-all"
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-card/50 px-2.5 py-1.5 text-[10px] font-black text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all shadow-sm uppercase tracking-widest"
         >
-          <ArrowLeft className="h-4 w-4 shrink-0" />
-          <span className="hidden sm:inline font-medium">Back</span>
-        </button>
-        <div className="h-4 w-px bg-border mx-1" />
-        <div className="flex items-center gap-2">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-[#6366f1]/15">
-            <FilePlus2 className="h-3.5 w-3.5 text-[#818cf8]" />
+          <ArrowLeft className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Back</span>
+        </motion.button>
+        <div className="h-5 w-[1px] bg-border/40" />
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 border border-primary/20">
+            <FilePlus2 className="h-4 w-4 text-primary" />
           </div>
-          <span className="text-sm font-semibold text-foreground">New Article</span>
+          <div>
+            <h1 className="text-xs font-black text-foreground uppercase tracking-tight leading-none">New Command</h1>
+            <p className="text-[8px] text-primary/60 font-mono tracking-widest mt-0.5">PRISM CORE V2</p>
+          </div>
         </div>
         {lastSaved && (
-          <div className="ml-auto flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
-            <Clock className="h-3 w-3" />
+          <div className="ml-auto flex items-center gap-1.5 text-[9px] font-black text-emerald-500/60 bg-emerald-500/5 px-2 py-0.5 rounded-md border border-emerald-500/10 uppercase tracking-widest">
+            <div className="h-1 w-1 rounded-full bg-emerald-500 animate-pulse" />
             <span>Saved</span>
           </div>
         )}
       </div>
 
-      {/* Stats Dashboard */}
-      <div className="px-4 md:px-8 pt-4 md:pt-6 relative z-10">
+      <div className="px-4 md:px-6 pt-4 relative z-10">
         <GenerationStats />
       </div>
 
-      {/* Loading State */}
-      {submitting && (
-        <div className="flex-1">
-          <GenerationLoader step="brief" message={progressMessage || "Generating SEO Brief..."} />
-        </div>
-      )}
-
-      {/* Hero area */}
-      {!submitting && (
-        <div className="flex flex-1 items-center justify-center px-4 sm:px-6 pb-12 sm:pb-16 pt-8 sm:pt-10 relative z-10 w-full max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 w-full items-center">
-            
-            {/* Left Column: Copy & Value Prop */}
-            <div className="flex flex-col items-center lg:items-start text-center lg:text-left">
-              {/* Badge */}
-              <div className="mb-4 sm:mb-6 flex items-center gap-2 rounded-full border border-[#6366f1]/30 bg-[#6366f1]/10 px-3 sm:px-4 py-1.5 animate-float shadow-lg shadow-[#6366f1]/5">
-                <Sparkles className="h-3.5 w-3.5 text-[#818cf8]" />
-                <span className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-[#818cf8]">
-                  AI Content Generator
-                </span>
-              </div>
-
-              {/* Headline */}
-              <h1 className="mb-4 max-w-2xl text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground font-display leading-[1.1]">
-                What do you want{" "}
-                <br className="hidden lg:block" />
-                <span className="bg-gradient-to-r from-[#6366f1] via-[#818cf8] to-[#22d3ee] bg-clip-text text-transparent drop-shadow-sm">
-                  to rank for?
-                </span>
-              </h1>
-              <p className="mb-8 max-w-md text-sm sm:text-base text-muted-foreground leading-relaxed">
-                Enter your target keyword and we'll generate a fully optimised
-                article — brief, outline, draft and SEO — in minutes.
-              </p>
-
-              {/* What happens next preview (Desktop) */}
-              {!keyword && !siteId && (
-                <div className="hidden lg:block w-full max-w-md animate-in fade-in slide-in-from-left-4 duration-700">
-                  <div className="rounded-2xl border border-white/5 bg-card/30 backdrop-blur-md p-6 shadow-2xl hover:border-white/10 transition-all card-premium">
-                    <p className="text-xs font-bold text-foreground mb-4 flex items-center gap-2 uppercase tracking-wider">
-                      <Sparkles className="h-4 w-4 text-[#818cf8]" />
-                      What happens next?
-                    </p>
-                    <div className="space-y-4">
-                      {[
-                        { step: 1, label: "SEO Brief", time: "~30s", icon: BarChart3, color: "text-blue-500", bg: "bg-blue-500/10" },
-                        { step: 2, label: "Article Outline", time: "~45s", icon: FileText, color: "text-green-500", bg: "bg-green-500/10" },
-                        { step: 3, label: "Full Draft", time: "~2min", icon: PenTool, color: "text-purple-500", bg: "bg-purple-500/10" },
-                        { step: 4, label: "SEO Polish", time: "~30s", icon: Zap, color: "text-amber-500", bg: "bg-amber-500/10" }
-                      ].map((item, idx) => (
-                        <div key={item.step} className="relative flex items-center gap-4">
-                          {idx !== 3 && <div className="absolute left-4 top-8 h-6 w-px bg-border/50" />}
-                          <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", item.bg)}>
-                            <item.icon className={`h-4 w-4 ${item.color}`} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground">{item.label}</p>
-                          </div>
-                          <span className="text-[10px] font-mono text-muted-foreground/60 bg-muted/50 px-2 py-1 rounded-md">{item.time}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Right Column: Form */}
-            <div className="flex flex-col items-center w-full max-w-xl mx-auto lg:mx-0">
+      <AnimatePresence mode="wait">
+        {submitting ? (
+          <motion.div 
+            key="loader"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex-1 flex flex-col items-center justify-center"
+          >
+            <GenerationLoader step="brief" message={progressMessage || "Initializing Engine..."} />
+          </motion.div>
+        ) : (
+          <motion.div 
+            key="content"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex flex-1 items-center justify-center px-4 sm:px-6 pb-12 pt-6 relative z-10 w-full max-w-6xl mx-auto"
+          >
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 w-full items-start">
               
-              {/* Mobile "What happens next" (only shows when no keyword/siteId and screen is small) */}
-              {!keyword && !siteId && (
-                <div className="lg:hidden mb-8 w-full animate-in fade-in slide-in-from-bottom-3 duration-700">
-                  <div className="rounded-xl border border-white/5 bg-card/30 backdrop-blur-sm p-4 sm:p-5 shadow-xl hover:border-white/10 transition-all">
-                    <p className="text-xs font-bold text-foreground mb-3 flex items-center gap-2 uppercase tracking-wider">
-                      <Sparkles className="h-3.5 w-3.5 text-[#818cf8]" />
-                      What happens next?
-                    </p>
-                    <div className="grid gap-2.5">
-                      {[
-                        { step: 1, label: "SEO Brief", time: "~30s", icon: BarChart3, color: "text-blue-500" },
-                        { step: 2, label: "Article Outline", time: "~45s", icon: FileText, color: "text-green-500" },
-                        { step: 3, label: "Full Draft", time: "~2min", icon: PenTool, color: "text-purple-500" },
-                        { step: 4, label: "SEO Polish", time: "~30s", icon: Zap, color: "text-amber-500" }
-                      ].map((item) => (
-                        <div key={item.step} className="flex items-center gap-3 text-xs">
-                          <item.icon className={`h-4 w-4 ${item.color}`} />
-                          <span className="flex-1 text-muted-foreground">{item.label}</span>
-                          <span className="text-[10px] text-muted-foreground/60 font-mono">{item.time}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Left Column: Vision */}
+              <div className="flex flex-col items-center lg:items-start text-center lg:text-left pt-2 lg:pt-8">
+                <motion.div 
+                  className="mb-5 flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 shadow-lg shadow-primary/5"
+                >
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
+                    AI COMMAND CENTER
+                  </span>
+                </motion.div>
 
-              <div className="relative w-full">
-                <form onSubmit={handleSubmit} className="space-y-5 lg:space-y-6">
-                  {/* Prevent double submission overlay */}
-                  {submitting && (
-                    <div className="absolute inset-0 bg-background/80 backdrop-blur-sm z-10 rounded-2xl flex items-center justify-center">
-                      <div className="text-center space-y-2">
-                        <Loader2 className="h-6 w-6 animate-spin text-[#818cf8] mx-auto" />
-                        <p className="text-xs text-muted-foreground">Processing your request...</p>
-                      </div>
-                    </div>
-                  )}
+                <h1 className="mb-5 max-w-xl text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[0.95] font-display">
+                  Dominate the{" "}
+                  <span className="bg-gradient-to-r from-primary via-cyan-400 to-violet-500 bg-clip-text text-transparent">
+                    SERPs
+                  </span>
+                </h1>
                 
-                {/* Success indicator when form is complete */}
-                {keyword.trim() && siteId && !submitting && (
-                  <div className="flex items-center justify-center lg:justify-start gap-2 text-xs text-[#10b981] animate-in fade-in slide-in-from-top-2 duration-500">
-                    <div className="h-1.5 w-1.5 rounded-full bg-[#10b981] shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-                    <span className="font-semibold">Ready to generate</span>
-                  </div>
-                )}
-                {/* Keyword input */}
-                <div className="group relative">
-                  <Search className="pointer-events-none absolute left-3 sm:left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground transition-colors group-focus-within:text-[#818cf8]" />
-                  <Input
-                    autoFocus
-                    placeholder="e.g. best CRM software for small businesses"
-                    value={keyword}
-                    onChange={(e) => setKeyword(e.target.value)}
-                    disabled={submitting}
-                    aria-label="Target keyword"
-                    className="h-11 sm:h-12 pl-10 sm:pl-11 pr-20 text-sm sm:text-base shadow-md border-border/50 bg-card/80 backdrop-blur-sm focus-visible:border-[#6366f1] focus-visible:ring-2 focus-visible:ring-[#6366f1]/20 transition-all rounded-xl"
-                  />
-                  {/* Character counter & clear button */}
-                  <div className="absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                    {keyword && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setKeyword("")}
-                          className="rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-colors"
-                          aria-label="Clear keyword"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                        <div className="h-5 w-px bg-border" />
-                      </>
-                    )}
-                    {keyword && (
-                      <div className="flex items-center gap-1.5">
-                        <span className={cn(
-                          "text-xs font-mono font-medium transition-colors",
-                          keyword.length >= 30 && keyword.length <= 100 ? "text-[#10b981]" : "text-muted-foreground"
-                        )}>
-                          {keyword.length}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-                {/* Keyword hint */}
-                {keyword && keyword.length < 30 && (
-                  <p className="text-xs text-muted-foreground/70 -mt-3 px-1 animate-in fade-in slide-in-from-top-1 flex items-center justify-center lg:justify-start gap-1.5 font-medium">
-                    <Sparkles className="h-3.5 w-3.5 text-[#22d3ee]" />
-                    More specific keywords get better results
-                  </p>
-                )}
-                {showKeywordHint && (
-                  <p className="text-xs text-[#818cf8] -mt-3 px-1 animate-in fade-in slide-in-from-top-1 flex items-center justify-center lg:justify-start gap-1.5 font-medium">
-                    <Zap className="h-3.5 w-3.5 text-[#818cf8]" />
-                    Press 1-4 to quickly select example keywords
-                  </p>
-                )}
-
-                {/* Recent keywords */}
-                {recentKeywords.length > 0 && !keyword && (
-                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-500 bg-card/40 backdrop-blur-sm p-3 rounded-xl border border-border/50">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <Clock className="h-3.5 w-3.5" />
-                        Recent Searches
-                      </label>
-                      <button
-                        type="button"
-                        onClick={clearRecent}
-                        className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/60 hover:text-destructive transition-colors"
-                      >
-                        Clear
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {recentKeywords.map((kw, index) => (
-                        <button
-                          key={index}
-                          type="button"
-                          onClick={() => setKeyword(kw)}
-                          className="group flex items-center gap-1.5 rounded-lg border border-border bg-card/80 px-2.5 py-1.5 text-xs text-muted-foreground transition-all hover:border-[#6366f1]/40 hover:bg-[#6366f1]/5 hover:text-foreground hover:scale-105 active:scale-95 shadow-sm"
-                        >
-                          <Clock className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity" />
-                          <span className="max-w-[200px] truncate font-medium">{kw}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Site selector */}
-                {sitesLoading ? (
-                  <div className="flex items-center gap-3 rounded-xl border border-border bg-card/80 backdrop-blur-sm px-4 py-3">
-                    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-                    <span className="text-sm font-medium text-muted-foreground">Loading your sites…</span>
-                  </div>
-                ) : sites.length === 0 ? (
-                  <div className="rounded-xl border border-dashed border-border bg-card/50 px-5 py-6 text-center space-y-3">
-                    <div className="flex justify-center">
-                      <div className="rounded-xl bg-[#6366f1]/10 p-3">
-                        <Globe className="h-6 w-6 text-[#818cf8]" />
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-foreground mb-1">No sites configured yet</p>
-                      <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-                        Add your first WordPress site to start generating content
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-2 text-sm font-bold text-white bg-[#6366f1] hover:bg-[#818cf8] px-4 py-2 rounded-lg transition-all shadow-md shadow-[#6366f1]/20 hover:scale-105 active:scale-95"
-                      onClick={() => router.push("/dashboard/sites/new")}
-                    >
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Connect Site
-                    </button>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                      <Globe className="h-3.5 w-3.5" />
-                      Select Target Site
-                      <span className="ml-auto text-[10px] text-muted-foreground/60 font-mono">
-                        {sites.length} available
-                      </span>
-                    </label>
-                    <div className="grid gap-3 sm:grid-cols-2" role="radiogroup" aria-label="Select site">
-                      {sites.map((site, index) => (
-                        <button
-                          key={site.id}
-                          type="button"
-                          onClick={() => setSiteId(site.id)}
-                          role="radio"
-                          aria-checked={siteId === site.id}
-                          aria-label={`Select ${site.siteName}`}
-                          className={cn(
-                            "flex items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]",
-                            siteId === site.id
-                              ? "border-[#6366f1]/60 bg-[#6366f1]/10 text-foreground shadow-md shadow-[#6366f1]/10 ring-1 ring-[#6366f1]/20"
-                              : "border-border/50 bg-card/80 backdrop-blur-sm text-muted-foreground hover:border-[#6366f1]/30 hover:text-foreground hover:shadow-sm hover:bg-card"
-                          )}
-                        >
-                          <div
-                            className={cn(
-                              "flex h-7 w-7 shrink-0 items-center justify-center rounded-lg transition-colors duration-300",
-                              siteId === site.id
-                                ? "bg-[#6366f1]/20 text-[#818cf8]"
-                                : "bg-muted text-muted-foreground"
-                            )}
-                          >
-                          <Globe className="h-3.5 w-3.5" />
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm sm:text-base font-bold leading-tight">
-                              {site.siteName}
-                            </p>
-                            <p className="truncate text-xs opacity-60 font-mono mt-0.5">{site.domain}</p>
-                          </div>
-                          {siteId === site.id && (
-                            <div className="ml-auto h-2.5 w-2.5 shrink-0 rounded-full bg-[#10b981] shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse" />
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Error */}
-                {error && (
-                  <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 animate-in fade-in slide-in-from-top-2">
-                    <div className="flex items-start gap-3">
-                      <AlertCircle className="h-5 w-5 shrink-0 text-destructive mt-0.5" />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-destructive">{error}</p>
-                        {error.includes('timeout') || error.includes('Retry') ? (
-                          <p className="text-xs text-destructive/80 mt-1 font-medium">
-                            The request is taking longer than expected. Please try again.
-                          </p>
-                        ) : error.includes('limit') ? (
-                          <p className="text-xs text-destructive/80 mt-1 font-medium">
-                            <button
-                              type="button"
-                              onClick={() => router.push('/dashboard/settings')}
-                              className="underline hover:no-underline font-bold text-destructive"
-                            >
-                              Upgrade your plan
-                            </button>
-                            {' '}to generate more articles.
-                          </p>
-                        ) : null}
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* CTA button */}
-                <div className="pt-1">
-                  <button
-                    type="submit"
-                    disabled={submitting || !keyword.trim() || !siteId}
-                    className={cn(
-                      "group relative w-full overflow-hidden rounded-xl py-3 text-sm font-bold text-white transition-all duration-300 bg-gradient-to-r from-[#6366f1] to-[#818cf8]",
-                      "disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none",
-                      !submitting && keyword.trim() && siteId && "hover:scale-[1.01] active:scale-[0.98] shadow-lg shadow-[#6366f1]/25 hover:shadow-[#6366f1]/40",
-                      submitting && "pointer-events-none"
-                    )}
-                  >
-                    {!submitting && keyword.trim() && siteId && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700 ease-in-out" />
-                    )}
-                    {submitting ? (
-                      <span className="flex flex-col items-center justify-center gap-1.5">
-                        <span className="flex items-center gap-2">
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          <span>Generating Brief…</span>
-                        </span>
-                        {progressMessage && (
-                          <span className="text-xs text-white/70 font-normal">{progressMessage}</span>
-                        )}
-                      </span>
-                    ) : (
-                      <span className="relative flex items-center justify-center gap-2">
-                        <Sparkles className="h-4 w-4 group-hover:rotate-12 transition-transform duration-300" />
-                        Generate Article
-                        {keyword.trim() && siteId && (
-                          <span className="text-xs opacity-70 group-hover:translate-x-0.5 transition-transform">→</span>
-                        )}
-                      </span>
-                    )}
-                  </button>
-                </div>
-                </form>
-              </div>
-
-              {/* Example keywords */}
-              <div className="mt-8 sm:mt-10 flex flex-col items-center gap-3 w-full">
-                <p className="text-[10px] sm:text-xs font-bold text-muted-foreground/50 uppercase tracking-widest flex items-center gap-2">
-                  Try an example
-                  <span className="hidden sm:inline text-[9px] opacity-60 normal-case font-normal">(or press 1-4)</span>
+                <p className="mb-8 max-w-md text-sm sm:text-base text-muted-foreground font-medium leading-relaxed">
+                  Precision-engineered content generation. Enter your keyword and let the Prism Engine synthesize your next ranking article.
                 </p>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {EXAMPLE_KEYWORDS.map((kw, index) => (
-                    <button
-                      key={kw}
-                      type="button"
-                      onClick={() => setKeyword(kw)}
-                      className="group relative rounded-lg border border-border bg-card/50 backdrop-blur-sm px-3 py-1.5 text-[10px] sm:text-xs font-medium text-muted-foreground transition-all duration-200 hover:border-[#6366f1]/40 hover:bg-[#6366f1]/5 hover:text-foreground hover:scale-105 active:scale-95 hover:shadow-sm"
-                    >
-                      <span className="absolute -top-1 -left-1 hidden sm:flex h-4 w-4 items-center justify-center rounded-full bg-[#6366f1] text-[8px] font-bold text-white shadow-sm opacity-0 group-hover:opacity-100 transition-opacity scale-75 group-hover:scale-100 duration-200">
-                        {index + 1}
-                      </span>
-                      {kw}
-                    </button>
+
+                {/* Compact Steps */}
+                <div className="hidden lg:block w-full max-w-xs space-y-3">
+                  {[
+                    { label: "STRATEGY", time: "~30s", icon: BarChart3, color: "text-indigo-400", bg: "bg-indigo-400/10" },
+                    { label: "ARCHITECTURE", time: "~45s", icon: FileText, color: "text-cyan-400", bg: "bg-cyan-400/10" },
+                    { label: "SYNTHESIS", time: "~2min", icon: PenTool, color: "text-rose-400", bg: "bg-rose-400/10" },
+                    { label: "OPTIMIZATION", time: "~30s", icon: Zap, color: "text-emerald-400", bg: "bg-emerald-400/10" }
+                  ].map((item) => (
+                    <div key={item.label} className="flex items-center gap-3">
+                      <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/5", item.bg)}>
+                        <item.icon className={cn("h-4 w-4", item.color)} />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] font-black tracking-widest text-foreground/80 uppercase leading-none">{item.label}</p>
+                        <p className="text-[9px] font-mono text-muted-foreground/40 uppercase mt-0.5">{item.time}</p>
+                      </div>
+                    </div>
                   ))}
                 </div>
               </div>
+
+              {/* Right Column: Sharp Form */}
+              <div className="flex flex-col items-center w-full max-w-md mx-auto lg:mx-0">
+                <motion.div 
+                  className="w-full rounded-xl border border-white/10 bg-card/40 backdrop-blur-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+                >
+                  <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
+                    <div className="space-y-1 mb-2">
+                      <h2 className="text-sm font-black tracking-widest text-foreground uppercase">Command Parameters</h2>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase opacity-60">System Configuration</p>
+                    </div>
+
+                    {/* Keyword Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between px-0.5">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/70">Target Keyword</label>
+                        {keyword && (
+                          <span className="text-[9px] font-mono font-bold text-primary/40 uppercase">{keyword.length} CH</span>
+                        )}
+                      </div>
+                      <div className="group relative">
+                        <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
+                        <Input
+                          autoFocus
+                          placeholder="e.g. best hiking backpacks"
+                          value={keyword}
+                          onChange={(e) => setKeyword(e.target.value)}
+                          className="h-11 pl-10 pr-10 text-sm border-white/5 bg-black/20 backdrop-blur-md focus-visible:border-primary/40 focus-visible:ring-primary/10 transition-all rounded-lg font-medium"
+                        />
+                        {keyword && (
+                          <button
+                            type="button"
+                            onClick={() => setKeyword("")}
+                            className="absolute right-3.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-muted-foreground hover:bg-white/5 transition-all"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Site Section */}
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between px-0.5">
+                        <label className="text-[9px] font-black uppercase tracking-[0.2em] text-primary/70">Destination</label>
+                        <span className="text-[9px] font-mono text-muted-foreground/40 uppercase">{sites.length} Active</span>
+                      </div>
+                      
+                      {sitesLoading ? (
+                        <div className="h-24 rounded-lg border border-white/5 bg-black/10 flex items-center justify-center animate-pulse">
+                          <Loader2 className="h-4 w-4 animate-spin text-primary opacity-20" />
+                        </div>
+                      ) : sites.length === 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => router.push("/dashboard/sites/new")}
+                          className="w-full rounded-lg border border-dashed border-white/10 bg-black/10 p-6 text-center hover:border-primary/20 transition-all"
+                        >
+                          <Globe className="h-6 w-6 text-muted-foreground mx-auto mb-2 opacity-50" />
+                          <p className="text-[10px] font-black text-foreground uppercase tracking-wider">No Sites Link</p>
+                        </button>
+                      ) : (
+                        <div className="grid gap-2">
+                          {sites.map((site) => (
+                            <button
+                              key={site.id}
+                              type="button"
+                              onClick={() => setSiteId(site.id)}
+                              className={cn(
+                                "group relative flex items-center gap-3 rounded-lg border p-3 text-left transition-all duration-300",
+                                siteId === site.id
+                                  ? "border-primary/40 bg-primary/10 shadow-lg shadow-primary/5"
+                                  : "border-white/5 bg-black/20 text-muted-foreground hover:border-primary/20"
+                              )}
+                            >
+                              <div className={cn(
+                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border transition-all duration-300",
+                                siteId === site.id ? "bg-primary/20 border-primary/20 text-primary" : "bg-muted/5 border-white/5 opacity-40"
+                              )}>
+                                <Globe className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className={cn("truncate text-xs font-black tracking-tight uppercase", siteId === site.id ? "text-foreground" : "text-muted-foreground")}>
+                                  {site.siteName}
+                                </p>
+                                <p className="truncate text-[8px] font-mono opacity-30 uppercase tracking-tighter mt-0.5">{site.domain}</p>
+                              </div>
+                              {siteId === site.id && (
+                                <motion.div layoutId="active-indicator" className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(99,102,241,0.6)]" />
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Submit Section */}
+                    <div className="pt-2">
+                      <button
+                        type="submit"
+                        disabled={submitting || !keyword.trim() || !siteId}
+                        className={cn(
+                          "group relative w-full overflow-hidden rounded-lg py-3 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500",
+                          !submitting && keyword.trim() && siteId
+                            ? "bg-primary text-white shadow-xl shadow-primary/20 hover:scale-[1.01] active:scale-[0.99]"
+                            : "bg-white/5 text-muted-foreground cursor-not-allowed border border-white/5"
+                        )}
+                      >
+                        <span className="relative flex items-center justify-center gap-2">
+                          <Zap className={cn("h-3.5 w-3.5", !submitting && keyword.trim() && siteId ? "fill-white" : "")} />
+                          Execute Command
+                        </span>
+                      </button>
+                    </div>
+
+                    {error && (
+                      <motion.div 
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="rounded-lg border border-rose-500/20 bg-rose-500/5 p-3 flex items-start gap-2.5"
+                      >
+                        <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-black text-rose-500 uppercase tracking-wider leading-relaxed">{error}</p>
+                          {error.includes('limit') && (
+                            <button
+                              type="button"
+                              onClick={() => router.push('/dashboard/settings')}
+                              className="mt-1 text-[9px] font-black text-rose-500 underline underline-offset-2 hover:no-underline uppercase"
+                            >
+                              Upgrade Plan
+                            </button>
+                          )}
+                        </div>
+                      </motion.div>
+                    )}
+                  </form>
+                </motion.div>
+
+                {/* Example Engine */}
+                <div className="mt-8 w-full space-y-3">
+                  <div className="flex items-center gap-2 px-1 opacity-20">
+                    <div className="h-px flex-1 bg-gradient-to-r from-transparent to-foreground" />
+                    <p className="text-[8px] font-black uppercase tracking-[0.3em]">Presets</p>
+                    <div className="h-px flex-1 bg-gradient-to-l from-transparent to-foreground" />
+                  </div>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {EXAMPLE_KEYWORDS.map((kw, index) => (
+                      <motion.button
+                        key={kw}
+                        type="button"
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        onClick={() => setKeyword(kw)}
+                        className="group relative rounded-lg border border-white/5 bg-card/20 px-3 py-1.5 text-[9px] font-black text-muted-foreground uppercase tracking-widest transition-all hover:border-primary/20 hover:text-foreground"
+                      >
+                        <span className="absolute -top-1 -left-1 hidden sm:flex h-4 w-4 items-center justify-center rounded-md bg-primary text-[8px] font-black text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          {index + 1}
+                        </span>
+                        {kw}
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <UpgradeModal
         isOpen={showUpgradeModal}
         onClose={() => setShowUpgradeModal(false)}
         currentPlan={plan}
         reason={error || undefined}
-        onUpgrade={(plan) => router.push('/dashboard/settings?tab=billing')}
+        onUpgrade={() => router.push('/dashboard/settings?tab=billing')}
       />
     </div>
   );

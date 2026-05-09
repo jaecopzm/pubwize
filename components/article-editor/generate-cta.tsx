@@ -1,6 +1,8 @@
 "use client";
 
-import { Loader2, Sparkles, CheckCircle2 } from "lucide-react";
+import { Loader2, Sparkles, CheckCircle2, Zap } from "lucide-react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface GenerateCTAProps {
   onClick: () => void;
@@ -21,19 +23,26 @@ export function GenerateCTA({
 }: GenerateCTAProps) {
   if (done)
     return (
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-        <div className="flex items-center gap-2 rounded-xl border border-teal/30 bg-teal/10 px-4 py-3 text-sm font-semibold flex-1 text-teal">
-          <CheckCircle2 className="h-4 w-4 shrink-0" />
-          <span className="truncate">{doneLabel}</span>
-        </div>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+        <motion.div 
+          initial={{ opacity: 0, x: -10 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-xs font-bold flex-1 text-emerald-500 shadow-sm shadow-emerald-500/10"
+        >
+          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500/20 shadow-inner">
+            <CheckCircle2 className="h-3 w-3 shrink-0" />
+          </div>
+          <span className="truncate tracking-tight uppercase">{doneLabel}</span>
+        </motion.div>
+        
         {onRegenerate && (
           <button
             onClick={onRegenerate}
-            className="group relative flex items-center justify-center gap-2 rounded-xl border border-gold/30 bg-gold/5 px-4 py-3 text-sm font-semibold text-gold transition-all hover:bg-gold/10 hover:border-gold/50 hover:shadow-lg hover:shadow-gold/20 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 touch-manipulation overflow-hidden sm:flex-1"
+            className="group relative flex items-center justify-center gap-2 rounded-xl border border-indigo-500/30 bg-indigo-500/5 px-4 py-2.5 text-xs font-bold text-indigo-400 transition-all hover:bg-indigo-500/10 hover:border-indigo-500/50 hover:shadow-lg hover:shadow-indigo-500/10 hover:-translate-y-0.5 active:scale-95 active:translate-y-0 overflow-hidden sm:flex-1"
           >
-            <div className="absolute inset-0 bg-gradient-to-r from-gold/0 via-gold/10 to-gold/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            <Sparkles className="h-4 w-4 shrink-0 relative z-10 group-hover:rotate-12 transition-transform" />
-            <span className="relative z-10">Regenerate</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-indigo-400/5 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+            <Sparkles className="h-3 w-3 shrink-0 relative z-10 group-hover:rotate-12 transition-transform" />
+            <span className="relative z-10 tracking-tight uppercase">Regenerate</span>
           </button>
         )}
       </div>
@@ -43,19 +52,37 @@ export function GenerateCTA({
     <button
       onClick={onClick}
       disabled={loading}
-      className="group relative w-full flex items-center justify-center gap-2 rounded-xl border border-gold/30 bg-gold px-4 py-3 text-sm font-semibold text-obsidian transition-all hover:bg-gold/90 hover:shadow-xl hover:shadow-gold/30 hover:-translate-y-1 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:scale-100 active:scale-95 active:translate-y-0 touch-manipulation overflow-hidden min-w-full"
+      className={cn(
+        "group relative w-full flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-xs font-black uppercase tracking-widest transition-all duration-300 overflow-hidden shadow-xl",
+        loading 
+          ? "bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 cursor-not-allowed shadow-none" 
+          : "bg-indigo-600 border border-indigo-400/50 text-white hover:bg-indigo-500 hover:shadow-indigo-500/30 hover:-translate-y-1 active:scale-95"
+      )}
     >
-      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
+      {!loading && (
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 via-violet-600 to-indigo-600 bg-[length:200%_100%] animate-gradient-xy opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      )}
+      
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000 ease-in-out" />
+      
       {loading ? (
-        <>
-          <Loader2 className="h-4 w-4 animate-spin relative z-10" />
-          <span className="relative z-10">Generating…</span>
-        </>
+        <div className="flex items-center gap-2 relative z-10">
+          <div className="relative">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <motion.div 
+              animate={{ scale: [1, 1.4, 1], opacity: [0.4, 0, 0.4] }}
+              transition={{ duration: 1.5, repeat: Infinity }}
+              className="absolute inset-0 bg-indigo-400/20 rounded-full"
+            />
+          </div>
+          <span className="font-mono tracking-widest uppercase text-[10px]">Processing...</span>
+        </div>
       ) : (
-        <>
-          <Sparkles className="h-4 w-4 relative z-10 group-hover:rotate-12 group-hover:scale-110 transition-transform" />
-          <span className="relative z-10">{label}</span>
-        </>
+        <div className="flex items-center gap-2 relative z-10">
+          <Zap className="h-4 w-4 fill-white group-hover:animate-pulse transition-all" />
+          <span className="tracking-widest">{label}</span>
+          <Sparkles className="h-3 w-3 opacity-0 group-hover:opacity-100 group-hover:translate-x-1 group-hover:-translate-y-1 transition-all duration-300" />
+        </div>
       )}
     </button>
   );

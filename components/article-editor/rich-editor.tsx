@@ -16,7 +16,20 @@ import { cn } from "@/lib/utils";
 
 // ── Simple markdown → HTML (for initial import) ────────────────────
 function markdownToHtml(md: string): string {
-  return md
+  let cleanMd = md.trim();
+  if (cleanMd.startsWith("```markdown")) {
+    cleanMd = cleanMd.replace(/^```markdown\s*\n/, "");
+    if (cleanMd.endsWith("```")) {
+      cleanMd = cleanMd.replace(/\n```$/, "");
+    }
+  } else if (cleanMd.startsWith("```")) {
+    cleanMd = cleanMd.replace(/^```[a-zA-Z]*\s*\n/, "");
+    if (cleanMd.endsWith("```")) {
+      cleanMd = cleanMd.replace(/\n```$/, "");
+    }
+  }
+
+  return cleanMd
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1">')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
     .replace(/^### (.*$)/gm, "<h3>$1</h3>")
@@ -139,9 +152,23 @@ export function RichEditor({
   });
 
   // Sync external value changes (streaming) into the editor
+  const isStreamingRef = useRef(streaming);
+  const lastUpdateLengthRef = useRef(0);
+  isStreamingRef.current = streaming;
+  
   useEffect(() => {
     if (!editor) return;
-    if (value === prevValueRef.current) return;
+    
+    // During streaming, batch updates (only update every 100 chars)
+    if (isStreamingRef.current) {
+      const lengthDiff = Math.abs(value.length - lastUpdateLengthRef.current);
+      if (lengthDiff < 100 && value.length > 0) return;
+      lastUpdateLengthRef.current = value.length;
+    } else {
+      // Not streaming, check if value actually changed
+      if (value === prevValueRef.current) return;
+    }
+    
     prevValueRef.current = value;
 
     const { from, to } = editor.state.selection;

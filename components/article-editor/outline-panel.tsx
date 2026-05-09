@@ -49,17 +49,17 @@ export function OutlinePanel({
     const estimatedWords = sections.length * Math.floor(targetWordCount / sections.length);
 
     return (
-        <div className="space-y-4 sm:space-y-6">
+        <div className="space-y-4">
             {/* Quality Suggestions */}
             <WorkflowSuggestions step="outline" data={{ sections }} />
             
             {/* Word Count Control */}
-            <div className="rounded-xl border border-gold/20 bg-gold/5 p-3 sm:p-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0 mb-3">
-                    <label className="text-[10px] sm:text-xs font-semibold font-mono-dm text-text-1">
+            <div className="rounded-xl border border-gold/20 bg-gold/5 p-3">
+                <div className="flex items-center justify-between gap-2 mb-2">
+                    <label className="text-xs font-semibold text-text-1">
                         Target Word Count
                     </label>
-                    <span className="text-sm sm:text-base font-bold font-mono-dm text-gold">
+                    <span className="text-sm font-bold text-gold">
                         {targetWordCount.toLocaleString()}
                     </span>
                 </div>
@@ -70,15 +70,14 @@ export function OutlinePanel({
                     step="50"
                     value={targetWordCount}
                     onChange={(e) => setTargetWordCount(Number(e.target.value))}
-                    className="w-full h-1.5 sm:h-2 rounded-lg appearance-none cursor-pointer"
+                    className="w-full h-1.5 rounded-lg appearance-none cursor-pointer"
                     style={{
                         background: `linear-gradient(to right, var(--gold) 0%, var(--gold) ${((targetWordCount - 500) / 2000) * 100}%, rgba(255,255,255,0.1) ${((targetWordCount - 500) / 2000) * 100}%, rgba(255,255,255,0.1) 100%)`
                     }}
                 />
-                <div className="flex justify-between mt-1 text-[9px] sm:text-[10px] font-mono-dm text-text-3">
+                <div className="flex justify-between mt-1 text-[10px] text-text-3">
                     <span>500</span>
-                    <span className="hidden sm:inline">~{Math.floor(targetWordCount / sections.length)} words/section</span>
-                    <span className="sm:hidden">~{Math.floor(targetWordCount / sections.length)}/sec</span>
+                    <span>~{Math.floor(targetWordCount / sections.length)}/section</span>
                     <span>2,500</span>
                 </div>
             </div>
@@ -86,15 +85,11 @@ export function OutlinePanel({
 
 
             {/* Stats and Actions */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="flex items-center gap-2 sm:gap-3">
-                    <p className="text-xs font-mono-dm text-text-3">
-                        {sections.length} sections
-                    </p>
-                    <span className="text-xs text-text-3">•</span>
-                    <p className="text-xs font-mono-dm text-text-3">
-                        ~{estimatedWords.toLocaleString()} words
-                    </p>
+            <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2 text-xs text-text-3">
+                    <span>{sections.length} sections</span>
+                    <span>•</span>
+                    <span>~{estimatedWords.toLocaleString()} words</span>
                 </div>
                 <div className="flex items-center gap-2">
                     <button
@@ -119,19 +114,19 @@ export function OutlinePanel({
             </div>
 
             {/* Sections List */}
-            <div className="space-y-2 sm:space-y-3">
+            <div className="space-y-2">
                 {sections.map((section, i) => (
-                    <div key={i} className="group rounded-lg border px-2.5 py-2 sm:px-3 sm:py-2.5 transition-all card-premium">
+                    <div key={i} className="group rounded-lg border px-2.5 py-2 transition-all card-premium">
                         <div className="flex gap-2">
                             <div className={cn(
-                                "flex h-5 w-5 sm:h-6 sm:w-6 shrink-0 items-center justify-center rounded text-[10px] sm:text-xs font-bold",
+                                "flex h-5 w-5 shrink-0 items-center justify-center rounded text-xs font-bold",
                                 section.level === 3 ? "bg-lilac/15 text-lilac" : "bg-gold/15 text-gold"
                             )}>
                                 {i + 1}
                             </div>
                             <div className={cn(
                                 "min-w-0 flex-1",
-                                section.level === 3 && "pl-2 sm:pl-4 border-l border-white/5"
+                                section.level === 3 && "pl-2 border-l border-white/5"
                             )}>
                                 {editingIndex === i ? (
                                     <input
@@ -156,38 +151,37 @@ export function OutlinePanel({
                                         className="w-full bg-transparent border-b border-gold text-xs sm:text-sm font-semibold outline-none text-text-1"
                                     />
                                 ) : (
-                                    <p className="text-xs sm:text-sm font-semibold text-text-1 break-words leading-snug">{section.heading}</p>
+                                    <p className="text-sm font-semibold text-text-1 break-words leading-snug">{section.heading}</p>
                                 )}
                                 <div className="mt-1 flex flex-wrap gap-1">
                                     {section.level && (
                                         <span className={cn(
-                                            "text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.5 rounded border",
+                                            "text-[9px] font-bold uppercase px-1 py-0.5 rounded border",
                                             section.level === 3 ? "bg-lilac/10 border-lilac/20 text-lilac" : "bg-gold/10 border-gold/20 text-gold"
                                         )}>
                                             H{section.level}
                                         </span>
                                     )}
                                     {section.answerTarget && (
-                                        <span className="flex items-center gap-0.5 text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.5 rounded border bg-teal/10 border-teal/20 text-teal">
+                                        <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase px-1 py-0.5 rounded border bg-teal/10 border-teal/20 text-teal">
                                             <Zap className="h-2 w-2" />
-                                            <span className="hidden sm:inline">Featured Snippet</span>
-                                            <span className="sm:hidden">Snippet</span>
+                                            Snippet
                                         </span>
                                     )}
                                     {section.isFaq && (
-                                        <span className="flex items-center gap-0.5 text-[8px] sm:text-[9px] font-bold uppercase px-1 py-0.5 rounded border bg-blue-400/10 border-blue-400/20 text-blue-400">
+                                        <span className="flex items-center gap-0.5 text-[9px] font-bold uppercase px-1 py-0.5 rounded border bg-blue-400/10 border-blue-400/20 text-blue-400">
                                             <MessageSquare className="h-2 w-2" />
                                             FAQ
                                         </span>
                                     )}
                                 </div>
                                 {section.notes && (
-                                    <p className="mt-1.5 text-[10px] sm:text-xs leading-snug text-text-3 break-words line-clamp-2">{section.notes}</p>
+                                    <p className="mt-1.5 text-xs leading-snug text-text-3 break-words line-clamp-2">{section.notes}</p>
                                 )}
                                 {section.answerTarget && (
                                     <div className="mt-1.5 p-1.5 rounded bg-surface-2/50 border border-white/5 flex items-start gap-1.5">
                                         <Quote className="h-2.5 w-2.5 text-teal shrink-0 mt-0.5" />
-                                        <p className="text-[9px] sm:text-[10px] text-text-3 leading-snug line-clamp-2">
+                                        <p className="text-[10px] text-text-3 leading-snug line-clamp-2">
                                             <span className="text-text-2 font-medium">Target:</span> {section.answerTarget}
                                         </p>
                                     </div>

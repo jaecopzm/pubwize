@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
-import { Copy, Download, Check, List, Loader2, FileCode, Sparkles, Zap, Edit3, Eye, CheckCircle2 } from "lucide-react";
+import { Copy, Download, Check, List, Loader2, FileCode, Sparkles, Zap, Edit3, Eye, CheckCircle2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -9,7 +9,6 @@ import { GenerateCTA } from "./shared-ui";
 import { GenerationLoader } from "@/components/generation-loader";
 import { UnsplashSearch } from "@/components/unsplash-search";
 import { RichEditor } from "./rich-editor";
-import { PublishChecklist } from "./publish-checklist";
 import { WordCountRing } from "./word-count-ring";
 import { SEOCommandCenter } from "./seo-command-center";
 import type { DraftData } from "@/lib/types";
@@ -27,7 +26,6 @@ const stripMarkdown = (md: string) =>
         .replace(/~~(.+?)~~/g, "$1")
         .replace(/\[(.+?)\]\(.+?\)/g, "$1")
         .replace(/!\[.*?\]\(.+?\)/g, "")
-        .replace(/`{3}[\s\S]*?`{3}/g, "")
         .replace(/`(.+?)`/g, "$1")
         .replace(/^[-*+]\s+/gm, "")
         .replace(/^\d+\.\s+/gm, "")
@@ -40,7 +38,20 @@ const stripMarkdown = (md: string) =>
 // ── Simple markdown → HTML (for preview) ────────────────────
 function markdownToHtml(md: string): string {
   if (!md) return "";
-  return md
+  let cleanMd = md.trim();
+  if (cleanMd.startsWith("```markdown")) {
+    cleanMd = cleanMd.replace(/^```markdown\s*\n/, "");
+    if (cleanMd.endsWith("```")) {
+      cleanMd = cleanMd.replace(/\n```$/, "");
+    }
+  } else if (cleanMd.startsWith("```")) {
+    cleanMd = cleanMd.replace(/^```[a-zA-Z]*\s*\n/, "");
+    if (cleanMd.endsWith("```")) {
+      cleanMd = cleanMd.replace(/\n```$/, "");
+    }
+  }
+
+  return cleanMd
     .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" class="w-full h-auto rounded-2xl border border-white/10 shadow-2xl my-8">')
     .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" class="text-indigo-400 underline">$1</a>')
     .replace(/^### (.*$)/gm, '<h3 class="text-xl font-bold mt-8 mb-4 text-text-1">$1</h3>')
@@ -68,12 +79,16 @@ export function DraftPanel({
     siteDomain,
     onGenerate,
     onOptimize,
+    onGenerateSocial,
+    onPublish,
     loading,
     done,
     hasSeoData,
     targetWordCount,
     streaming = false,
     onUpgradeRequired,
+    brief,
+    socialLoading,
 }: {
     draft: DraftData;
     keyword: string;
@@ -81,12 +96,16 @@ export function DraftPanel({
     siteDomain?: string;
     onGenerate?: () => void;
     onOptimize: () => void;
+    onGenerateSocial?: () => void;
+    onPublish?: () => void;
     loading: boolean;
     done: boolean;
     hasSeoData?: boolean;
     targetWordCount?: number;
     streaming?: boolean;
     onUpgradeRequired?: (reason: string) => void;
+    brief?: any;
+    socialLoading?: boolean;
 }) {
     const [content, setContent] = useState(draft.content);
     const [isSaving, setIsSaving] = useState(false);
@@ -116,8 +135,10 @@ export function DraftPanel({
     const headings = useMemo(() => content.match(/^#{1,6}\s+.+$/gm) || [], [content]);
 
     // ── Sync external draft content when streaming from parent page ─
+    const lastDraftContentRef = useRef<string>("");
     useEffect(() => {
-        if (streaming && draft.content !== undefined) {
+        if (streaming && draft.content !== undefined && draft.content !== lastDraftContentRef.current) {
+            lastDraftContentRef.current = draft.content;
             setContent(draft.content);
         }
     }, [streaming, draft.content]);
@@ -157,6 +178,7 @@ export function DraftPanel({
             const decoder = new TextDecoder();
             let accumulatedContent = "";
             let accumulatedRaw = "";
+            let lastUpdateTime = 0;
 
             while (true) {
                 const { done: rdDone, value } = await reader.read();
@@ -180,9 +202,14 @@ export function DraftPanel({
                         if (payload.error) throw new Error(payload.error);
                         if (payload.chunk) {
                             accumulatedContent += payload.chunk;
-                            setStreamContent(accumulatedContent);
+                            const now = performance.now();
+                            if (now - lastUpdateTime > 50) {
+                                setStreamContent(accumulatedContent);
+                                lastUpdateTime = now;
+                            }
                         }
                         if (payload.done) {
+                            setStreamContent(accumulatedContent);
                             setContent(accumulatedContent);
                             setStreamContent("");
                             toast.success("Draft generated!");
@@ -237,13 +264,13 @@ export function DraftPanel({
         }
     };
 
-    // The displayed content — streaming takes priority while active
+    // The displayed content — use content directly, or streamContent if currently streaming from this panel
     const displayContent = isStreaming ? streamContent : content;
     const currentWordCount = displayContent.split(/\s+/).filter(Boolean).length;
     const isAnyStreaming = isStreaming || streaming;
 
     return (
-        <div className="w-full space-y-3 sm:space-y-4">
+        <div className="w-full space-y-3">
                 <SEOCommandCenter
                     content={displayContent}
                     keyword={keyword}
@@ -280,6 +307,79 @@ export function DraftPanel({
                         </div>
                     </div>
                 </div>
+
+                {/* SEO Metadata */}
+                {brief && (
+                    <div className="rounded-xl border border-indigo-500/20 bg-indigo-500/5 p-3">
+                        <h4 className="text-xs font-semibold text-text-1 mb-2">SEO Metadata</h4>
+                        <div className="space-y-2">
+                            {/* Meta Title */}
+                            <div>
+                                <label className="text-[10px] text-text-3 mb-1 block">Meta Title</label>
+                                <div className="flex items-center gap-2 p-2 rounded-lg bg-surface-2/50 border border-white/5">
+                                    <input
+                                        type="text"
+                                        value={`${keyword} - Complete Guide 2026`}
+                                        readOnly
+                                        className="flex-1 bg-transparent text-xs text-text-2 outline-none"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(`${keyword} - Complete Guide 2026`);
+                                            toast.success("Title copied!");
+                                        }}
+                                        className="p-1 rounded hover:bg-white/5"
+                                    >
+                                        <Copy className="h-3 w-3 text-text-3" />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Meta Description */}
+                            <div>
+                                <label className="text-[10px] text-text-3 mb-1 block">Meta Description</label>
+                                <div className="flex items-start gap-2 p-2 rounded-lg bg-surface-2/50 border border-white/5">
+                                    <textarea
+                                        value={`Discover everything about ${keyword}. Expert insights, practical tips, and comprehensive guide to help you master ${keyword} in 2026.`}
+                                        readOnly
+                                        rows={2}
+                                        className="flex-1 bg-transparent text-xs text-text-2 outline-none resize-none"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(`Discover everything about ${keyword}. Expert insights, practical tips, and comprehensive guide to help you master ${keyword} in 2026.`);
+                                            toast.success("Description copied!");
+                                        }}
+                                        className="p-1 rounded hover:bg-white/5 shrink-0"
+                                    >
+                                        <Copy className="h-3 w-3 text-text-3" />
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            {/* Keywords */}
+                            {brief.entities && brief.entities.length > 0 && (
+                                <div>
+                                    <label className="text-[10px] text-text-3 mb-1 block">Keywords</label>
+                                    <div className="flex flex-wrap gap-1">
+                                        {brief.entities.slice(0, 8).map((entity: string, i: number) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => {
+                                                    navigator.clipboard.writeText(entity);
+                                                    toast.success("Keyword copied!");
+                                                }}
+                                                className="px-2 py-1 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-[10px] font-medium text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                                            >
+                                                {entity}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Featured Image */}
                 <div className="rounded-xl border border-gold/20 bg-gold/5 p-3 sm:p-4">
@@ -408,7 +508,7 @@ export function DraftPanel({
 
 
                 {/* ── Rich Text Editor / Preview ── */}
-                <div className="rounded-xl border border-white/8 bg-surface-2/50 p-4 sm:p-6 relative min-h-[600px]">
+                <div className="rounded-xl border border-white/8 bg-surface-2/50 p-3 sm:p-4 relative min-h-[500px]">
                     {(isAnyStreaming || loading) && !displayContent && (
                         <div className="absolute inset-0 z-10 flex items-center justify-center bg-surface-2/90 backdrop-blur-sm rounded-xl">
                             <GenerationLoader step="draft" message={isAnyStreaming ? "Writing your article..." : "Drafting your article..."} keyword={keyword} />
@@ -436,14 +536,6 @@ export function DraftPanel({
                         />
                     )}
                 </div>
-
-                {/* Publish Checklist */}
-                <PublishChecklist
-                    wordCount={wordCount}
-                    featuredImage={featuredImage}
-                    hasSeoData={hasSeoData ?? false}
-                    targetWordCount={targetWordCount}
-                />
 
                 {/* Export */}
                 <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
@@ -501,19 +593,32 @@ export function DraftPanel({
                     </div>
                 )}
 
-                {/* Generate / Optimize CTA */}
-                {loading ? (
-                    <GenerationLoader step="optimize" message="Optimizing your article..." keyword={keyword} />
-                ) : (
-                    <div className="pt-1 w-full">
-                        <GenerateCTA
-                            onClick={onOptimize}
-                            loading={loading}
-                            done={done}
-                            label="Run SEO Analysis →"
-                            doneLabel="SEO Analysis Complete"
-                            onRegenerate={done ? onOptimize : undefined}
-                        />
+                {/* Action Buttons */}
+                {!streaming && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                        {onGenerateSocial && (
+                            <button
+                                onClick={onGenerateSocial}
+                                disabled={socialLoading}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-500 text-white font-semibold hover:bg-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                {socialLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                    <Share2 className="h-4 w-4" />
+                                )}
+                                {socialLoading ? "Generating..." : "Generate Social Posts"}
+                            </button>
+                        )}
+                        {onPublish && siteDomain && (
+                            <button
+                                onClick={onPublish}
+                                className="flex items-center gap-2 px-4 py-2 rounded-lg border border-teal bg-teal/10 text-teal font-semibold hover:bg-teal/20 transition-colors"
+                            >
+                                <Zap className="h-4 w-4" />
+                                Publish to WordPress
+                            </button>
+                        )}
                     </div>
                 )}
         </div>
