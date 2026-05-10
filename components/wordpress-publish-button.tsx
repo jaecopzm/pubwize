@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Globe, Loader2, ExternalLink, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
+import { getAuthHeaders } from "@/lib/hooks/use-auth";
 
 interface WordPressPublishButtonProps {
   articleId: string;
@@ -32,11 +33,10 @@ export function WordPressPublishButton({
 
     setPublishing(true);
     try {
+      const headers = await getAuthHeaders();
       const response = await fetch("/api/wordpress/publish", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           articleId,
           wordPressSiteId: selectedSite,
@@ -44,7 +44,8 @@ export function WordPressPublishButton({
       });
 
       if (!response.ok) {
-        throw new Error("Failed to publish");
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Failed to publish");
       }
 
       const data = await response.json();

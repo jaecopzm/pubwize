@@ -6,7 +6,7 @@ import { validateArticleId } from "@/lib/validation";
 import { withRateLimit } from "@/lib/rate-limit";
 import { invalidateArticleCache } from "@/lib/cache-invalidation";
 import { logger } from "@/lib/logger";
-import { decryptPassword } from "@/lib/wordpress/encryption";
+import { looksLikeHtml, markdownToHtml } from "@/lib/wordpress/markdown";
 
 async function publishHandler(request: NextRequest) {
   const auth = await authenticateRequest(request);
@@ -19,81 +19,84 @@ async function publishHandler(request: NextRequest) {
   }
 
   const body = await request.json();
-  const validation = validateRequestBody(body, ["articleId", "wordPressSiteId", "title", "content"]);
+  // Allow minimal payload from lightweight clients:
+  // - `title` / `content` can be omitted and will be loaded from the Article record.
+  const validation = validateRequestBody(body, ["articleId", "wordPressSiteId"]);
   assertValid(validation.valid, validation.error || "Invalid request");
 
-  const { articleId, wordPressSiteId, title, content, status = "draft", categories = [], tags = [], featuredImageUrl, scheduledDate } = body;
+  const {
+    articleId,
+    wordPressSiteId,
+    title: incomingTitle,
+    content: incomingContent,
+    status = "draft",
+    categories = [],
+    tags = [],
+    featuredImageUrl,
+    scheduledDate
+  } = body;
   assertValid(validateArticleId(articleId).valid, "Invalid article ID");
 
   const article = await prisma.article.findUnique({ where: { id: articleId } });
   if (!article) throw new NotFoundError("Article");
   assertValid(article.ownerId === uid, "You don't have permission to publish this article");
+  const draftJson = (article as any).draft as any;
+  const draftContent =
+    typeof draftJson === "object" && draftJson
+      ? (draftJson.content ?? draftJson.html ?? "")
+      : draftJson;
+
+  const title = (incomingTitle ??
+    (article as any).metaTitle ??
+    (article as any).keyword ??
+    "").toString().trim();
+
+  const content = (incomingContent ??
+    (article as any).content ??
+    draftContent ??
+    "").toString();
+  assertValid(title.length > 0, "Missing article title");
+  assertValid(content.trim().length > 0, "Missing article content");
 
   const wpSite = await prisma.wordPressSite.findUnique({ where: { id: wordPressSiteId } });
   if (!wpSite) throw new NotFoundError("WordPress site");
   assertValid(wpSite.userId === uid, "You don't have permission to use this WordPress site");
 
-  const { getCategories, getTags, createCategory } = await import("@/lib/wordpress/service");
   const wpSiteFormatted = { id: wordPressSiteId, siteUrl: wpSite.siteUrl, username: wpSite.username, encryptedPassword: wpSite.encryptedPassword } as any;
+  const { publishToWordPress } = await import("@/lib/wordpress/service");
 
-  const categoryIds: number[] = [];
-  if (categories.length > 0) {
-    const existingCategories = await getCategories(wpSiteFormatted);
-    for (const name of categories) {
-      const existing = existingCategories.find((c: any) => c.name.toLowerCase() === name.toLowerCase());
-      categoryIds.push(existing ? existing.id : await createCategory(wpSiteFormatted, name));
-    }
-  }
+  const contentHtml = looksLikeHtml(content) ? content : markdownToHtml(content);
+  const scheduledDateObj =
+    status === "future" && scheduledDate
+      ? new Date(scheduledDate)
+      : undefined;
 
-  const tagIds: number[] = [];
-  if (tags.length > 0) {
-    const existingTags = await getTags(wpSiteFormatted);
-    for (const name of tags) {
-      const existing = existingTags.find((t: any) => t.name.toLowerCase() === name.toLowerCase());
-      if (existing) tagIds.push(existing.id);
-    }
-  }
+  const wpResult = await publishToWordPress(
+    wpSiteFormatted,
+    title,
+    contentHtml,
+    {
+      status,
+      categories,
+      tags,
+      featuredImageUrl,
+      scheduledDate: scheduledDateObj,
+    },
+  );
 
-  const postData: any = { title, content, status };
-  if (categoryIds.length > 0) postData.categories = categoryIds;
-  if (tagIds.length > 0) postData.tags = tagIds;
-  if (status === "future" && scheduledDate) postData.date = scheduledDate;
-
-  if (featuredImageUrl) {
-    try {
-      const { uploadFeaturedImage } = await import("@/lib/wordpress/service");
-      const mediaId = await uploadFeaturedImage(wpSiteFormatted, featuredImageUrl, title);
-      if (mediaId) postData.featured_media = mediaId;
-    } catch {}
-  }
-
-  let wpPost;
-  try {
-    const decryptedPassword = decryptPassword(wpSite.encryptedPassword).replace(/\s+/g, "");
-    const wpResponse = await fetch(`${wpSite.siteUrl}/wp-json/wp/v2/posts`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Basic ${Buffer.from(`${wpSite.username}:${decryptedPassword}`).toString("base64")}`,
-      },
-      body: JSON.stringify(postData),
-    });
-
-    if (!wpResponse.ok) throw new Error("Failed to publish to WordPress");
-    wpPost = await wpResponse.json();
-  } catch (wpError) {
-    throw new ExternalServiceError("WordPress", wpError);
+  if (!wpResult.success || !wpResult.postId || !wpResult.postUrl) {
+    throw new ExternalServiceError("WordPress", new Error(wpResult.error || "Failed to publish"));
   }
 
   await prisma.article.update({
     where: { id: articleId },
-    data: { wordPressPostId: wpPost.id, wordPressSiteId: wordPressSiteId, publishedUrl: wpPost.link },
+    data: { wordPressPostId: wpResult.postId, wordPressSiteId: wordPressSiteId, publishedUrl: wpResult.postUrl },
   });
 
   await invalidateArticleCache(articleId, uid);
-  logger.info("Article published to WordPress", { articleId, userId: uid, wpSiteId: wordPressSiteId, wpPostId: wpPost.id });
+  logger.info("Article published to WordPress", { articleId, userId: uid, wpSiteId: wordPressSiteId, wpPostId: wpResult.postId });
 
-  return NextResponse.json({ success: true, postId: wpPost.id, postUrl: wpPost.link });
+  return NextResponse.json({ success: true, postId: wpResult.postId, postUrl: wpResult.postUrl, retryCount: wpResult.retryCount ?? 0 });
 }
 
 export const POST = withRateLimit(withErrorHandler(publishHandler), "wordpress");

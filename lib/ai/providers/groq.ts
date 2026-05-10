@@ -11,6 +11,7 @@ function getClient(): Groq {
 
 export class GroqProvider extends BaseProvider {
   name = 'groq' as const;
+  private static readonly DEFAULT_MAX_TOKENS = 7000;
 
   private getModelQueue(request: AIRequest): string[] {
     const g = MODELS.groq as any;
@@ -35,7 +36,7 @@ export class GroqProvider extends BaseProvider {
             { role: "user", content: request.userPrompt }
           ],
           temperature: request.temperature ?? 0.7,
-          max_completion_tokens: request.maxTokens ?? 4096,
+          max_completion_tokens: request.maxTokens ?? GroqProvider.DEFAULT_MAX_TOKENS,
           ...(request.topP !== undefined && { top_p: request.topP }),
           ...(request.reasoningEffort !== undefined && { reasoning_effort: request.reasoningEffort }),
         }, { signal });
@@ -87,7 +88,7 @@ export class GroqProvider extends BaseProvider {
       
       try {
         console.log(`[Groq] Attempting stream with model: ${modelName}`);
-        console.log(`[Groq] Prompt sizes - system: ${request.systemPrompt.length} chars, user: ${request.userPrompt.length} chars, max_tokens: ${Math.min(request.maxTokens ?? 4096, 8000)}`);
+        console.log(`[Groq] Prompt sizes - system: ${request.systemPrompt.length} chars, user: ${request.userPrompt.length} chars, max_tokens: ${Math.min(request.maxTokens ?? GroqProvider.DEFAULT_MAX_TOKENS, GroqProvider.DEFAULT_MAX_TOKENS)}`);
         
         const stream = await client.chat.completions.create({
           model: modelName,
@@ -96,7 +97,7 @@ export class GroqProvider extends BaseProvider {
             { role: "user", content: request.userPrompt }
           ],
           temperature: request.temperature ?? 0.7,
-          max_completion_tokens: Math.min(request.maxTokens ?? 4096, 8000),
+          max_completion_tokens: Math.min(request.maxTokens ?? GroqProvider.DEFAULT_MAX_TOKENS, GroqProvider.DEFAULT_MAX_TOKENS),
           stream: true,
           ...(request.topP !== undefined && { top_p: request.topP }),
         }, { signal });

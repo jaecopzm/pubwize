@@ -246,6 +246,45 @@ export async function getTags(
 }
 
 /**
+ * Create a tag if it doesn't exist
+ */
+export async function createTag(
+  site: WordPressSite,
+  tagName: string
+): Promise<number> {
+  try {
+    const normalizedUrl = normalizeSiteUrl(site.siteUrl);
+    const authHeader = createAuthHeader(
+      site.username,
+      decryptPassword(site.encryptedPassword)
+    );
+
+    const response = await fetch(`${normalizedUrl}/wp-json/wp/v2/tags`, {
+      method: "POST",
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        name: tagName,
+        slug: tagName.toLowerCase().replace(/\s+/g, "-"),
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || `Failed to create tag: ${response.statusText}`);
+    }
+
+    const tag = await response.json();
+    return tag.id;
+  } catch (error) {
+    console.error("Error creating tag:", error);
+    throw error;
+  }
+}
+
+/**
  * Create a category if it doesn't exist
  */
 export async function createCategory(
@@ -369,6 +408,21 @@ export async function updateWordPressPost(
       }
     }
 
+    // Get or create tags
+    const tagIds: number[] = [];
+    if (options.tags.length > 0) {
+      const existingTags = await getTags(site);
+      for (const tagName of options.tags) {
+        const existing = existingTags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
+        if (existing) {
+          tagIds.push(existing.id);
+        } else {
+          const newTagId = await createTag(site, tagName);
+          tagIds.push(newTagId);
+        }
+      }
+    }
+
     // Prepare post data
     const postData: any = {
       title,
@@ -380,9 +434,7 @@ export async function updateWordPressPost(
       postData.categories = categoryIds;
     }
 
-    if (options.tags.length > 0) {
-      postData.tags = options.tags;
-    }
+    if (tagIds.length > 0) postData.tags = tagIds;
 
     if (options.featuredImageUrl) {
       const mediaId = await uploadFeaturedImage(site, options.featuredImageUrl, title);
@@ -502,6 +554,21 @@ export async function publishToWordPress(
         }
       }
 
+      // Get or create tags
+      const tagIds: number[] = [];
+      if (options.tags.length > 0) {
+        const existingTags = await getTags(site);
+        for (const tagName of options.tags) {
+          const existing = existingTags.find((t) => t.name.toLowerCase() === tagName.toLowerCase());
+          if (existing) {
+            tagIds.push(existing.id);
+          } else {
+            const newTagId = await createTag(site, tagName);
+            tagIds.push(newTagId);
+          }
+        }
+      }
+
       // Prepare post data
       const postData: any = {
         title,
@@ -513,9 +580,7 @@ export async function publishToWordPress(
         postData.categories = categoryIds;
       }
 
-      if (options.tags.length > 0) {
-        postData.tags = options.tags;
-      }
+      if (tagIds.length > 0) postData.tags = tagIds;
 
       // Handle scheduled publishing
       if (options.scheduledDate) {

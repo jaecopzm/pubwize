@@ -13,6 +13,7 @@ import { RichEditor, type RichEditorRef } from "./rich-editor";
 import { WordCountRing } from "./word-count-ring";
 import { SEOCommandCenter } from "./seo-command-center";
 import type { DraftData } from "@/lib/types";
+import { getAuthHeaders } from "@/lib/hooks/use-auth";
 
 // ── Utilities (outside component for hoisting) ────────────────────
 
@@ -90,6 +91,8 @@ export function DraftPanel({
     onUpgradeRequired,
     brief,
     socialLoading,
+    featuredImageUrl,
+    onFeaturedImageChange,
 }: {
     draft: DraftData;
     keyword: string;
@@ -107,6 +110,8 @@ export function DraftPanel({
     onUpgradeRequired?: (reason: string) => void;
     brief?: any;
     socialLoading?: boolean;
+    featuredImageUrl?: string | null;
+    onFeaturedImageChange?: (img: { url: string; photographer?: string; photographerUrl?: string; unsplashId?: string } | null) => void;
 }) {
     const [content, setContent] = useState(draft.content);
     const [isSaving, setIsSaving] = useState(false);
@@ -114,7 +119,7 @@ export function DraftPanel({
     const [wordCount, setWordCount] = useState(0);
     const [showFeaturedImageSearch, setShowFeaturedImageSearch] = useState(false);
     const [showImageSearch, setShowImageSearch] = useState(false);
-    const [featuredImage, setFeaturedImage] = useState<string | null>(null);
+    const [featuredImage, setFeaturedImage] = useState<string | null>(featuredImageUrl ?? null);
     const [showStructure, setShowStructure] = useState(false);
     const [imageSearchQuery, setImageSearchQuery] = useState("");
     const [imageSearchSection, setImageSearchSection] = useState("");
@@ -154,6 +159,29 @@ export function DraftPanel({
             setContent(draft.content);
         }
     }, [streaming, draft.content]);
+
+    // ── Sync featured image from parent (e.g. refresh) ───────────────
+    useEffect(() => {
+        setFeaturedImage(featuredImageUrl ?? null);
+    }, [featuredImageUrl]);
+
+    const persistFeaturedImage = async (img: any | null) => {
+        try {
+            const headers = await getAuthHeaders();
+            const res = await fetch(`/api/articles/${articleId}/featured-image`, {
+                method: "PATCH",
+                headers,
+                body: JSON.stringify({ featuredImage: img }),
+            });
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || "Failed to save featured image");
+            }
+            onFeaturedImageChange?.(img);
+        } catch (e: any) {
+            toast.error(e?.message || "Failed to save featured image");
+        }
+    };
 
     // ── Auto-save every 30 seconds (skip during streaming or empty content) ──
     useEffect(() => {
@@ -416,7 +444,10 @@ export function DraftPanel({
                             <img src={featuredImage} alt="Featured" className="w-full h-48 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <button
-                                onClick={() => setFeaturedImage(null)}
+                                onClick={() => {
+                                    setFeaturedImage(null);
+                                    persistFeaturedImage(null);
+                                }}
                                 className="absolute top-3 right-3 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/90 backdrop-blur-sm text-white border border-red-400/30 hover:bg-red-500 transition-all shadow-lg active:scale-95"
                             >
                                 Remove
@@ -602,7 +633,12 @@ export function DraftPanel({
                                 </button>
                             </div>
                             <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
-                                <UnsplashSearch onSelectImage={(url) => { setFeaturedImage(url); setShowFeaturedImageSearch(false); toast.success("Featured image set!"); }} />
+                                <UnsplashSearch onSelectImage={(url, _attr, meta) => {
+                                    setFeaturedImage(url);
+                                    setShowFeaturedImageSearch(false);
+                                    persistFeaturedImage({ url, ...(meta || {}) });
+                                    toast.success("Featured image set!");
+                                }} />
                             </div>
                         </div>
                     </div>,

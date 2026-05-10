@@ -22,7 +22,11 @@ interface UnsplashImage {
 }
 
 interface UnsplashSearchProps {
-  onSelectImage: (imageUrl: string, attribution: string) => void;
+  onSelectImage: (
+    imageUrl: string,
+    attribution: string,
+    meta?: { unsplashId: string; photographer: string; photographerUrl: string }
+  ) => void;
   initialQuery?: string;
 }
 
@@ -68,7 +72,11 @@ export function UnsplashSearch({ onSelectImage, initialQuery = "" }: UnsplashSea
   function handleSelectImage(image: UnsplashImage) {
     const attribution = `Photo by ${image.user.name} on Unsplash`;
     setSelectedImage(image.id);
-    onSelectImage(image.urls.regular, attribution);
+    onSelectImage(image.urls.regular, attribution, {
+      unsplashId: image.id,
+      photographer: image.user.name,
+      photographerUrl: `https://unsplash.com/@${image.user.username}`,
+    });
     toast.success('Image selected');
   }
 

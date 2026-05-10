@@ -42,6 +42,7 @@ interface ArticleState {
   articleType: string;
   siteId: string;
   siteDomain?: string;
+  featuredImage?: { url: string; photographer?: string; photographerUrl?: string; unsplashId?: string } | null;
   brief: BriefData | null;
   outline: OutlineData | null;
   draft: DraftData | null;
@@ -753,6 +754,7 @@ export default function ArticleDetailPage() {
         if (res.ok) {
           const { article: data } = await res.json();
           console.log("Article data loaded:", data);
+          const optimizations = data.optimizations || null;
           setArticle({
             articleId: data.id,
             keyword: data.keyword,
@@ -760,11 +762,12 @@ export default function ArticleDetailPage() {
             articleType: data.articleType,
             siteId: data.siteId,
             siteDomain: data.siteDomain,
+            featuredImage: data.featuredImage || null,
             brief: data.brief || null,
             outline: data.outline || null,
             draft: data.draft || null,
-            optimization: data.optimizations || null,
-            socialMedia: data.socialMedia || null,
+            optimization: optimizations,
+            socialMedia: optimizations?.socialMedia || null,
             settings: data.settings,
           });
         } else {
@@ -795,6 +798,26 @@ export default function ArticleDetailPage() {
     
     trackView();
   }, [articleId]);
+
+  // Fetch WordPress sites when opening the publish modal
+  useEffect(() => {
+    if (!showWordPressPublish) return;
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const headers = await getAuthHeaders();
+        const res = await fetch("/api/wordpress/sites", { headers });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled) setWordPressSites(data.sites || []);
+      } catch {
+        // Silent fail: modal will show "no sites" state
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [showWordPressPublish]);
 
   // Update currentView when article loads
   useEffect(() => {
@@ -921,6 +944,7 @@ export default function ArticleDetailPage() {
               const articleRes = await fetch(`/api/articles/${articleId}`, {});
               if (articleRes.ok) {
                 const { article: data } = await articleRes.json();
+                const optimizations = data.optimizations || null;
                 setArticle({
                   articleId: data.id,
                   keyword: data.keyword,
@@ -928,11 +952,12 @@ export default function ArticleDetailPage() {
                   articleType: data.articleType,
                   siteId: data.siteId,
                   siteDomain: data.siteDomain,
+                  featuredImage: data.featuredImage || null,
                   brief: data.brief || null,
                   outline: data.outline || null,
                   draft: data.draft || null,
-                  optimization: data.optimizations || null,
-                  socialMedia: data.socialMedia || null,
+                  optimization: optimizations,
+                  socialMedia: optimizations?.socialMedia || null,
                   settings: data.settings,
                 });
                 setCurrentView(3);
@@ -1353,6 +1378,10 @@ export default function ArticleDetailPage() {
                             keyword={article.keyword}
                             articleId={article.articleId}
                             siteDomain={article.siteDomain}
+                            featuredImageUrl={article.featuredImage?.url || null}
+                            onFeaturedImageChange={(img) =>
+                              setArticle((p) => (p ? { ...p, featuredImage: img } : p))
+                            }
                             onOptimize={handleOptimize}
                             onGenerateSocial={handleGenerateSocial}
                             onPublish={() => setShowWordPressPublish(true)}
@@ -1502,6 +1531,48 @@ export default function ArticleDetailPage() {
           router.push("/dashboard/settings?tab=billing");
         }}
       />
+
+      {/* WordPress Publish Modal (global) */}
+      {showWordPressPublish && article && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+          onClick={() => setShowWordPressPublish(false)}
+        >
+          <div
+            className="w-full max-w-2xl rounded-xl sm:rounded-2xl border border-white/10 bg-surface-1 p-4 sm:p-6 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base sm:text-lg md:text-xl font-bold font-display text-text-1 truncate">
+                  Publish to WordPress
+                </h3>
+                <p className="text-[10px] sm:text-xs md:text-sm mt-1 text-text-3">
+                  Configure and publish your article
+                </p>
+              </div>
+              <button
+                onClick={() => setShowWordPressPublish(false)}
+                className="text-xl sm:text-2xl shrink-0 p-1 hover:bg-white/5 rounded transition-colors"
+                style={{ color: "var(--text-3)" }}
+              >
+                ×
+              </button>
+            </div>
+            <WordPressPublishPanel
+              articleId={article.articleId}
+              title={article.keyword}
+              content={article.draft?.content || ""}
+              sites={wordPressSites}
+              featuredImageUrl={(article as any).featuredImage?.url || undefined}
+              onPublishSuccess={() => {
+                toast.success("Published to WordPress!");
+                setShowWordPressPublish(false);
+              }}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

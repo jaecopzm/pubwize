@@ -17,6 +17,8 @@ import { Loader2, Send, ExternalLink, AlertCircle, Calendar, RefreshCw, Clock, C
 import { toast } from "sonner";
 import { getAuthHeaders } from "@/lib/hooks/use-auth";
 import type { WordPressSite } from "@/lib/types";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface WordPressPublishPanelProps {
   articleId: string;
@@ -50,6 +52,14 @@ export function WordPressPublishPanel({
   const [error, setError] = React.useState<string | null>(null);
   const [siteHealth, setSiteHealth] = React.useState<Record<string, boolean>>({});
   const [showPreview, setShowPreview] = React.useState(false);
+  const mountedRef = React.useRef(false);
+
+  React.useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Check site health on mount and cache for 5 minutes
   React.useEffect(() => {
@@ -90,6 +100,7 @@ export function WordPressPublishPanel({
       }
     }
     
+    if (!mountedRef.current) return;
     setSiteHealth(healthStatus);
     // Cache the results
     localStorage.setItem('wp-site-health', JSON.stringify(healthStatus));
@@ -97,6 +108,7 @@ export function WordPressPublishPanel({
   };
 
   const checkSiteHealth = async (siteId: string) => {
+    if (!mountedRef.current) return;
     setIsCheckingHealth(true);
     try {
       const headers = await getAuthHeaders();
@@ -109,48 +121,29 @@ export function WordPressPublishPanel({
       if (data.healthy) {
         toast.success("Connection is healthy");
         const newHealth = { ...siteHealth, [siteId]: true };
-        setSiteHealth(newHealth);
+        if (mountedRef.current) setSiteHealth(newHealth);
         // Update cache
         localStorage.setItem('wp-site-health', JSON.stringify(newHealth));
         localStorage.setItem('wp-site-health-time', Date.now().toString());
       } else {
         toast.error(data.error || "Connection failed");
         const newHealth = { ...siteHealth, [siteId]: false };
-        setSiteHealth(newHealth);
+        if (mountedRef.current) setSiteHealth(newHealth);
         localStorage.setItem('wp-site-health', JSON.stringify(newHealth));
         localStorage.setItem('wp-site-health-time', Date.now().toString());
       }
     } catch (err) {
       toast.error("Failed to check connection");
     } finally {
-      setIsCheckingHealth(false);
+      if (mountedRef.current) setIsCheckingHealth(false);
     }
   };
 
-  const convertMarkdownToHTML = (markdown: string): string => {
-    return markdown
-      // Convert headings
-      .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-      // Convert bold
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      // Convert italic
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      // Convert links
-      .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2">$1</a>')
-      // Convert images
-      .replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1" />')
-      // Convert line breaks to paragraphs
-      .split('\n\n')
-      .map(para => {
-        if (para.trim() && !para.startsWith('<h') && !para.startsWith('<img')) {
-          return `<p>${para.replace(/\n/g, '<br />')}</p>`;
-        }
-        return para;
-      })
-      .join('\n');
-  };
+  const previewMarkdown = React.useMemo(() => {
+    // Title is rendered separately in the preview modal.
+    // If the draft starts with an H1, strip it to avoid duplicate titles.
+    return content.replace(/^# .*\n+/, "");
+  }, [content]);
 
   const handlePublish = async () => {
     if (!selectedSiteId) {
@@ -164,14 +157,11 @@ export function WordPressPublishPanel({
     try {
       const headers = await getAuthHeaders();
       
-      // Convert markdown to HTML
-      const htmlContent = convertMarkdownToHTML(content);
-      
       const publishData: any = {
         articleId,
         wordPressSiteId: selectedSiteId,
         title,
-        content: htmlContent,
+        content,
         status,
         categories: categories
           .split(",")
@@ -257,9 +247,6 @@ export function WordPressPublishPanel({
     try {
       const headers = await getAuthHeaders();
       
-      // Convert markdown to HTML
-      const htmlContent = convertMarkdownToHTML(content);
-      
       const response = await fetch("/api/wordpress/update", {
         method: "POST",
         headers,
@@ -268,7 +255,7 @@ export function WordPressPublishPanel({
           siteId: selectedSiteId,
           postId: publishedPostId,
           title,
-          content: htmlContent,
+          content,
           status,
           categories: categories
             .split(",")
@@ -582,7 +569,7 @@ export function WordPressPublishPanel({
             </div>
             
             {/* Content */}
-            <div 
+            <article
               className="prose prose-sm sm:prose-base lg:prose-lg max-w-none 
                 prose-headings:font-bold prose-headings:mt-8 prose-headings:mb-4
                 prose-h1:text-3xl prose-h2:text-2xl prose-h2:mt-12 prose-h3:text-xl 
@@ -595,31 +582,11 @@ export function WordPressPublishPanel({
                 prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic
                 prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
                 [&>*:first-child]:mt-0"
-              style={{ whiteSpace: 'pre-wrap' }}
             >
-              {content.split('\n').map((line, i) => {
-                // Skip the first H1 (it's already shown as the title)
-                if (i === 0 && line.startsWith('# ')) {
-                  return null;
-                }
-                // Handle headings
-                if (line.startsWith('### ')) {
-                  return <h3 key={i} className="text-xl font-bold mt-8 mb-4">{line.replace('### ', '')}</h3>;
-                }
-                if (line.startsWith('## ')) {
-                  return <h2 key={i} className="text-2xl font-bold mt-12 mb-4">{line.replace('## ', '')}</h2>;
-                }
-                if (line.startsWith('# ')) {
-                  return <h1 key={i} className="text-3xl font-bold mt-8 mb-4">{line.replace('# ', '')}</h1>;
-                }
-                // Handle empty lines
-                if (line.trim() === '') {
-                  return <br key={i} />;
-                }
-                // Regular paragraphs
-                return <p key={i} className="mb-6 leading-relaxed">{line}</p>;
-              })}
-            </div>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {previewMarkdown}
+              </ReactMarkdown>
+            </article>
           </div>
         </div>
       )}
