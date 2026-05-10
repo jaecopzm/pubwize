@@ -61,8 +61,7 @@ function EnhancedSidebarTrigger() {
         "relative inline-flex items-center justify-center rounded-md p-2 transition-all duration-200",
         "hover:bg-accent hover:text-accent-foreground",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        "min-h-[44px] min-w-[44px]", // Touch target size
-        isOpen && "bg-accent/50"
+        "min-h-[44px] min-w-[44px]"
       )}
       aria-label={isOpen ? "Close sidebar" : "Open sidebar"}
       aria-expanded={isOpen}
@@ -102,9 +101,6 @@ function EnhancedSidebarTrigger() {
       )}
 
       {/* Active indicator */}
-      {isOpen && (
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-0.5 w-6 bg-primary rounded-full" />
-      )}
     </button>
   );
 }

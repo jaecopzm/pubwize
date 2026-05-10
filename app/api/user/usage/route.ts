@@ -1,7 +1,8 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { PLANS, type PlanTier } from "@/lib/pricing";
+import { ensureUserRecord } from "@/lib/ensure-user";
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,10 +10,17 @@ export async function GET(req: NextRequest) {
     if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     let user = await prisma.user.findUnique({ where: { id: userId } });
+
     if (!user) {
-      user = await prisma.user.create({
-        data: { id: userId, email: "", planTier: "free", periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) },
+      const client = await clerkClient();
+      const clerkUser = await client.users.getUser(userId);
+      const ensured = await ensureUserRecord(userId, {
+        email: clerkUser.emailAddresses[0]?.emailAddress ?? null,
+        displayName: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() || null,
+        photoURL: clerkUser.imageUrl || null,
       });
+
+      user = ensured.user;
     }
 
     const plan = (user.planTier as PlanTier) || "free";

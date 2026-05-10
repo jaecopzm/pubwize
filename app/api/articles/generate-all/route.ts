@@ -12,6 +12,7 @@ import { withErrorHandler, assertValid } from "@/lib/error-handler";
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
 import { validateArticleId } from "@/lib/validation";
 import type { BriefData, OutlineData, SiteBrandVoice } from "@/lib/types";
+import { fetchSerpContext } from "@/lib/serper";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -46,6 +47,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const site = await prisma.site.findUnique({ where: { id: article!.siteId } });
   const brandVoice = (site as any)?.brandVoice || null;
 
+  // Fetch SERP context for Pro users so drafts can include real, non-hallucinated external links.
+  const user = await prisma.user.findUnique({ where: { id: uid } });
+  let serpContext: any = null;
+  if (user?.planTier === "pro") {
+    try {
+      serpContext = await fetchSerpContext(keyword, (site as any)?.targetCountry ?? "us");
+    } catch {
+      serpContext = null;
+    }
+  }
+
   const internalLinkArticles = await prisma.article.findMany({
     where: { ownerId: uid, publishedUrl: { not: null }, NOT: { id: articleId } },
     select: { keyword: true, publishedUrl: true },
@@ -71,6 +83,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           language: (site as any)?.language,
           brandVoice: brandVoice || undefined,
         },
+        serpContext: serpContext || undefined,
       })) {
         if (typeof item === "string") {
           await writer.write(send({ thinkingChunk: item }));
@@ -111,6 +124,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       // ── Phase 3: Draft (Streaming) ──────────────────────────────────
       await writer.write(send({ phase: "draft" }));
       let fullContent = "";
+      const externalSources = (serpContext?.topResults ?? [])
+        .filter((r: any) => r?.title && r?.link)
+        .slice(0, 10)
+        .map((r: any) => ({ title: r.title, url: r.link, snippet: r.snippet }));
 
       for await (const chunk of generateDraftStream({
         outline,
@@ -120,6 +137,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         lsiKeywords: [],
         siteBrandVoice: brandVoice,
         internalLinkArticles,
+        externalSources: externalSources.length > 0 ? externalSources : null,
       })) {
         fullContent += chunk;
         await writer.write(send({ chunk }));
@@ -127,9 +145,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
       // Save draft immediately so it's not lost if SEO phase fails
       let draftContent = fullContent;
-      try {
-        draftContent = await injectImagesIntoMarkdown(fullContent);
-      } catch { /* non-fatal */ }
+      const hasUnsplashKey = !!(process.env.UNSPLASH_ACCESS_KEY || process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY);
+      if (hasUnsplashKey) {
+        try {
+          draftContent = await injectImagesIntoMarkdown(fullContent);
+        } catch { /* non-fatal */ }
+      }
 
       await prisma.article.update({
         where: { id: articleId },

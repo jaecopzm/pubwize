@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Copy, Download, Check, List, Loader2, FileCode, Sparkles, Zap, Edit3, Eye, CheckCircle2, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -8,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { GenerateCTA } from "./shared-ui";
 import { GenerationLoader } from "@/components/generation-loader";
 import { UnsplashSearch } from "@/components/unsplash-search";
-import { RichEditor } from "./rich-editor";
+import { RichEditor, type RichEditorRef } from "./rich-editor";
 import { WordCountRing } from "./word-count-ring";
 import { SEOCommandCenter } from "./seo-command-center";
 import type { DraftData } from "@/lib/types";
@@ -123,6 +124,17 @@ export function DraftPanel({
     const [isStreaming, setIsStreaming] = useState(false);
     const [streamContent, setStreamContent] = useState("");
     const streamAbortRef = useRef<AbortController | null>(null);
+    const editorRef = useRef<RichEditorRef>(null);
+
+    // Lock body scroll when modals are open
+    useEffect(() => {
+        if (showFeaturedImageSearch || showImageSearch) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+        return () => { document.body.style.overflow = ''; };
+    }, [showFeaturedImageSearch, showImageSearch]);
 
     // ── Word count ───────────────────────────────────────────────────
     useEffect(() => {
@@ -382,29 +394,45 @@ export function DraftPanel({
                 )}
 
                 {/* Featured Image */}
-                <div className="rounded-xl border border-gold/20 bg-gold/5 p-3 sm:p-4">
-                    <div className="flex items-center justify-between">
+                <div className="rounded-xl border border-white/10 bg-surface-1 p-4 sm:p-5 shadow-lg">
+                    <div className="flex items-center justify-between mb-4">
                         <div>
-                            <h4 className="text-xs sm:text-sm font-semibold font-mono-dm mb-0.5 text-text-1">Featured Image</h4>
-                            <p className="text-[10px] sm:text-xs text-text-3">Hero image for your article</p>
+                            <h4 className="text-sm sm:text-base font-bold text-text-1 flex items-center gap-2">
+                                <span className="inline-block h-2 w-2 rounded-full bg-gold animate-pulse" />
+                                Featured Image
+                            </h4>
+                            <p className="text-xs text-text-3 mt-1">Hero image for your article</p>
                         </div>
                         <button
                             onClick={() => setShowFeaturedImageSearch(true)}
-                            className="flex items-center gap-2 rounded-lg border border-gold/30 bg-gold/5 px-3 py-1.5 text-xs font-semibold text-gold hover:bg-gold/10 transition-colors"
+                            className="flex items-center gap-2 rounded-lg border border-gold/30 bg-gold px-3 py-2 text-xs font-bold text-obsidian hover:bg-gold/90 transition-all shadow-lg shadow-gold/20 hover:shadow-gold/30 active:scale-95"
                         >
-                            <Download className="h-3 w-3" />
-                            {featuredImage ? "Change" : "Select"}
+                            <Download className="h-3.5 w-3.5" />
+                            {featuredImage ? "Change" : "Select Image"}
                         </button>
                     </div>
-                    {featuredImage && (
-                        <div className="mt-3 relative rounded-lg overflow-hidden">
-                            <img src={featuredImage} alt="Featured" className="w-full h-32 sm:h-48 object-cover" />
+                    {featuredImage ? (
+                        <div className="relative rounded-xl overflow-hidden border border-white/10 shadow-xl group">
+                            <img src={featuredImage} alt="Featured" className="w-full h-48 sm:h-64 object-cover transition-transform duration-300 group-hover:scale-105" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                             <button
                                 onClick={() => setFeaturedImage(null)}
-                                className="absolute top-2 right-2 px-2 py-1 rounded-lg text-xs font-semibold bg-black/70 text-white"
+                                className="absolute top-3 right-3 px-3 py-1.5 rounded-lg text-xs font-bold bg-red-500/90 backdrop-blur-sm text-white border border-red-400/30 hover:bg-red-500 transition-all shadow-lg active:scale-95"
                             >
                                 Remove
                             </button>
+                        </div>
+                    ) : (
+                        <div className="rounded-xl border-2 border-dashed border-white/10 bg-surface-2/50 p-8 sm:p-12 text-center">
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="h-12 w-12 rounded-full bg-gold/10 flex items-center justify-center">
+                                    <Download className="h-6 w-6 text-gold" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-text-2">No image selected</p>
+                                    <p className="text-xs text-text-3 mt-1">Click "Select Image" to browse Unsplash</p>
+                                </div>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -517,6 +545,7 @@ export function DraftPanel({
                     
                     {viewMode === "edit" ? (
                         <RichEditor
+                            ref={editorRef}
                             value={displayContent}
                             onChange={setContent}
                             keyword={keyword}
@@ -557,40 +586,68 @@ export function DraftPanel({
                 </div>
 
                 {/* Featured Image Modal */}
-                {showFeaturedImageSearch && (
-                    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto" onClick={() => setShowFeaturedImageSearch(false)}>
-                        <div className="w-full max-w-4xl rounded-xl sm:rounded-2xl border border-white/10 bg-surface-1 p-4 sm:p-6 my-4 sm:my-8" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex justify-between mb-3 sm:mb-4">
-                                <h3 className="text-base sm:text-lg font-bold text-text-1">Select Featured Image</h3>
-                                <button onClick={() => setShowFeaturedImageSearch(false)} className="text-xl sm:text-2xl text-text-3">×</button>
+                {showFeaturedImageSearch && typeof document !== "undefined" && createPortal(
+                    <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md" onClick={() => setShowFeaturedImageSearch(false)}>
+                        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/10 bg-surface-1 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between p-6 border-b border-white/5">
+                                <div>
+                                    <h3 className="text-xl font-bold text-text-1">Select Featured Image</h3>
+                                    <p className="text-sm text-text-3 mt-1">Browse free high-quality images from Unsplash</p>
+                                </div>
+                                <button 
+                                    onClick={() => setShowFeaturedImageSearch(false)} 
+                                    className="h-10 w-10 rounded-full hover:bg-white/5 flex items-center justify-center text-text-3 hover:text-text-1 transition-all active:scale-95"
+                                >
+                                    <span className="text-2xl">×</span>
+                                </button>
                             </div>
-                            <UnsplashSearch onSelectImage={(url) => { setFeaturedImage(url); setShowFeaturedImageSearch(false); toast.success("Featured image set!"); }} />
+                            <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+                                <UnsplashSearch onSelectImage={(url) => { setFeaturedImage(url); setShowFeaturedImageSearch(false); toast.success("Featured image set!"); }} />
+                            </div>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
 
                 {/* Image Insert Modal */}
-                {showImageSearch && (
-                    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/60 backdrop-blur-sm p-2 sm:p-4 overflow-y-auto" onClick={() => setShowImageSearch(false)}>
-                        <div className="w-full max-w-4xl rounded-xl sm:rounded-2xl border border-white/10 bg-surface-1 p-4 sm:p-6 my-4 sm:my-8" onClick={(e) => e.stopPropagation()}>
-                            <div className="flex justify-between mb-3 sm:mb-4">
+                {showImageSearch && typeof document !== "undefined" && createPortal(
+                    <div className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md" onClick={() => setShowImageSearch(false)}>
+                        <div className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[calc(100%-2rem)] max-w-5xl max-h-[90vh] overflow-hidden rounded-2xl border border-white/10 bg-surface-1 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-between p-6 border-b border-white/5">
                                 <div>
-                                    <h3 className="text-base sm:text-lg font-bold text-text-1">Insert Image</h3>
-                                    {imageSearchQuery && <p className="text-xs text-text-3">Suggested: "{imageSearchQuery}"</p>}
+                                    <h3 className="text-xl font-bold text-text-1">Insert Image</h3>
+                                    {imageSearchQuery ? (
+                                        <p className="text-sm text-text-3 mt-1">Suggested: <span className="text-gold font-semibold">"{imageSearchQuery}"</span></p>
+                                    ) : (
+                                        <p className="text-sm text-text-3 mt-1">Search and insert images into your article</p>
+                                    )}
                                 </div>
-                                <button onClick={() => setShowImageSearch(false)} className="text-xl sm:text-2xl text-text-3">×</button>
+                                <button 
+                                    onClick={() => setShowImageSearch(false)} 
+                                    className="h-10 w-10 rounded-full hover:bg-white/5 flex items-center justify-center text-text-3 hover:text-text-1 transition-all active:scale-95"
+                                >
+                                    <span className="text-2xl">×</span>
+                                </button>
                             </div>
-                            <UnsplashSearch
-                                initialQuery={imageSearchQuery}
-                                onSelectImage={(url, attr) => {
-                                    const md = `\n\n![${imageSearchSection || "Image"}](${url})\n*${attr}*\n\n`;
-                                    setContent((c) => c + md);
-                                    setShowImageSearch(false);
-                                    toast.success("Image inserted!");
-                                }}
-                            />
+                            <div className="p-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+                                <UnsplashSearch
+                                    initialQuery={imageSearchQuery}
+                                    onSelectImage={(url, attr) => {
+                                        const html = `<p><img src="${url}" alt="${imageSearchSection || 'Image'}"></p><p><em>${attr}</em></p>`;
+                                        if (editorRef.current && viewMode === "edit") {
+                                            editorRef.current.insertContent(html);
+                                        } else {
+                                            const md = `\n\n![${imageSearchSection || "Image"}](${url})\n*${attr}*\n\n`;
+                                            setContent((c) => c + md);
+                                        }
+                                        setShowImageSearch(false);
+                                        toast.success("Image inserted!");
+                                    }}
+                                />
+                            </div>
                         </div>
-                    </div>
+                    </div>,
+                    document.body
                 )}
 
                 {/* Action Buttons */}

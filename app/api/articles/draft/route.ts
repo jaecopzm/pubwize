@@ -4,6 +4,10 @@ import { generateDraftStream, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
 import { validateArticleId } from "@/lib/validation";
+import { fetchSerpContext } from "@/lib/serper";
+import { injectImagesIntoMarkdown } from "@/lib/unsplash";
+import { clerkClient } from "@clerk/nextjs/server";
+import { ensureUserRecord } from "@/lib/ensure-user";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -39,6 +43,34 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const site = await prisma.site.findUnique({ where: { id: article!.siteId } });
   const siteBrandVoice = (site as any)?.brandVoice || null;
 
+  // Determine plan tier (used for SERP-enriched external sources).
+  let user = await prisma.user.findUnique({ where: { id: uid } });
+  if (!user) {
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(uid);
+    const ensured = await ensureUserRecord(uid, {
+      email: clerkUser.emailAddresses[0]?.emailAddress ?? null,
+      displayName: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() || null,
+      photoURL: clerkUser.imageUrl || null,
+    });
+
+    user = ensured.user;
+  }
+
+  // Provide real, non-hallucinated URLs the model is allowed to cite.
+  let externalSources: Array<{ title: string; url: string; snippet?: string }> | null = null;
+  if (user.planTier === "pro") {
+    try {
+      const serp = await fetchSerpContext(article!.keyword, (site as any)?.targetCountry ?? "us");
+      externalSources = serp.topResults
+        .filter(r => r.title && r.link)
+        .slice(0, 10)
+        .map(r => ({ title: r.title, url: r.link, snippet: r.snippet }));
+    } catch {
+      // non-fatal
+    }
+  }
+
   const internalLinkArticles = await prisma.article.findMany({
     where: { ownerId: uid, publishedUrl: { not: null }, NOT: { id: articleId } },
     select: { keyword: true, publishedUrl: true },
@@ -63,6 +95,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           lsiKeywords,
           siteBrandVoice,
           internalLinkArticles,
+          externalSources,
         })
       );
 
@@ -91,6 +124,17 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         .trim()
         .split(/\s+/)
         .filter((w) => w.length > 0).length;
+
+      // Only inject real images when an Unsplash key is configured.
+      // Otherwise, keep placeholders visible as suggestions.
+      const hasUnsplashKey = !!(process.env.UNSPLASH_ACCESS_KEY || process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY);
+      if (hasUnsplashKey) {
+        try {
+          finalContent = await injectImagesIntoMarkdown(finalContent);
+        } catch {
+          // non-fatal
+        }
+      }
 
       await prisma.article.update({
         where: { id: articleId },

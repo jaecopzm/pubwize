@@ -109,7 +109,7 @@ function NewArticleContent() {
       return;
     }
     try {
-      setProgressMessage("Initializing Engine...");
+      setProgressMessage("Getting started...");
       const data = await generateWithProgress<BriefState>(
         "/api/articles/brief",
         { keyword: keyword.trim(), siteId },
@@ -158,8 +158,8 @@ function NewArticleContent() {
             <FilePlus2 className="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h1 className="text-xs font-black text-foreground uppercase tracking-tight leading-none">New Command</h1>
-            <p className="text-[8px] text-primary/60 font-mono tracking-widest mt-0.5">PRISM CORE V2</p>
+            <h1 className="text-xs font-black text-foreground uppercase tracking-tight leading-none">New Article</h1>
+            <p className="text-[8px] text-primary/60 font-mono tracking-widest mt-0.5">AI POWERED</p>
           </div>
         </div>
         {lastSaved && (
@@ -170,7 +170,7 @@ function NewArticleContent() {
         )}
       </div>
 
-      <div className="px-4 md:px-6 pt-4 relative z-10">
+      <div className="px-4 md:px-6 pt-3 relative z-10 hidden md:block">
         <GenerationStats />
       </div>
 
@@ -183,29 +183,29 @@ function NewArticleContent() {
             exit={{ opacity: 0 }}
             className="flex-1 flex flex-col items-center justify-center"
           >
-            <GenerationLoader step="brief" message={progressMessage || "Initializing Engine..."} />
+            <GenerationLoader step="brief" message={progressMessage || "Getting started..."} />
           </motion.div>
         ) : (
           <motion.div 
             key="content"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="flex flex-1 items-center justify-center px-4 sm:px-6 pb-12 pt-6 relative z-10 w-full max-w-6xl mx-auto"
+            className="flex flex-1 items-center justify-center px-4 sm:px-6 pb-8 pt-4 lg:pb-12 lg:pt-6 relative z-10 w-full max-w-6xl mx-auto"
           >
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 w-full items-start">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-16 w-full items-start">
               
-              {/* Left Column: Vision */}
-              <div className="flex flex-col items-center lg:items-start text-center lg:text-left pt-2 lg:pt-8">
+              {/* Left Column: hidden on mobile, visible on lg */}
+              <div className="hidden lg:flex flex-col items-start text-left pt-8">
                 <motion.div 
                   className="mb-5 flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-3 py-1.5 shadow-lg shadow-primary/5"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-primary" />
                   <span className="text-[10px] font-black uppercase tracking-[0.2em] text-primary">
-                    AI COMMAND CENTER
+                    AI Article Writer
                   </span>
                 </motion.div>
 
-                <h1 className="mb-5 max-w-xl text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[0.95] font-display">
+                <h1 className="mb-5 max-w-xl text-5xl lg:text-6xl font-black tracking-tight text-foreground leading-[0.95] font-display">
                   Dominate the{" "}
                   <span className="bg-gradient-to-r from-primary via-cyan-400 to-violet-500 bg-clip-text text-transparent">
                     SERPs
@@ -213,16 +213,15 @@ function NewArticleContent() {
                 </h1>
                 
                 <p className="mb-8 max-w-md text-sm sm:text-base text-muted-foreground font-medium leading-relaxed">
-                  Precision-engineered content generation. Enter your keyword and let the Prism Engine synthesize your next ranking article.
+                  Enter your target keyword and we'll generate a fully optimized, ready-to-rank article for your site.
                 </p>
 
-                {/* Compact Steps */}
-                <div className="hidden lg:block w-full max-w-xs space-y-3">
+                <div className="w-full max-w-xs space-y-3">
                   {[
-                    { label: "STRATEGY", time: "~30s", icon: BarChart3, color: "text-indigo-400", bg: "bg-indigo-400/10" },
-                    { label: "ARCHITECTURE", time: "~45s", icon: FileText, color: "text-cyan-400", bg: "bg-cyan-400/10" },
-                    { label: "SYNTHESIS", time: "~2min", icon: PenTool, color: "text-rose-400", bg: "bg-rose-400/10" },
-                    { label: "OPTIMIZATION", time: "~30s", icon: Zap, color: "text-emerald-400", bg: "bg-emerald-400/10" }
+                    { label: "Research", time: "~30s", icon: BarChart3, color: "text-indigo-400", bg: "bg-indigo-400/10" },
+                    { label: "Outline", time: "~45s", icon: FileText, color: "text-cyan-400", bg: "bg-cyan-400/10" },
+                    { label: "Writing", time: "~2min", icon: PenTool, color: "text-rose-400", bg: "bg-rose-400/10" },
+                    { label: "SEO Review", time: "~30s", icon: Zap, color: "text-emerald-400", bg: "bg-emerald-400/10" }
                   ].map((item) => (
                     <div key={item.label} className="flex items-center gap-3">
                       <div className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/5", item.bg)}>
@@ -237,15 +236,21 @@ function NewArticleContent() {
                 </div>
               </div>
 
-              {/* Right Column: Sharp Form */}
-              <div className="flex flex-col items-center w-full max-w-md mx-auto lg:mx-0">
+              {/* Mobile-only compact header */}
+              <div className="lg:hidden flex items-center gap-3 mb-1">
+                <Sparkles className="h-4 w-4 text-primary shrink-0" />
+                <p className="text-sm font-black text-foreground">Generate a new article</p>
+              </div>
+
+              {/* Right Column: Form */}
+              <div className="flex flex-col items-center w-full lg:max-w-md lg:mx-0">
                 <motion.div 
-                  className="w-full rounded-xl border border-white/10 bg-card/40 backdrop-blur-3xl p-6 sm:p-8 shadow-2xl relative overflow-hidden"
+                  className="w-full rounded-xl border border-white/10 bg-card/40 backdrop-blur-3xl p-4 sm:p-6 lg:p-8 shadow-2xl relative overflow-hidden"
                 >
                   <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
                     <div className="space-y-1 mb-2">
-                      <h2 className="text-sm font-black tracking-widest text-foreground uppercase">Command Parameters</h2>
-                      <p className="text-[10px] text-muted-foreground font-medium uppercase opacity-60">System Configuration</p>
+                      <h2 className="text-sm font-black tracking-widest text-foreground uppercase">Article Details</h2>
+                      <p className="text-[10px] text-muted-foreground font-medium uppercase opacity-60">Fill in the details below</p>
                     </div>
 
                     {/* Keyword Section */}
@@ -346,7 +351,7 @@ function NewArticleContent() {
                       >
                         <span className="relative flex items-center justify-center gap-2">
                           <Zap className={cn("h-3.5 w-3.5", !submitting && keyword.trim() && siteId ? "fill-white" : "")} />
-                          Execute Command
+                          Generate Article
                         </span>
                       </button>
                     </div>
@@ -375,8 +380,8 @@ function NewArticleContent() {
                   </form>
                 </motion.div>
 
-                {/* Example Engine */}
-                <div className="mt-8 w-full space-y-3">
+                {/* Example keywords — desktop only */}
+                <div className="hidden sm:block mt-6 w-full space-y-3">
                   <div className="flex items-center gap-2 px-1 opacity-20">
                     <div className="h-px flex-1 bg-gradient-to-r from-transparent to-foreground" />
                     <p className="text-[8px] font-black uppercase tracking-[0.3em]">Presets</p>

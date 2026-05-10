@@ -1,7 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
-import { prisma } from "@/lib/prisma";
+import { ensureUserRecord } from "@/lib/ensure-user";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -35,19 +35,10 @@ export async function POST(req: Request) {
 
   if (evt.type === "user.created") {
     const user = evt.data;
-    const email = user.email_addresses[0]?.email_address || "";
-
-    await prisma.user.upsert({
-      where: { id: user.id },
-      create: {
-        id: user.id,
-        email,
-        displayName: [user.first_name, user.last_name].filter(Boolean).join(" ").trim() || null,
-        photoURL: user.image_url || null,
-        planTier: "free",
-        periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
-      update: {},
+    await ensureUserRecord(user.id, {
+      email: user.email_addresses[0]?.email_address ?? null,
+      displayName: [user.first_name, user.last_name].filter(Boolean).join(" ").trim() || null,
+      photoURL: user.image_url || null,
     });
   }
 

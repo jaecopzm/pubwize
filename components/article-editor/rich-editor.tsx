@@ -7,7 +7,7 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { Loader2, Sparkles, ChevronDown, Minus, Plus, RefreshCw, AlignLeft, Type, Highlighter, Wand2 } from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
@@ -101,7 +101,11 @@ interface RichEditorProps {
   onUpgradeRequired?: (reason: string) => void;
 }
 
-export function RichEditor({
+export interface RichEditorRef {
+  insertContent: (html: string) => void;
+}
+
+export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
   value,
   onChange,
   keyword = "",
@@ -109,7 +113,7 @@ export function RichEditor({
   readonly = false,
   streaming = false,
   onUpgradeRequired,
-}: RichEditorProps) {
+}, ref) => {
   const [aiAction, setAiAction] = useState<AIAction | null>(null);
   const [floatingPos, setFloatingPos] = useState<{ top: number; left: number } | null>(null);
   const [hasSelection, setHasSelection] = useState(false);
@@ -150,6 +154,14 @@ export function RichEditor({
       onChange(md);
     },
   });
+
+  useImperativeHandle(ref, () => ({
+    insertContent: (html: string) => {
+      if (editor) {
+        editor.chain().focus().insertContent(html).run();
+      }
+    }
+  }), [editor]);
 
   // Sync external value changes (streaming) into the editor
   const isStreamingRef = useRef(streaming);
@@ -550,4 +562,4 @@ export function RichEditor({
       `}</style>
     </div>
   );
-}
+});

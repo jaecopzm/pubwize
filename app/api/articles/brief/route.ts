@@ -7,6 +7,8 @@ import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { withErrorHandler, QuotaExceededError, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
 import { validateKeyword } from "@/lib/validation";
+import { clerkClient } from "@clerk/nextjs/server";
+import { ensureUserRecord } from "@/lib/ensure-user";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -45,14 +47,15 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   // Ensure user exists
   let user = await prisma.user.findUnique({ where: { id: uid } });
   if (!user) {
-    user = await prisma.user.create({
-      data: {
-        id: uid,
-        email: "",
-        planTier: "free",
-        periodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      },
+    const client = await clerkClient();
+    const clerkUser = await client.users.getUser(uid);
+    const ensured = await ensureUserRecord(uid, {
+      email: clerkUser.emailAddresses[0]?.emailAddress ?? null,
+      displayName: [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(" ").trim() || null,
+      photoURL: clerkUser.imageUrl || null,
     });
+
+    user = ensured.user;
   }
 
   // Validate site ownership

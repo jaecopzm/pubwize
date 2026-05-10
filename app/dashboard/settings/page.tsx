@@ -91,7 +91,7 @@ function SettingsContent() {
     if (success === 'true') {
       toast.success('Subscription updated successfully');
       router.replace('/dashboard/settings?tab=billing');
-      setTimeout(() => fetchUserPlan(), 5000);
+      setTimeout(() => fetchUserPlan(true), 5000);
       return;
     }
 
@@ -125,13 +125,14 @@ function SettingsContent() {
     }
   }, [searchParams, user?.email, router]);
 
-  const fetchUserPlan = async () => {
+  const fetchUserPlan = async (bustCache = false) => {
     try {
       if (!clerkUser) return;
 
       const token = await window.Clerk?.session?.getToken();
+      const url = bustCache ? "/api/user/plan?bustCache=1" : "/api/user/plan";
 
-      const response = await fetch("/api/user/plan", {
+      const response = await fetch(url, {
         headers: {
           "Content-Type": "application/json",
         },

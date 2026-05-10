@@ -11,6 +11,7 @@ const isPublicRoute = createRouteMatcher([
   '/refunds',
   '/blog(.*)',
   '/api/webhooks(.*)',
+  '/api/paddle/webhook',
 ]);
 
 export const proxy = clerkMiddleware(async (auth, request) => {

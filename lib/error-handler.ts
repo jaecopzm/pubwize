@@ -83,8 +83,6 @@ export class ExternalServiceError extends AppError {
  * Handle errors and return appropriate NextResponse
  */
 export function handleApiError(error: any): NextResponse {
-  console.error("API Error:", error);
-
   // Handle known error types
   if (error instanceof QuotaExceededError) {
     return NextResponse.json(
@@ -162,6 +160,7 @@ export function handleApiError(error: any): NextResponse {
 
   // Handle unknown errors (don't expose internal details in production)
   const isDevelopment = process.env.NODE_ENV === "development";
+  console.error("API Error:", error);
 
   return NextResponse.json(
     {

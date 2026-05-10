@@ -15,6 +15,31 @@ const WEBHOOK_PROCESSED_TTL = 86400;
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+export async function GET() {
+  return NextResponse.json({
+    ok: true,
+    env: process.env.PADDLE_ENV === "production" ? "production" : "sandbox",
+    hasApiKey: !!process.env.PADDLE_API_KEY,
+    hasWebhookSecret: !!process.env.PADDLE_WEBHOOK_SECRET,
+    expectedWebhookPath: "/api/paddle/webhook",
+  });
+}
+
+function planStatusFromSubscriptionStatus(status?: SubscriptionStatus): string | undefined {
+  switch (status) {
+    case "active":
+    case "trialing":
+      return status;
+    case "cancelled":
+      return "canceled";
+    case "on_hold":
+    case "failed":
+      return "past_due";
+    default:
+      return undefined;
+  }
+}
+
 function planFromPriceId(priceId: string): string | undefined {
   const starterIds = [
     process.env.NEXT_PUBLIC_PADDLE_PRICE_STARTER_MONTHLY,
@@ -70,6 +95,16 @@ async function updateUserSubscription(
     updatedAt: new Date(),
   };
 
+  if ("status" in updateData) {
+    updateData.subscriptionStatus = updateData.status;
+    delete updateData.status;
+  }
+
+  const planStatus = planStatusFromSubscriptionStatus(data.status);
+  if (planStatus) {
+    updateData.planStatus = planStatus;
+  }
+
   if (plan && (data.status === "active" || data.status === "trialing")) {
     updateData.planTier = plan;
   }
@@ -112,6 +147,12 @@ export async function POST(req: NextRequest) {
     }
 
     const { eventType, data } = eventData;
+    console.info("[Paddle webhook] Received event", {
+      eventId,
+      eventType,
+      customerId: data?.customerId ?? null,
+      subscriptionId: data?.id ?? data?.subscriptionId ?? null,
+    });
 
     switch (eventType) {
       case EventName.SubscriptionCreated: {

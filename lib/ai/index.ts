@@ -15,6 +15,8 @@ import { getOptimizeSystemPrompt, getOptimizeUserPrompt } from "./prompts/optimi
 import { getSocialSystemPrompt, getSocialUserPrompt } from "./prompts/social";
 import { SerpContext } from "../serper";
 
+type ExternalSource = { title: string; url: string; snippet?: string };
+
 /**
  * Generates a full SEO brief for a keyword.
  */
@@ -64,6 +66,7 @@ export async function generateDraft(params: {
   targetWordCount?: number | null;
   lsiKeywords?: string[];
   siteBrandVoice?: any;
+  externalSources?: ExternalSource[] | null;
 }): Promise<DraftData> {
   const targetWords = params.targetWordCount || 2500;
   
@@ -100,6 +103,7 @@ export async function* generateDraftStream(params: {
   lsiKeywords?: string[];
   siteBrandVoice?: any;
   internalLinkArticles?: any[];
+  externalSources?: ExternalSource[] | null;
 }): AsyncGenerator<string> {
   const targetWords = params.targetWordCount || 2500;
   

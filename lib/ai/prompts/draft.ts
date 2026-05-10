@@ -1,5 +1,11 @@
 import { OutlineData, SiteBrandVoice } from "../types";
 
+type ExternalSource = {
+  title: string;
+  url: string;
+  snippet?: string;
+};
+
 export const getDraftSystemPrompt = (params: {
   keyword: string;
   targetWords: number;
@@ -42,6 +48,18 @@ CONTENT STRUCTURE & WRITING STYLE:
 6. PREMIUM FORMATTING: Use Markdown blockquotes (> ) for "Expert Pro Tips" or "Key Takeaways". Bold meaningful phrases to help skimmers.
 7. CRITICAL FORMATTING: Use exactly ONE blank line between paragraphs and sections.
 
+SOURCING & LINKS (MANDATORY):
+- Add external links to credible sources in-context where they support factual claims.
+- You MUST NOT invent URLs. Only link to URLs provided in the user message under "ALLOWED EXTERNAL SOURCES".
+- When referencing a source, use normal Markdown links like: ...([source](https://example.com))...
+- Include a final "## Sources" section listing ONLY the sources you actually used (each as a Markdown link).
+
+IMAGES (MANDATORY):
+- Insert 5-8 image placeholders throughout the article as their own standalone paragraph.
+- Placeholder format MUST be exactly: [IMAGE_SUGGESTION: <2-6 word query>]
+- Put one near the top (after the intro), then place others under sections where a visual would help (tools, comparisons, step-by-step, diagrams).
+- DO NOT output actual image URLs; only placeholders. These placeholders will be replaced later by an image plugin.
+
 CRITICAL KEYWORD & SEO REQUIREMENTS:
 - Target keyword: "${keyword}"
 - MUST appear in: H1 title, at least 2-3 subheadings, first 100 words, last paragraph
@@ -73,8 +91,9 @@ export const getDraftUserPrompt = (params: {
   targetWords: number;
   lsiKeywords?: string[];
   internalLinkArticles?: Array<{ keyword: string; publishedUrl?: string | null }> | null;
+  externalSources?: ExternalSource[] | null;
 }) => {
-  const { outline, keyword, tone, targetWords, lsiKeywords, internalLinkArticles } = params;
+  const { outline, keyword, tone, targetWords, lsiKeywords, internalLinkArticles, externalSources } = params;
   
   const internalLinksBlock = (internalLinkArticles && internalLinkArticles.length > 0)
     ? '\n\nINTERNAL LINK OPPORTUNITIES:\n' +
@@ -82,6 +101,15 @@ export const getDraftUserPrompt = (params: {
       .filter(a => a.publishedUrl)
       .map(a => `- "${a.keyword}" -> ${a.publishedUrl}`)
       .join('\n')
+    : '';
+
+  const externalSourcesBlock = (externalSources && externalSources.length > 0)
+    ? '\n\nALLOWED EXTERNAL SOURCES (DO NOT INVENT URLS):\n' +
+      externalSources
+        .filter(s => s?.title && s?.url)
+        .slice(0, 12)
+        .map((s, i) => `${i + 1}. ${s.title}\n   ${s.url}${s.snippet ? `\n   ${s.snippet}` : ""}`)
+        .join('\n')
     : '';
 
   return `Target keyword: "${keyword}"
@@ -97,6 +125,7 @@ Tone: ${tone}
 
 Outline: ${JSON.stringify(outline, null, 2)}
 ${internalLinksBlock}
+${externalSourcesBlock}
 
 MANDATORY EXECUTION STEPS (FOLLOW EXACTLY):
 1. Introduction: Write ${Math.floor(targetWords * 0.1)} words - NO keyword in first paragraph
