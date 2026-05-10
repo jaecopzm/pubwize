@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { useTheme } from "next-themes";
+import { trackEvent } from "@/lib/analytics";
 
 interface PricingCardsProps {
   currentPlan?: PlanTier;
@@ -24,23 +25,44 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
   const router = useRouter();
 
   const handleSelectPlan = (planId: PlanTier) => {
-    console.log('Plan selected:', planId);
-    
     if (planId === 'free') {
+      trackEvent("pricing_cta_clicked", {
+        location: "pricing_cards",
+        plan: planId,
+        billing_cycle: billingCycle,
+        authenticated: !!user,
+        destination: "free",
+      });
       if (onSelectPlan) onSelectPlan(planId, billingCycle === 'annual');
       return;
     }
 
     // Always open Paddle checkout for paid plans
     if (onSelectPlan) {
+      trackEvent("pricing_cta_clicked", {
+        location: "pricing_cards",
+        plan: planId,
+        billing_cycle: billingCycle,
+        authenticated: !!user,
+        destination: "in_app_upgrade",
+      });
       onSelectPlan(planId, billingCycle === 'annual');
       return;
     }
 
-    console.log('User state:', { loading, user: !!user });
-
     if (!loading && !user) {
-      console.log('Redirecting to signup with plan:', planId);
+      trackEvent("pricing_cta_clicked", {
+        location: "pricing_cards",
+        plan: planId,
+        billing_cycle: billingCycle,
+        authenticated: false,
+        destination: "sign_up",
+      });
+      trackEvent("signup_intent_started", {
+        source: "pricing_cards",
+        plan: planId,
+        billing_cycle: billingCycle,
+      });
       router.push(`/sign-up?plan=${planId}&billing=${billingCycle}`);
       return;
     }
@@ -53,6 +75,19 @@ export function PricingCards({ currentPlan = 'free', onSelectPlan, customerEmail
         }
 
         const priceId = getPaddlePriceId(planId as 'starter' | 'pro', billingCycle);
+        trackEvent("pricing_cta_clicked", {
+          location: "pricing_cards",
+          plan: planId,
+          billing_cycle: billingCycle,
+          authenticated: true,
+          destination: "checkout",
+        });
+        trackEvent("checkout_opened", {
+          source: "pricing_cards",
+          plan: planId,
+          billing_cycle: billingCycle,
+          price_id: priceId,
+        });
         
         window.Paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],

@@ -91,7 +91,7 @@ export function UpgradeCTA({ variant = 'card', reason, className }: UpgradeCTAPr
       </Link>
 
       <p className="text-center text-[10px] sm:text-xs text-muted-foreground mt-2 sm:mt-3">
-        <span className="text-[#818cf8] font-medium">Limited time:</span> Get 20% off your first month
+        Plans are monthly or annual with a 14-day money-back guarantee
       </p>
     </div>
   );

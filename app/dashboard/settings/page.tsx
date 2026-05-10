@@ -26,6 +26,7 @@ import { PricingCards } from "@/components/pricing";
 import { BillingManagement } from "@/components/billing-management";
 import { getPaddlePriceId } from "@/lib/paddle";
 import { createPaddleCheckoutSession, createPaddleCustomerPortalSession } from "@/app/actions/paddle";
+import { trackEvent } from "@/lib/analytics";
 import { toast } from "sonner";
 import { useTransition } from "react";
 import type { WordPressSite, PlanTier } from "@/lib/types";
@@ -89,6 +90,9 @@ function SettingsContent() {
 
     // Fix #1: simple one-time refetch after delay instead of fragile polling
     if (success === 'true') {
+      trackEvent("checkout_success_page_viewed", {
+        source: "settings_success_redirect",
+      });
       toast.success('Subscription updated successfully');
       router.replace('/dashboard/settings?tab=billing');
       setTimeout(() => fetchUserPlan(true), 5000);
@@ -107,6 +111,12 @@ function SettingsContent() {
           }
 
           const priceId = getPaddlePriceId(checkoutPlan as 'starter' | 'pro', checkoutBilling || 'monthly');
+          trackEvent("checkout_opened", {
+            source: "settings_auto_checkout",
+            plan: checkoutPlan,
+            billing_cycle: checkoutBilling || 'monthly',
+            price_id: priceId,
+          });
           
           window.Paddle.Checkout.open({
             items: [{ priceId, quantity: 1 }],

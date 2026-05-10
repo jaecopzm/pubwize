@@ -7,6 +7,7 @@ import { ArrowLeft, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { UpgradeModal } from "@/components/pricing/upgrade-modal";
 import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
+import { trackEvent } from "@/lib/analytics";
 
 import SiteForm, { SiteFormData } from "../site-form";
 
@@ -44,6 +45,18 @@ export default function NewSitePage() {
       }
 
       toast.success("Site created successfully!");
+      trackEvent("site_created", {
+        source: "new_site_page",
+        plan,
+        has_target_country: !!data.targetCountry,
+        has_brand_voice: !!(
+          data.brandVoiceAdjectives?.length ||
+          data.brandVoiceTone ||
+          data.brandVoiceTargetAudience ||
+          data.brandVoiceFormattingRules ||
+          data.expertPersona
+        ),
+      });
       router.push("/dashboard/sites");
     } catch (err) {
       console.error(err);

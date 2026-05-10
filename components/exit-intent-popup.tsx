@@ -51,9 +51,9 @@ export function ExitIntentPopup({ planTier }: ExitIntentPopupProps) {
           <div className="h-16 w-16 rounded-2xl bg-gold/20 flex items-center justify-center mx-auto mb-4">
             <Crown className="h-8 w-8 text-gold" />
           </div>
-          <h2 className="text-2xl font-bold mb-2">Wait! Special Offer 🎉</h2>
+          <h2 className="text-2xl font-bold mb-2">Before you go</h2>
           <p className="text-sm text-muted-foreground">
-            Get <span className="text-gold font-bold">20% OFF</span> your first month
+            Upgrade when you're ready to unlock the full workflow
           </p>
         </div>
 
@@ -74,21 +74,20 @@ export function ExitIntentPopup({ planTier }: ExitIntentPopupProps) {
 
         <div className="text-center mb-4">
           <div className="text-3xl font-bold mb-1">
-            <span className="line-through text-muted-foreground text-xl">$19</span>{" "}
-            <span className="text-gold">$15</span>
+            <span className="text-gold">$19</span>
             <span className="text-sm text-muted-foreground">/month</span>
           </div>
-          <p className="text-xs text-gold font-medium">Limited time offer - First month only</p>
+          <p className="text-xs text-muted-foreground font-medium">Start with Starter and upgrade again as usage grows</p>
         </div>
 
         <button
           onClick={() => {
             handleClose();
-            router.push('/dashboard/settings?tab=billing&discount=first20');
+            router.push('/dashboard/settings?tab=billing');
           }}
           className="w-full btn-gold py-3 text-base font-bold mb-3"
         >
-          Claim 20% OFF Now
+          View Plans
         </button>
 
         <button

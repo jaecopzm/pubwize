@@ -8,6 +8,7 @@ import { getPaddlePriceId } from "@/lib/paddle";
 import { useAuth } from "@/lib/hooks/use-auth";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { trackEvent } from "@/lib/analytics";
 
 interface CompactPricingCardsProps {
   currentPlan?: PlanTier;
@@ -30,16 +31,42 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
 
   const handleSelectPlan = (planId: PlanTier) => {
     if (planId === 'free') {
+      trackEvent("pricing_cta_clicked", {
+        location: "compact_pricing_cards",
+        plan: planId,
+        billing_cycle: billingCycle,
+        authenticated: !!user,
+        destination: "free",
+      });
       if (onSelectPlan) onSelectPlan(planId, billingCycle === 'annual');
       return;
     }
 
     if (onSelectPlan) {
+      trackEvent("pricing_cta_clicked", {
+        location: "compact_pricing_cards",
+        plan: planId,
+        billing_cycle: billingCycle,
+        authenticated: !!user,
+        destination: "in_app_upgrade",
+      });
       onSelectPlan(planId, billingCycle === 'annual');
       return;
     }
 
     if (!loading && !user) {
+      trackEvent("pricing_cta_clicked", {
+        location: "compact_pricing_cards",
+        plan: planId,
+        billing_cycle: billingCycle,
+        authenticated: false,
+        destination: "sign_up",
+      });
+      trackEvent("signup_intent_started", {
+        source: "compact_pricing_cards",
+        plan: planId,
+        billing_cycle: billingCycle,
+      });
       router.push(`/sign-up?plan=${planId}&billing=${billingCycle}`);
       return;
     }
@@ -52,6 +79,19 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
         }
 
         const priceId = getPaddlePriceId(planId as 'starter' | 'pro', billingCycle);
+        trackEvent("pricing_cta_clicked", {
+          location: "compact_pricing_cards",
+          plan: planId,
+          billing_cycle: billingCycle,
+          authenticated: true,
+          destination: "checkout",
+        });
+        trackEvent("checkout_opened", {
+          source: "compact_pricing_cards",
+          plan: planId,
+          billing_cycle: billingCycle,
+          price_id: priceId,
+        });
         
         window.Paddle.Checkout.open({
           items: [{ priceId, quantity: 1 }],

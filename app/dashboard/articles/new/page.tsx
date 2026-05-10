@@ -18,6 +18,7 @@ import { useFormAutosave } from "@/lib/hooks/use-form-autosave";
 import { UpgradeModal } from "@/components/pricing/upgrade-modal";
 import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
 import { motion, AnimatePresence } from "framer-motion";
+import { trackEvent } from "@/lib/analytics";
 
 interface BriefState {
   articleId: string;
@@ -117,6 +118,12 @@ function NewArticleContent() {
         { maxRetries: 1, timeout: 90000, onProgress: (msg) => setProgressMessage(msg) }
       );
       if (!data.articleId) throw new Error("No article ID returned");
+      trackEvent("article_created", {
+        source: "new_article_page",
+        site_id: siteId,
+        plan,
+        keyword_length: keyword.trim().length,
+      });
       addKeyword(keyword.trim());
       clearSaved();
       setShowConfetti(true);
