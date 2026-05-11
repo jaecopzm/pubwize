@@ -332,18 +332,21 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
   };
 
   return (
-    <div className={`rich-editor-wrapper${heatmapOn ? " heatmap-on" : ""}`} ref={wrapperRef} style={{ position: 'relative' }}>
+    <div className={cn("rich-editor-wrapper relative", heatmapOn && "heatmap-on")} ref={wrapperRef}>
       {/* Toolbar row: Heatmap toggle */}
-      <div className="flex items-center justify-end gap-2 mb-3">
+      <div className="flex items-center justify-end gap-2 mb-4">
         <button
           onClick={() => setHeatmapOn(!heatmapOn)}
-          className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-semibold transition-all ${heatmapOn
-            ? "border-amber-500/50 bg-amber-500/10 text-amber-400"
-            : "border-white/10 text-text-3 hover:text-text-2 hover:border-white/20"
-            }`}
-          title="Toggle Readability Heatmap — highlights long sentences"
+          className={cn(
+            "flex items-center gap-2 rounded-xl border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] transition-all",
+            heatmapOn
+              ? "border-amber-500/50 bg-amber-500/10 text-amber-400 shadow-lg shadow-amber-500/10"
+              : "border-white/5 bg-white/5 text-white/20 hover:text-white/40 hover:border-white/10"
+          )}
+          title="Toggle Readability Heatmap"
         >
-          {heatmapOn ? "🌡️ Heatmap On" : "🌡️ Readability"}
+          <Highlighter className="h-3 w-3" />
+          {heatmapOn ? "Neural Heatmap Active" : "Diagnostic Mode"}
         </button>
       </div>
 
@@ -351,22 +354,26 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
       {editor && (
         <BubbleMenu
           editor={editor}
-          className="bubble-menu-v2 flex items-center gap-1 p-1 bg-obsidian-90 backdrop-blur-2xl border border-white/10 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.5)]"
+          className="bubble-menu-v2 flex items-center gap-1.5 p-1.5 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]"
         >
-          <div className="flex items-center gap-1 pr-1 border-r border-white/10 mr-1">
+          <div className="flex items-center gap-1 pr-1.5 border-r border-white/5 mr-1">
             <button
               onClick={() => editor.chain().focus().toggleBold().run()}
-              className={cn("p-2 rounded-lg transition-all hover:bg-white/10", editor.isActive("bold") ? "text-gold bg-gold/10" : "text-text-3")}
-              title="Bold"
+              className={cn(
+                "p-2.5 rounded-xl transition-all hover:bg-white/5",
+                editor.isActive("bold") ? "text-indigo-400 bg-indigo-400/10 shadow-inner" : "text-white/40"
+              )}
             >
-              <span className="font-bold text-sm">B</span>
+              <Type className="h-4 w-4" />
             </button>
             <button
               onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={cn("p-2 rounded-lg transition-all hover:bg-white/10", editor.isActive("italic") ? "text-gold bg-gold/10" : "text-text-3")}
-              title="Italic"
+              className={cn(
+                "p-2.5 rounded-xl transition-all hover:bg-white/5",
+                editor.isActive("italic") ? "text-indigo-400 bg-indigo-400/10 shadow-inner" : "text-white/40"
+              )}
             >
-              <span className="italic text-sm">I</span>
+              <AlignLeft className="h-4 w-4" />
             </button>
           </div>
 
@@ -377,16 +384,16 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
                 onMouseDown={(e) => { e.preventDefault(); handleAIAction(action.id); }}
                 disabled={!!aiAction}
                 className={cn(
-                  "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[11px] font-black uppercase tracking-wider transition-all",
+                  "flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all",
                   aiAction === action.id 
-                    ? "bg-gold text-obsidian" 
-                    : "text-text-2 hover:bg-white/10 hover:text-white"
+                    ? "bg-indigo-500 text-white shadow-xl shadow-indigo-500/30" 
+                    : "text-white/40 hover:bg-white/5 hover:text-white"
                 )}
               >
                 {aiAction === action.id ? (
-                  <Loader2 className="h-3 w-3 animate-spin" />
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <span className="text-sm">{action.icon}</span>
+                  <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
                 )}
                 <span className="hidden sm:inline">{action.label}</span>
               </button>
@@ -396,168 +403,184 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
       )}
 
       {/* Streaming overlay */}
-      {streaming && (
-        <div className="streaming-overlay">
-          <div className="streaming-cursor" />
-        </div>
-      )}
+      <AnimatePresence>
+        {streaming && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-10 pointer-events-none bg-indigo-500/[0.02] border border-indigo-500/10 rounded-3xl"
+          />
+        )}
+      </AnimatePresence>
 
       <EditorContent editor={editor} />
 
       <style>{`
-        .rich-editor-wrapper {
-          position: relative;
-        }
-
         .rich-editor-content {
-          min-height: 500px;
+          min-height: 400px;
           outline: none;
-          color: var(--text-1);
-          font-size: 0.875rem;
+          color: hsl(var(--foreground));
+          font-size: 0.9375rem;
           line-height: 1.7;
-          font-family: var(--font-sans, system-ui, sans-serif);
+          font-family: inherit;
+          padding: 0;
+          border-radius: 0;
+          transition: all 0.3s ease;
+          background: transparent;
+          border: none;
         }
 
         @media (min-width: 640px) {
           .rich-editor-content {
-            font-size: 0.925rem;
-            line-height: 1.8;
+            min-height: 500px;
+            font-size: 1rem;
           }
+        }
+
+        .rich-editor-content:focus {
+          background: transparent;
+          border: none;
+          box-shadow: none;
         }
 
         .rich-editor-content.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
-          color: var(--text-3);
+          color: hsl(var(--muted-foreground));
           pointer-events: none;
           height: 0;
-        }
-
-        .rich-editor-content h1 {
-          font-size: 1.75rem;
-          font-weight: 700;
-          margin: 1.5rem 0 0.75rem;
-          color: var(--text-1);
-          line-height: 1.3;
-        }
-        .rich-editor-content h2 {
-          font-size: 1.35rem;
-          font-weight: 700;
-          margin: 1.5rem 0 0.5rem;
-          color: var(--text-1);
-          line-height: 1.4;
-        }
-        .rich-editor-content h3 {
-          font-size: 1.1rem;
-          font-weight: 600;
-          margin: 1rem 0 0.25rem;
-          color: var(--text-1);
-        }
-        .rich-editor-content p {
-          margin-bottom: 0.75rem;
-          color: var(--text-2);
-        }
-        .rich-editor-content strong {
-          color: var(--text-1);
-          font-weight: 600;
-        }
-        .rich-editor-content em { font-style: italic; }
-        .rich-editor-content code {
-          background: var(--surface-2);
-          color: var(--teal);
-          padding: 0.15em 0.4em;
-          border-radius: 4px;
-          font-size: 0.85em;
-          font-family: monospace;
-        }
-        .rich-editor-content ul,
-        .rich-editor-content ol {
-          padding-left: 1.5rem;
-          margin-bottom: 1rem;
-          color: var(--text-2);
-        }
-        .rich-editor-content li { margin-bottom: 0.25rem; }
-        .rich-editor-content blockquote {
-          border-left: 3px solid var(--gold);
-          padding-left: 1rem;
-          margin: 1rem 0;
-          color: var(--text-3);
+          font-weight: 500;
           font-style: italic;
         }
 
-        /* Bubble menu v2 */
-        .bubble-menu-v2 {
-          animation: bubbleGrow 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        .rich-editor-content h1 {
+          font-size: 1.5rem;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          margin: 1.5rem 0 1rem;
+          color: hsl(var(--foreground));
+          line-height: 1.2;
         }
-        @keyframes bubbleGrow {
-          from { opacity: 0; transform: scale(0.9) translateY(10px); }
+        
+        @media (min-width: 640px) {
+          .rich-editor-content h1 {
+            font-size: 2rem;
+          }
+        }
+        
+        @media (min-width: 768px) {
+          .rich-editor-content h1 {
+            font-size: 2.5rem;
+          }
+        }
+        
+        .rich-editor-content h2 {
+          font-size: 1.25rem;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+          margin: 1.25rem 0 0.75rem;
+          color: hsl(var(--foreground));
+          line-height: 1.3;
+        }
+        
+        @media (min-width: 640px) {
+          .rich-editor-content h2 {
+            font-size: 1.5rem;
+          }
+        }
+        
+        @media (min-width: 768px) {
+          .rich-editor-content h2 {
+            font-size: 1.875rem;
+          }
+        }
+        
+        .rich-editor-content h3 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          letter-spacing: -0.01em;
+          margin: 1rem 0 0.5rem;
+          color: hsl(var(--foreground));
+        }
+        
+        @media (min-width: 640px) {
+          .rich-editor-content h3 {
+            font-size: 1.25rem;
+          }
+        }
+        
+        .rich-editor-content p {
+          margin-bottom: 1rem;
+          color: hsl(var(--foreground));
+        }
+        
+        .rich-editor-content strong {
+          color: hsl(var(--foreground));
+          font-weight: 600;
+        }
+        
+        .rich-editor-content code {
+          background: hsl(var(--muted));
+          color: hsl(var(--foreground));
+          padding: 0.2em 0.4em;
+          border-radius: 4px;
+          font-size: 0.875em;
+          font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+          border: 1px solid rgba(34, 211, 238, 0.1);
+        }
+        .rich-editor-content ul,
+        .rich-editor-content ol {
+          padding-left: 1.75rem;
+          margin-bottom: 2rem;
+        }
+        .rich-editor-content li { 
+          margin-bottom: 0.5rem;
+          position: relative;
+        }
+        .rich-editor-content blockquote {
+          border-left: 4px solid #6366f1;
+          padding: 1rem 2rem;
+          margin: 2.5rem 0;
+          background: rgba(99, 102, 241, 0.05);
+          border-radius: 0 16px 16px 0;
+          font-style: italic;
+          color: rgba(255, 255, 255, 0.5);
+        }
+        .rich-editor-content img {
+          border-radius: 24px;
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          margin: 3rem 0;
+          box-shadow: 0 32px 64px -16px rgba(0, 0, 0, 0.5);
+        }
+
+        .bubble-menu-v2 {
+          animation: bubbleIn 0.3s cubic-bezier(0.19, 1, 0.22, 1);
+        }
+        @keyframes bubbleIn {
+          from { opacity: 0; transform: scale(0.9) translateY(12px); }
           to { opacity: 1; transform: scale(1) translateY(0); }
         }
 
-        .rich-editor-content {
-          border-radius: 12px;
-          transition: all 0.4s ease;
-          padding: 2rem;
-          background: rgba(255, 255, 255, 0.01);
-          border: 1px solid transparent;
-        }
-
-        .rich-editor-content:focus-within {
-          background: rgba(255, 255, 255, 0.02);
-          border-color: rgba(212, 175, 55, 0.1);
-          box-shadow: 0 0 50px -12px rgba(212, 175, 55, 0.05);
-        }
-
-        /* Streaming cursor */
-        .streaming-overlay {
-          pointer-events: none;
-        }
-        .streaming-cursor {
-          display: inline-block;
-          width: 2px;
-          height: 1.2em;
-          background: var(--gold);
-          border-radius: 1px;
-          animation: blink 0.8s step-start infinite;
-          vertical-align: text-bottom;
-        }
-        @keyframes blink {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0; }
-        }
-
-        /* Tiptap selection */
-        .rich-editor-content ::selection {
-          background: rgba(234, 179, 8, 0.25);
-        }
-
-        /* ── Readability Heatmap ──────────────────────────────────────
-           When .heatmap-on is active, we highlight long sentences
-           using a CSS content-length trick on <p> elements.
-           Since we can't split sentences client-side without JS,
-           we highlight the entire paragraph if it's long.
-        ────────────────────────────────────────────────────────────── */
+        /* Heatmap Highlighting */
         .heatmap-on .rich-editor-content p {
-          transition: background 0.3s ease;
-          border-radius: 3px;
-          padding: 0 2px;
+          transition: background 0.4s ease;
         }
-        /* Paragraphs with more than ~150 chars ≈ "long" */
-        .heatmap-on .rich-editor-content p:not(:empty) {
-          --char-len: 0;
-        }
-        /* We use a JS-side class approach instead: add .long-sentence / .very-long-sentence */
         .heatmap-on .rich-editor-content .long-sentence {
-          background: rgba(245, 158, 11, 0.12);
-          border-bottom: 2px solid rgba(245, 158, 11, 0.4);
-          border-radius: 2px;
-          padding: 0 1px;
+          background: rgba(245, 158, 11, 0.1);
+          border-bottom: 2px solid rgba(245, 158, 11, 0.3);
+          border-radius: 4px;
         }
         .heatmap-on .rich-editor-content .very-long-sentence {
-          background: rgba(239, 68, 68, 0.10);
-          border-bottom: 2px solid rgba(239, 68, 68, 0.45);
-          border-radius: 2px;
-          padding: 0 1px;
+          background: rgba(239, 68, 68, 0.08);
+          border-bottom: 2px solid rgba(239, 68, 68, 0.4);
+          border-radius: 4px;
+        }
+
+        /* Selection styling */
+        .rich-editor-content ::selection {
+          background: rgba(99, 102, 241, 0.3);
+          color: white;
         }
       `}</style>
     </div>

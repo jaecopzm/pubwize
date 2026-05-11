@@ -83,77 +83,103 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   let fullContent = "";
 
   (async () => {
-    try {
-      console.log(`[Draft] Starting generation for article ${articleId}, target: ${targetWordCount} words`);
-      
-      const generator = aiUserContext.run(uid, () =>
-        generateDraftStream({
-          outline: article!.outline as any,
-          keyword: article!.keyword,
-          tone,
-          targetWordCount,
-          lsiKeywords,
-          siteBrandVoice,
-          internalLinkArticles,
-          externalSources,
-        })
-      );
+    let retryCount = 0;
+    const maxRetries = 2;
+    
+    while (retryCount <= maxRetries) {
+      try {
+        console.log(`[Draft] Starting generation for article ${articleId}, target: ${targetWordCount} words (attempt ${retryCount + 1}/${maxRetries + 1})`);
+        
+        const generator = aiUserContext.run(uid, () =>
+          generateDraftStream({
+            outline: article!.outline as any,
+            keyword: article!.keyword,
+            tone,
+            targetWordCount,
+            lsiKeywords,
+            siteBrandVoice,
+            internalLinkArticles,
+            externalSources,
+          })
+        );
 
-      let chunkCount = 0;
-      for await (const chunk of generator) {
-        fullContent += chunk;
-        chunkCount++;
-        await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
-      }
-      
-      console.log(`[Draft] Generated ${chunkCount} chunks, total length: ${fullContent.length} chars`);
+        let chunkCount = 0;
+        for await (const chunk of generator) {
+          fullContent += chunk;
+          chunkCount++;
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
+        }
+        
+        console.log(`[Draft] Generated ${chunkCount} chunks, total length: ${fullContent.length} chars`);
 
-      let finalContent = fullContent.trim();
-      if (finalContent.startsWith("```markdown")) {
-        finalContent = finalContent.replace(/^```markdown\s*\n/, "").replace(/\n```$/, "").trim();
-      } else if (finalContent.startsWith("```")) {
-        finalContent = finalContent.replace(/^```[a-zA-Z]*\s*\n/, "").replace(/\n```$/, "").trim();
-      }
+        // Check if content was cut off (too short)
+        const wordCount = fullContent.trim().split(/\s+/).filter(w => w.length > 0).length;
+        if (wordCount < targetWordCount * 0.5 && retryCount < maxRetries) {
+          console.log(`[Draft] Content too short (${wordCount} words), retrying...`);
+          fullContent = "";
+          retryCount++;
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ retry: retryCount })}\n\n`));
+          continue;
+        }
 
-      const wordCount = finalContent
-        .replace(/`[^`]*`/g, "")
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-        .replace(/[#*_~\[\](){}]/g, "")
-        .replace(/<[^>]+>/g, "")
-        .replace(/\s+/g, " ")
-        .trim()
-        .split(/\s+/)
-        .filter((w) => w.length > 0).length;
+        let finalContent = fullContent.trim();
+        if (finalContent.startsWith("```markdown")) {
+          finalContent = finalContent.replace(/^```markdown\s*\n/, "").replace(/\n```$/, "").trim();
+        } else if (finalContent.startsWith("```")) {
+          finalContent = finalContent.replace(/^```[a-zA-Z]*\s*\n/, "").replace(/\n```$/, "").trim();
+        }
 
-      // Only inject real images when an Unsplash key is configured.
-      // Otherwise, keep placeholders visible as suggestions.
-      const hasUnsplashKey = !!(process.env.UNSPLASH_ACCESS_KEY || process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY);
-      if (hasUnsplashKey) {
-        try {
-          finalContent = await injectImagesIntoMarkdown(finalContent);
-        } catch {
-          // non-fatal
+        const finalWordCount = finalContent
+          .replace(/`[^`]*`/g, "")
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+          .replace(/[#*_~\[\](){}]/g, "")
+          .replace(/<[^>]+>/g, "")
+          .replace(/\s+/g, " ")
+          .trim()
+          .split(/\s+/)
+          .filter((w) => w.length > 0).length;
+
+        // Only inject real images when an Unsplash key is configured.
+        const hasUnsplashKey = !!(process.env.UNSPLASH_ACCESS_KEY || process.env.NEXT_PUBLIC_UNSPLASH_ACCESS_KEY);
+        if (hasUnsplashKey) {
+          try {
+            finalContent = await injectImagesIntoMarkdown(finalContent);
+          } catch {
+            // non-fatal
+          }
+        }
+
+        await prisma.article.update({
+          where: { id: articleId },
+          data: {
+            draft: { content: finalContent, format: "markdown" } as any,
+            status: "draft_generated",
+            settings: { ...settings, targetWordCount } as any,
+          },
+        });
+
+        await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true, articleId })}\n\n`));
+        break; // Success, exit retry loop
+        
+      } catch (err) {
+        console.error(`[Draft] Attempt ${retryCount + 1} failed:`, err);
+        
+        if (retryCount < maxRetries) {
+          retryCount++;
+          fullContent = "";
+          await writer.write(encoder.encode(`data: ${JSON.stringify({ retry: retryCount })}\n\n`));
+          await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
+        } else {
+          console.error("[Draft] All retry attempts failed");
+          await writer.write(
+            encoder.encode(`data: ${JSON.stringify({ error: "Generation failed after multiple attempts. Please try again." })}\n\n`)
+          );
+          break;
         }
       }
-
-      await prisma.article.update({
-        where: { id: articleId },
-        data: {
-          draft: { content: finalContent, format: "markdown" } as any,
-          status: "draft_generated",
-          settings: { ...settings, targetWordCount } as any,
-        },
-      });
-
-      await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true, articleId })}\n\n`));
-    } catch (err) {
-      console.error("Streaming draft generation failed:", err);
-      await writer.write(
-        encoder.encode(`data: ${JSON.stringify({ error: "Generation failed. Please try again." })}\n\n`)
-      );
-    } finally {
-      await writer.close();
     }
+    
+    await writer.close();
   })();
 
   return new Response(readable, {

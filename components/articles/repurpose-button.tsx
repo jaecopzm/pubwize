@@ -102,10 +102,10 @@ function CopyButton({ text }: { text: string }) {
     return (
         <button
             onClick={handleCopy}
-            className="h-8 w-8 flex items-center justify-center rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 shrink-0"
+            className="h-7 w-7 sm:h-8 sm:w-8 flex items-center justify-center rounded-md sm:rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-muted active:scale-95 shrink-0 self-start"
             title="Copy to clipboard"
         >
-            {copied ? <CheckIcon className="h-4 w-4 text-emerald-500" /> : <CopyIcon className="h-4 w-4" />}
+            {copied ? <CheckIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" /> : <CopyIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
         </button>
     );
 }
@@ -230,118 +230,112 @@ export function RepurposeButton({
     ];
 
     const modalContent = isOpen ? (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 animate-in fade-in duration-200">
+        <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-200">
             {/* Backdrop */}
             <div 
-                className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity"
+                className="absolute inset-0 bg-black/60 dark:bg-black/80 backdrop-blur-md transition-opacity"
                 onClick={() => setIsOpen(false)}
             />
 
-            {/* Modal — Large centered */}
+            {/* Modal */}
             <div 
-                className="relative z-[10000] w-full max-w-4xl h-[85vh] rounded-2xl border border-white/10 bg-surface-1 shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-300"
+                className="relative z-[10000] w-full max-w-4xl h-[90vh] sm:h-[85vh] rounded-t-2xl sm:rounded-2xl border-t sm:border border-border bg-card shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom sm:zoom-in-95 duration-300"
                 onClick={(e) => e.stopPropagation()}
             >
                         <div className="absolute inset-0 bg-gradient-to-br from-lilac/10 via-transparent to-blue-500/5 pointer-events-none" />
                         
                         {/* Header */}
-                        <div className="relative flex items-center justify-between border-b border-white/10 px-6 py-5 bg-surface-1/50 backdrop-blur-xl">
-                            <div className="flex items-center gap-4">
-                                <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-lilac via-lilac/80 to-purple-500 text-white shadow-lg shadow-lilac/30">
-                                    <ShareIcon className="h-6 w-6" />
+                        <div className="relative flex items-center justify-between border-b border-border px-4 sm:px-6 py-3 sm:py-5 bg-card/50 backdrop-blur-xl">
+                            <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
+                                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-lilac via-lilac/80 to-purple-500 text-white shadow-lg shadow-lilac/30">
+                                    <ShareIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
-                                <div className="min-w-0">
-                                    <h2 className="font-display font-black text-foreground text-xl mb-0.5">Repurpose Content</h2>
+                                <div className="min-w-0 flex-1">
+                                    <h2 className="font-display font-black text-foreground text-base sm:text-xl mb-0.5">Repurpose Content</h2>
                                     {articleTitle && (
-                                        <p className="text-xs font-medium text-muted-foreground truncate max-w-md">{articleTitle}</p>
+                                        <p className="text-[10px] sm:text-xs font-medium text-muted-foreground truncate">{articleTitle}</p>
                                     )}
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <div className="text-xs text-muted-foreground hidden sm:block">
-                                    <kbd className="px-2 py-1 bg-muted rounded text-[10px] font-mono">ESC</kbd> to close
-                                    {assets && <> · <kbd className="px-2 py-1 bg-muted rounded text-[10px] font-mono">⌘C</kbd> to copy</>}
-                                </div>
-                                <button
-                                    onClick={() => setIsOpen(false)}
-                                    className="h-10 w-10 flex items-center justify-center rounded-xl bg-white/5 text-muted-foreground hover:text-foreground hover:bg-white/10 transition-all"
-                                >
-                                    <CloseIcon className="h-5 w-5" />
-                                </button>
-                            </div>
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                className="h-9 w-9 sm:h-10 sm:w-10 flex items-center justify-center rounded-lg sm:rounded-xl bg-muted/50 text-muted-foreground hover:text-foreground hover:bg-muted transition-all shrink-0"
+                            >
+                                <CloseIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                            </button>
                         </div>
 
                         {/* Body — scrollable */}
                         <div className="relative flex-1 overflow-y-auto">
                             {!assets ? (
-                                <div className="flex items-center justify-center h-full p-8">
+                                <div className="flex items-center justify-center h-full p-4 sm:p-8">
                                     <div className="text-center max-w-md">
-                                        <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-lilac/20 to-purple-500/10 mx-auto mb-6 border border-lilac/20">
-                                            <SparklesIcon className="h-10 w-10 text-lilac" />
+                                        <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl sm:rounded-3xl bg-gradient-to-br from-lilac/20 to-purple-500/10 mx-auto mb-4 sm:mb-6 border border-lilac/20">
+                                            <SparklesIcon className="h-8 w-8 sm:h-10 sm:w-10 text-lilac" />
                                         </div>
-                                        <h3 className="font-display font-bold text-foreground mb-3 text-xl">
+                                        <h3 className="font-display font-bold text-foreground mb-2 sm:mb-3 text-lg sm:text-xl">
                                             Generate Social Media Assets
                                         </h3>
-                                        <p className="text-sm text-muted-foreground mb-8 leading-relaxed">
-                                            Transform your article into engaging content for Twitter, LinkedIn, and email newsletters. AI will craft platform-optimized posts in seconds.
+                                        <p className="text-xs sm:text-sm text-muted-foreground mb-6 sm:mb-8 leading-relaxed px-4">
+                                            Transform your article into engaging content for Twitter, LinkedIn, and email newsletters.
                                         </p>
-                                        <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground mb-8">
+                                        <div className="flex items-center justify-center gap-4 sm:gap-6 text-xs sm:text-sm text-muted-foreground mb-6 sm:mb-8">
                                             {tabs.map((tab) => (
-                                                <div key={tab.id} className="flex items-center gap-2">
-                                                    <tab.icon className={cn("h-5 w-5", tab.color)} />
-                                                    <span className="font-medium">{tab.label}</span>
+                                                <div key={tab.id} className="flex items-center gap-1.5 sm:gap-2">
+                                                    <tab.icon className={cn("h-4 w-4 sm:h-5 sm:w-5", tab.color)} />
+                                                    <span className="font-medium hidden sm:inline">{tab.label}</span>
                                                 </div>
                                             ))}
                                         </div>
                                         <button
                                             onClick={handleGenerate}
                                             disabled={generating}
-                                            className="btn-gold flex items-center gap-2.5 mx-auto px-6 py-3 text-base font-bold"
+                                            className="btn-gold flex items-center gap-2 sm:gap-2.5 mx-auto px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base font-bold"
                                         >
                                             {generating ? (
-                                                <><LoaderIcon className="h-5 w-5" /> Generating...</>
+                                                <><LoaderIcon className="h-4 w-4 sm:h-5 sm:w-5" /> Generating...</>
                                             ) : (
-                                                <><SparklesIcon className="h-5 w-5" /> Generate Assets <ChevronRightIcon className="h-5 w-5" /></>
+                                                <><SparklesIcon className="h-4 w-4 sm:h-5 sm:w-5" /> Generate Assets <ChevronRightIcon className="h-4 w-4 sm:h-5 sm:w-5" /></>
                                             )}
                                         </button>
                                     </div>
                                 </div>
                             ) : (
-                                <div className="p-6">
+                                <div className="p-4 sm:p-6">
                                     {/* Tab Bar */}
-                                    <div className="flex items-center gap-2 p-1.5 rounded-xl bg-muted/50 border border-border mb-6">
+                                    <div className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 rounded-lg sm:rounded-xl bg-muted/50 border border-border mb-4 sm:mb-6">
                                         {tabs.map((tab) => (
                                             <button
                                                 key={tab.id}
                                                 onClick={() => setActiveTab(tab.id)}
                                                 className={cn(
-                                                    "flex-1 flex items-center justify-center gap-2 py-3 rounded-lg text-sm font-bold transition-all duration-200",
+                                                    "flex-1 flex items-center justify-center gap-1.5 sm:gap-2 py-2 sm:py-3 rounded-md sm:rounded-lg text-xs sm:text-sm font-bold transition-all duration-200",
                                                     activeTab === tab.id
                                                         ? "bg-card text-foreground shadow-md border border-border scale-105"
                                                         : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
                                                 )}
                                             >
-                                                <tab.icon className={cn("h-5 w-5 transition-colors", activeTab === tab.id ? tab.color : "")} />
-                                                <span>{tab.label}</span>
+                                                <tab.icon className={cn("h-4 w-4 sm:h-5 sm:w-5 transition-colors", activeTab === tab.id ? tab.color : "")} />
+                                                <span className="hidden sm:inline">{tab.label}</span>
                                             </button>
                                         ))}
                                     </div>
 
                                     {/* Content Area */}
-                                    <div className="min-h-[400px] transition-all duration-300">
+                                    <div className="min-h-[300px] sm:min-h-[400px] transition-all duration-300">
                                         {/* Twitter Thread */}
                                         {activeTab === "twitter" && (
-                                            <div className="space-y-3">
+                                            <div className="space-y-2 sm:space-y-3">
                                                 {assets.twitterThread.map((tweet, i) => (
                                                     <div
                                                         key={i}
-                                                        className="flex items-start gap-3 p-4 rounded-xl border border-border bg-background hover:border-sky-400/30 transition-colors"
+                                                        className="flex items-start gap-2 sm:gap-3 p-3 sm:p-4 rounded-lg sm:rounded-xl border border-border bg-background hover:border-sky-400/30 transition-colors"
                                                     >
-                                                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sky-400/15 text-sky-400 text-sm font-bold">
+                                                        <div className="flex h-6 w-6 sm:h-8 sm:w-8 shrink-0 items-center justify-center rounded-full bg-sky-400/15 text-sky-400 text-xs sm:text-sm font-bold">
                                                             {i + 1}
                                                         </div>
-                                                        <div className="flex-1 space-y-3">
-                                                            <p className="text-sm text-foreground leading-relaxed">{tweet}</p>
+                                                        <div className="flex-1 space-y-2 sm:space-y-3 min-w-0">
+                                                            <p className="text-xs sm:text-sm text-foreground leading-relaxed">{tweet}</p>
                                                             <CharacterCount text={tweet} limit={CHAR_LIMITS.twitter} />
                                                         </div>
                                                         <CopyButton text={tweet} />
@@ -350,9 +344,9 @@ export function RepurposeButton({
                                                 <div className="flex justify-end pt-2">
                                                     <button
                                                         onClick={() => { navigator.clipboard.writeText(assets.twitterThread.join("\n\n")); toast.success("Thread copied!"); }}
-                                                        className="text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg px-4 py-2 transition-all flex items-center gap-2 font-medium"
+                                                        className="text-xs sm:text-sm text-muted-foreground hover:text-foreground border border-border rounded-md sm:rounded-lg px-3 sm:px-4 py-1.5 sm:py-2 transition-all flex items-center gap-1.5 sm:gap-2 font-medium"
                                                     >
-                                                        <CopyIcon className="h-4 w-4" /> Copy All Tweets
+                                                        <CopyIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> Copy All
                                                     </button>
                                                 </div>
                                             </div>
@@ -360,12 +354,12 @@ export function RepurposeButton({
 
                                         {/* LinkedIn Post */}
                                         {activeTab === "linkedin" && (
-                                            <div className="space-y-4">
+                                            <div className="space-y-3 sm:space-y-4">
                                                 <div className="relative">
-                                                    <div className="p-5 rounded-xl border border-border bg-background text-sm text-foreground leading-relaxed whitespace-pre-wrap min-h-[300px]">
+                                                    <div className="p-4 sm:p-5 rounded-lg sm:rounded-xl border border-border bg-background text-xs sm:text-sm text-foreground leading-relaxed whitespace-pre-wrap min-h-[250px] sm:min-h-[300px]">
                                                         {assets.linkedinPost}
                                                     </div>
-                                                    <div className="absolute top-4 right-4">
+                                                    <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
                                                         <CopyButton text={assets.linkedinPost} />
                                                     </div>
                                                 </div>
@@ -375,12 +369,12 @@ export function RepurposeButton({
 
                                         {/* Email Newsletter */}
                                         {activeTab === "email" && (
-                                            <div className="space-y-4">
+                                            <div className="space-y-3 sm:space-y-4">
                                                 <div className="relative">
-                                                    <div className="p-5 rounded-xl border border-border bg-background text-sm text-foreground leading-relaxed whitespace-pre-wrap min-h-[300px]">
+                                                    <div className="p-4 sm:p-5 rounded-lg sm:rounded-xl border border-border bg-background text-xs sm:text-sm text-foreground leading-relaxed whitespace-pre-wrap min-h-[250px] sm:min-h-[300px]">
                                                         {assets.emailNewsletter}
                                                     </div>
-                                                    <div className="absolute top-4 right-4">
+                                                    <div className="absolute top-3 right-3 sm:top-4 sm:right-4">
                                                         <CopyButton text={assets.emailNewsletter} />
                                                     </div>
                                                 </div>
@@ -390,18 +384,18 @@ export function RepurposeButton({
                                     </div>
 
                                     {/* Footer Actions */}
-                                    <div className="flex justify-between items-center pt-6 mt-6 border-t border-border">
+                                    <div className="flex justify-between items-center pt-4 sm:pt-6 mt-4 sm:mt-6 border-t border-border gap-2">
                                         <button
                                             onClick={handleGenerate}
                                             disabled={generating}
-                                            className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground border border-border rounded-lg px-4 py-2.5 transition-all font-medium hover:border-lilac/40"
+                                            className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground hover:text-foreground border border-border rounded-md sm:rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 transition-all font-medium hover:border-lilac/40"
                                         >
-                                            {generating ? <LoaderIcon className="h-4 w-4" /> : <SparklesIcon className="h-4 w-4" />}
-                                            Regenerate
+                                            {generating ? <LoaderIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> : <SparklesIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                                            <span className="hidden sm:inline">Regenerate</span>
                                         </button>
                                         <button
                                             onClick={() => setIsOpen(false)}
-                                            className="btn-primary px-5 py-2.5"
+                                            className="btn-primary px-4 sm:px-5 py-2 sm:py-2.5 text-sm"
                                         >
                                             Done
                                         </button>

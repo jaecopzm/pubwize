@@ -30,9 +30,9 @@ export function StatPill({ label, value }: { label: string; value: any }) {
     };
 
     return (
-        <div className="flex items-center gap-1 sm:gap-1.5 rounded-full border border-border/60 bg-card px-2 sm:px-3 py-1">
-            <span className="text-[10px] sm:text-xs font-semibold text-foreground">{renderStat(value)}</span>
-            <span className="text-[10px] sm:text-xs text-muted-foreground">{label}</span>
+        <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-white/10 bg-black/40 backdrop-blur-md px-3 sm:px-4 py-1.5 shadow-xl hover:border-white/20 transition-all">
+            <span className="text-[11px] sm:text-[13px] font-black text-white tabular-nums tracking-tight">{renderStat(value)}</span>
+            <span className="text-[9px] sm:text-[11px] font-bold uppercase tracking-widest text-white/40">{label}</span>
         </div>
     );
 }
@@ -54,19 +54,18 @@ export function GenerateCTA({
 }) {
     if (done)
         return (
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
-                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-5 py-3.5 text-sm font-semibold flex-1 text-emerald-400 shadow-sm shadow-emerald-500/5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 dark:border-emerald-400/20 bg-emerald-500/5 dark:bg-emerald-400/5 px-4 py-2.5 text-sm font-semibold flex-1 text-emerald-600 dark:text-emerald-400">
                     <CheckCircle2 className="h-4 w-4 shrink-0" />
                     <span className="truncate">{doneLabel}</span>
                 </div>
                 {onRegenerate && (
                     <button
                         onClick={onRegenerate}
-                        className="group relative flex items-center justify-center gap-2 rounded-xl border border-[#6366f1]/30 bg-[#6366f1]/10 px-4 py-3.5 text-sm font-semibold text-[#818cf8] transition-all hover:bg-[#6366f1]/20 hover:border-[#6366f1]/50 hover:shadow-lg hover:shadow-[#6366f1]/20 hover:-translate-y-0.5 overflow-hidden"
+                        className="group flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-semibold text-muted-foreground transition-all hover:bg-accent hover:text-foreground active:scale-95"
                     >
-                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#6366f1]/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-                        <Sparkles className="h-4 w-4 shrink-0 relative z-10 group-hover:rotate-12 transition-transform" />
-                        <span className="relative z-10">Regenerate</span>
+                        <Sparkles className="h-4 w-4 shrink-0 transition-transform group-hover:rotate-12" />
+                        <span>Regenerate</span>
                     </button>
                 )}
             </div>
@@ -76,25 +75,17 @@ export function GenerateCTA({
         <button
             onClick={onClick}
             disabled={loading}
-            className="group relative w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#6366f1] to-[#818cf8] py-3.5 text-sm font-bold text-white shadow-lg shadow-[#6366f1]/25 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transition-all hover:scale-[1.01] hover:shadow-[#6366f1]/40 active:scale-[0.99]"
+            className="w-full flex items-center justify-center gap-2 rounded-lg bg-primary px-6 py-3 text-sm font-bold text-primary-foreground shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:bg-primary/90 active:scale-[0.98]"
         >
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
-            
             {loading ? (
-                <div className="flex flex-col items-center gap-1.5 relative z-10 w-full px-8">
-                    <div className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        <span>Working on it...</span>
-                    </div>
-                    {/* Subtle progress bar inside button */}
-                    <div className="w-full h-1 rounded-full bg-white/20 overflow-hidden mt-1">
-                        <div className="h-full bg-white/60 animate-progress-indefinite rounded-full" />
-                    </div>
-                </div>
+                <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Generating...</span>
+                </>
             ) : (
                 <>
-                    <Sparkles className="h-4 w-4 relative z-10 group-hover:rotate-12 group-hover:scale-110 transition-transform" />
-                    <span className="relative z-10">{label}</span>
+                    <Sparkles className="h-4 w-4" />
+                    <span>{label}</span>
                 </>
             )}
         </button>

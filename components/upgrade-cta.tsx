@@ -55,10 +55,10 @@ export function UpgradeCTA({ variant = 'card', reason, className }: UpgradeCTAPr
   }
 
   return (
-    <div className={cn("card-premium rounded-xl border border-[#6366f1]/30 bg-gradient-to-br from-card to-[#6366f1]/5 p-4 sm:p-6", className)}>
+    <div className={cn("card-premium rounded-lg sm:rounded-xl border border-[#6366f1]/30 bg-gradient-to-br from-card to-[#6366f1]/5 p-4 sm:p-6", className)}>
       <div className="flex items-start gap-3 mb-3 sm:mb-4">
-        <div className="h-9 w-9 sm:h-12 sm:w-12 rounded-lg sm:rounded-xl bg-[#6366f1]/15 border border-[#6366f1]/20 flex items-center justify-center shrink-0">
-          <Crown className="h-4 w-4 sm:h-6 sm:w-6 text-[#818cf8]" />
+        <div className="h-9 w-9 sm:h-12 sm:w-12 flex items-center justify-center shrink-0">
+          <Crown className="h-4 w-4 sm:h-6 sm:w-6 text-amber-500" />
         </div>
         <div className="flex-1">
           <h3 className="text-sm sm:text-lg font-bold mb-0.5 sm:mb-1">Upgrade to Unlock More</h3>
@@ -85,7 +85,7 @@ export function UpgradeCTA({ variant = 'card', reason, className }: UpgradeCTAPr
 
       <Link
         href="/dashboard/settings?tab=billing"
-        className="btn-gold w-full justify-center text-xs sm:text-sm py-2 sm:py-2.5"
+        className="btn-gold w-full justify-center text-xs sm:text-sm py-2 sm:py-2.5 !rounded-lg"
       >
         View Plans
       </Link>

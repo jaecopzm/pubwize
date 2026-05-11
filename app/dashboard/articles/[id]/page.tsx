@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle2, FileText, List, PenLine, TrendingUp, Copy, Check, Download, FileCode, FileJson, Plus, Trash2, Code, Share2, Zap, ChevronRight } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle2, FileText, List, PenLine, TrendingUp, Copy, Check, Download, FileCode, FileJson, Plus, Trash2, Code, Share2, Zap, ChevronRight, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import { AIImprovePanel } from "@/components/article-editor/ai-improve-panel";
 import { SectionRegenerate } from "@/components/article-editor/section-regenerate";
 import { GenerationProgress } from "@/components/article-editor/generation-progress";
 import { AutoPilotOverlay } from "@/components/article-editor/auto-pilot-overlay";
+import { CommandRail } from "@/components/article-editor/command-rail";
 import { useTypewriter } from "@/components/article-editor/use-typewriter";
 import { SuccessCelebration } from "@/components/article-editor/success-celebration";
 
@@ -799,9 +800,8 @@ export default function ArticleDetailPage() {
     trackView();
   }, [articleId]);
 
-  // Fetch WordPress sites when opening the publish modal
+  // Fetch WordPress sites
   useEffect(() => {
-    if (!showWordPressPublish) return;
     let cancelled = false;
 
     (async () => {
@@ -1010,7 +1010,7 @@ export default function ArticleDetailPage() {
   // ── Loading ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-obsidian">
+      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <div className="relative h-14 w-14">
             <div className="absolute inset-0 rounded-2xl bg-gold/20 blur-2xl animate-pulse" />
@@ -1018,7 +1018,7 @@ export default function ArticleDetailPage() {
               <Sparkles className="h-6 w-6 text-white" />
             </div>
           </div>
-          <p className="text-sm font-medium text-text-3 font-mono-dm">Loading your article…</p>
+          <p className="text-sm font-medium text-muted-foreground font-mono-dm">Loading your article…</p>
         </div>
       </div>
     );
@@ -1028,7 +1028,7 @@ export default function ArticleDetailPage() {
     return (
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-text-1">Article not found</h1>
+          <h1 className="text-2xl font-bold text-foreground">Article not found</h1>
           <button
             onClick={() => router.push("/dashboard/articles")}
             className="mt-4 text-sm text-gold underline underline-offset-2 hover:text-gold/80"
@@ -1048,45 +1048,71 @@ export default function ArticleDetailPage() {
       zenMode ? "bg-background" : ""
     )}>
       {/* ══ Neural Background (Animated) ══════════════════════════════ */}
-      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden">
-        <svg className="absolute inset-0 w-full h-full opacity-[0.03]" viewBox="0 0 100 100" preserveAspectRatio="none">
+      <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden bg-background">
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150" />
+        <svg className="absolute inset-0 w-full h-full opacity-[0.05]" viewBox="0 0 100 100" preserveAspectRatio="none">
           <motion.path
             d="M0,50 Q25,30 50,50 T100,50"
             fill="none"
             stroke="currentColor"
-            strokeWidth="0.1"
+            strokeWidth="0.05"
+            className="text-foreground"
             animate={{ d: ["M0,50 Q25,30 50,50 T100,50", "M0,50 Q25,70 50,50 T100,50", "M0,50 Q25,30 50,50 T100,50"] }}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
           />
-          <motion.path
-            d="M0,30 Q25,50 50,30 T100,30"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="0.1"
-            animate={{ d: ["M0,30 Q25,50 50,30 T100,30", "M0,30 Q25,10 50,30 T100,30", "M0,30 Q25,50 50,30 T100,30"] }}
-            transition={{ duration: 15, repeat: Infinity, ease: "linear", delay: 2 }}
-          />
         </svg>
-        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-gold/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-teal/5 blur-[120px] rounded-full" />
+        
+        {/* Dynamic Glow Blobs */}
+        <motion.div 
+          animate={{ 
+            scale: [1, 1.2, 1],
+            opacity: [0.3, 0.5, 0.3],
+            x: [0, 50, 0],
+            y: [0, -30, 0],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "easeInOut" }}
+          className={cn(
+            "absolute top-[-10%] left-[-10%] w-[600px] h-[600px] blur-[120px] rounded-full transition-colors duration-1000",
+            activeStep === 1 ? "bg-cyan-500/20" : 
+            activeStep === 2 ? "bg-indigo-500/20" : 
+            activeStep === 3 ? "bg-purple-500/20" : "bg-teal-500/20"
+          )} 
+        />
+        <motion.div 
+          animate={{ 
+            scale: [1.2, 1, 1.2],
+            opacity: [0.2, 0.4, 0.2],
+            x: [0, -40, 0],
+            y: [0, 60, 0],
+          }}
+          transition={{ duration: 18, repeat: Infinity, ease: "easeInOut", delay: 2 }}
+          className={cn(
+            "absolute bottom-[-10%] right-[-10%] w-[600px] h-[600px] blur-[120px] rounded-full transition-colors duration-1000",
+            activeStep === 1 ? "bg-blue-500/10" : 
+            activeStep === 2 ? "bg-violet-500/10" : 
+            activeStep === 3 ? "bg-fuchsia-500/10" : "bg-emerald-500/10"
+          )} 
+        />
       </div>
 
-      {/* Zen Toggle (Floating) */}
+      {/* Zen Toggle — mobile only floating (md+ shows when in zen mode) */}
       <motion.button
         layout
         onClick={toggleZenMode}
         className={cn(
-          "fixed bottom-8 right-8 z-[60] flex items-center gap-2 px-4 py-2.5 rounded-full border shadow-2xl backdrop-blur-xl transition-all active:scale-95 group",
-          zenMode 
-            ? "bg-gold border-gold text-obsidian font-black" 
-            : "bg-surface-1/80 border-white/10 text-text-2 hover:text-text-1 hover:border-white/20"
+          "fixed z-[60] flex items-center gap-1.5 px-3 py-2 rounded-lg border shadow-2xl backdrop-blur-xl transition-all active:scale-95",
+          zenMode
+            ? "bottom-24 right-4 bg-card/80 border-border text-foreground font-black"
+            : "bottom-20 right-4 bg-card/80 border-border text-muted-foreground hover:text-foreground hover:border-border/80 md:hidden"
         )}
       >
-        {zenMode ? <Sparkles className="h-4 w-4" /> : <PenLine className="h-4 w-4" />}
-        <span className="text-xs uppercase tracking-widest leading-none">
-          {zenMode ? "Zen Mode Active" : "Zen Mode"}
+        {zenMode ? <Sparkles className="h-3.5 w-3.5" /> : <PenLine className="h-3.5 w-3.5" />}
+        <span className="text-[10px] uppercase tracking-widest leading-none">
+          {zenMode ? "Exit" : "Zen"}
         </span>
       </motion.button>
+
+
       {/* Top bar */}
       <AnimatePresence>
         {!zenMode && (
@@ -1094,94 +1120,50 @@ export default function ArticleDetailPage() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden bg-obsidian-80 backdrop-blur-xl border-b border-white/5"
+            className="overflow-hidden bg-card/80 backdrop-blur-xl border-b border-border"
           >
-            <div className="flex items-center gap-2 sm:gap-4 px-4 sm:px-6 py-2 sm:py-3">
+            <div className="flex items-center gap-2 px-3 sm:px-4 lg:px-6 py-2 sm:py-2.5">
+              {/* Back */}
               <button
                 onClick={() => router.push("/dashboard/articles")}
-                className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-text-2 transition-all hover:text-text-1 active:scale-95 touch-manipulation"
+                className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-muted-foreground transition-all hover:text-foreground active:scale-95"
               >
-                <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <ArrowLeft className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                 <span className="hidden sm:inline">Articles</span>
               </button>
-              <div className="h-4 w-px bg-border" />
-              {/* Keyword chip */}
-              <div className="flex items-center gap-1.5 sm:gap-2 rounded-full border border-gold/30 bg-gold/10 px-2 sm:px-3 py-1 animate-float">
-                <Sparkles className="h-3 w-3 shrink-0 text-gold" />
-                <span className="max-w-[120px] sm:max-w-[260px] truncate text-[10px] sm:text-xs font-semibold text-gold">
+              <div className="h-3 sm:h-3.5 w-px bg-border" />
+              {/* Keyword — hidden on md+ (shown in rail) */}
+              <div className="flex md:hidden items-center gap-1 sm:gap-1.5 rounded-md border border-gold/30 bg-gold/10 px-1.5 sm:px-2 py-0.5 sm:py-1">
+                <Sparkles className="h-2.5 w-2.5 sm:h-3 sm:w-3 shrink-0 text-gold" />
+                <span className="max-w-[100px] sm:max-w-[140px] truncate text-[9px] sm:text-[10px] font-semibold text-gold">
                   {article.keyword}
                 </span>
               </div>
-              <div className="ml-auto flex items-center gap-2 sm:gap-3">
-                {/* Auto-Pilot toggle */}
-                <motion.button
-                  onClick={() => autoPilot ? setAutoPilot(false) : setAutoPilot(true)}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+              <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+                {/* Zen Mode — desktop */}
+                <button
+                  onClick={toggleZenMode}
                   className={cn(
-                    "hidden sm:flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold transition-all",
-                    autoPilot
-                      ? 'border-primary/50 bg-primary/15 text-primary shadow-lg shadow-primary/20'
-                      : 'border-border bg-card/50 text-muted-foreground hover:border-primary/30 hover:text-foreground hover:bg-card'
+                    "hidden md:flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-all active:scale-95",
+                    zenMode
+                      ? "border-gold/40 bg-gold/10 text-gold"
+                      : "border-border text-muted-foreground hover:text-foreground hover:border-border/80"
                   )}
-                  title="Auto-Pilot: Generate everything at once without manual steps"
                 >
-                  <Zap className={cn("h-3.5 w-3.5", autoPilot && "animate-pulse")} />
-                  <span>Auto-Pilot</span>
-                  <div className={cn(
-                    "h-2 w-2 rounded-full transition-all",
-                    autoPilot ? 'bg-primary animate-pulse' : 'bg-muted-foreground/30'
-                  )} />
-                </motion.button>
-                
-                {/* Generate All button */}
-                {autoPilot && !autoPilotRunning && (
-                  <motion.button
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.9 }}
-                    onClick={handleAutoPilot}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-primary to-primary/80 px-4 py-2 text-xs font-bold text-primary-foreground shadow-lg shadow-primary/30 hover:shadow-primary/40 transition-all"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Generate All
-                  </motion.button>
-                )}
-                
-                {/* Auto-Pilot running state */}
-                {autoPilotRunning && (
-                  <motion.div 
-                    initial={{ opacity: 0, x: -10 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    className="flex items-center gap-2 px-3 py-2 rounded-xl border border-primary/30 bg-primary/10"
-                  >
-                    <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-                    <span className="text-xs font-semibold text-primary">
-                      {autoPilotPhase === 'brief' ? 'Analyzing keyword...'
-                        : autoPilotPhase === 'outline' ? 'Building outline...'
-                          : autoPilotPhase === 'seo' ? 'Running SEO analysis...'
-                            : 'Writing article...'}
-                    </span>
-                  </motion.div>
-                )}
-                
-                <div className="flex items-center gap-1 text-[10px] sm:text-xs font-mono-dm text-text-3">
-                  <span className="font-medium text-text-1">Step {activeStep}</span>
-                  <span>of 4</span>
-                </div>
+                  {zenMode ? <Sparkles className="h-3 w-3" /> : <PenLine className="h-3 w-3" />}
+                  {zenMode ? "Exit Zen" : "Zen Mode"}
+                </button>
               </div>
             </div>
 
             {/* Error banner */}
             {error && (
-              <div className="border-t border-destructive/30 bg-destructive/10 px-4 sm:px-8 py-3">
+              <div className="border-t border-destructive/30 bg-destructive/10 px-3 sm:px-4 lg:px-8 py-2 sm:py-3">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs sm:text-sm text-destructive flex-1">{error}</p>
+                  <p className="text-[10px] sm:text-xs text-destructive flex-1">{error}</p>
                   <button
                     onClick={() => setError(null)}
-                    className="text-xs font-semibold text-destructive/70 hover:text-destructive underline shrink-0 active:scale-95 touch-manipulation"
+                    className="text-[10px] sm:text-xs font-semibold text-destructive/70 hover:text-destructive underline shrink-0 active:scale-95 touch-manipulation"
                   >
                     Dismiss
                   </button>
@@ -1192,57 +1174,54 @@ export default function ArticleDetailPage() {
         )}
       </AnimatePresence>
 
-      {/* Two-panel body -> Full width with Top Rail */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        {/* ── Mission Control Progress Rail ─────────────────────────── */}
+      {/* ── Two-column Command Center body ─────────────────────────── */}
+      <div className="flex flex-col flex-1 md:h-[calc(100vh-36px)] relative">
+
+        {/* Compact Command Rail - Horizontal below header */}
         <AnimatePresence>
           {!zenMode && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="w-full border-b border-white/10 bg-surface-1/50 backdrop-blur-md px-4 py-2 shrink-0 sticky top-0 z-40"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="sticky top-0 z-50 border-b border-border bg-card shadow-sm"
             >
-              <ol className="flex items-center w-full max-w-4xl mx-auto justify-between">
-                {STEPS.map((step, idx) => {
-                  const isDone = activeStep > step.id;
-                  const isActive = activeStep === step.id;
-                  const Icon = step.icon;
-
-                  return (
-                    <li key={step.id} className="flex items-center flex-1 relative">
-                      <div className="flex items-center gap-2 w-full relative z-10">
-                        <div
-                          className={cn(
-                            "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border-2 transition-all",
-                            isActive ? "border-gold bg-gold/10 text-gold" :
-                              isDone ? "border-teal bg-teal/10 text-teal" :
-                                "border-white/10 bg-surface-2 text-text-3"
-                          )}
-                        >
-                          {isDone ? <CheckCircle2 className="h-4 w-4" /> : <Icon className="h-4 w-4" />}
-                        </div>
-                        <p className={cn("text-xs font-bold hidden sm:block", isActive ? 'text-gold' : isDone ? 'text-teal' : 'text-text-3')}>
-                          {step.label}
-                        </p>
-                      </div>
-                      {idx < STEPS.length - 1 && (
-                        <div className="absolute top-3.5 left-[50%] right-[-50%] h-[2px] -z-10 bg-white/5">
-                          <div className="h-full bg-gradient-to-r from-teal to-gold transition-all" style={{ width: isDone ? '100%' : '0%' }} />
-                        </div>
-                      )}
-                    </li>
-                  );
-                })}
-              </ol>
+              <CommandRail
+                keyword={article.keyword}
+                activeStep={activeStep}
+                hasBrief={!!article.brief}
+                hasOutline={!!article.outline}
+                hasDraft={!!article.draft}
+                hasSocial={!!article.socialMedia}
+                seoScore={article.optimization ? Math.round(
+                  (article.optimization as any).seoScore ?? 0
+                ) : 0}
+                wordCount={wordCount}
+                targetWordCount={article.settings?.targetWordCount ?? 2000}
+                autoPilot={autoPilot}
+                autoPilotRunning={autoPilotRunning}
+                autoPilotPhase={autoPilotPhase}
+                onToggleAutoPilot={() => setAutoPilot(p => !p)}
+                onRunAutoPilot={handleAutoPilot}
+                onStepClick={(step) => {
+                  setExpandedSteps(prev => ({ ...prev, [step]: true }));
+                }}
+              />
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* ── Main Content Container ────────────────────────────────── */}
-        <main className={cn("flex-1 overflow-y-auto pb-16", zenMode ? "pt-6" : "p-3 sm:p-4")}>
-          <div className={cn("mx-auto space-y-4", zenMode ? "max-w-4xl" : "max-w-5xl")}>
-            {/* Keyword Intelligence Strip - Removed for compactness */}
+        {/* Scrollable content canvas */}
+        <main className={cn(
+          "flex-1 h-full overflow-y-auto transition-all duration-500",
+          zenMode ? "pt-8 sm:pt-12 pb-32" : "px-3 sm:px-4 lg:px-6 pt-3 sm:pt-4 lg:pt-6 pb-32"
+        )}>
+          <div className={cn(
+            "mx-auto space-y-4 sm:space-y-5 lg:space-y-6 transition-all duration-500",
+            zenMode ? "max-w-full px-4 sm:px-8 lg:px-12" : "max-w-5xl"
+          )}>
+
 
             <AnimatePresence mode="popLayout">
               {/* Step 1: Brief */}
@@ -1253,16 +1232,17 @@ export default function ArticleDetailPage() {
                 transition={{ duration: 0.5 }}
                 className={cn("transition-all duration-700", activeStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 hidden")}
               >
-                <div className="mb-4 sm:mb-6 flex items-center justify-between">
-                  <div>
-                    <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-foreground">Content Strategy & Brief</h2>
-                    <p className="mt-1 text-[10px] sm:text-xs md:text-sm text-muted-foreground">Review the auto-generated SEO strategy and competitor insights.</p>
-                  </div>
-                  <button 
+                <div className="mb-3 sm:mb-4 lg:mb-6 flex items-center justify-between">
+                  <button
                     onClick={() => setExpandedSteps(prev => ({ ...prev, 1: !prev[1] }))}
-                    className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                    className="w-full flex items-center justify-between gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-border bg-card/50 px-2.5 sm:px-3 py-2 sm:py-2.5 hover:bg-card transition-all"
                   >
-                    {expandedSteps[1] ? <ChevronRight className="rotate-90 transition-transform h-5 w-5" /> : <ChevronRight className="transition-transform h-5 w-5" />}
+                    <div className="flex items-center gap-1.5 sm:gap-2.5">
+                      <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#22d3ee]/15 text-[8px] sm:text-[9px] font-black text-[#22d3ee]">1</span>
+                      <span className="text-xs sm:text-sm font-semibold text-foreground">SEO Brief</span>
+                      <span className="hidden sm:inline text-[10px] text-muted-foreground">— keyword research & content map</span>
+                    </div>
+                    <ChevronRight className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform", expandedSteps[1] && "rotate-90")} />
                   </button>
                 </div>
                 
@@ -1272,7 +1252,7 @@ export default function ArticleDetailPage() {
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
+                      className="overflow-hidden pb-8"
                     >
                       {article.brief ? (
                         <BriefPanel
@@ -1301,19 +1281,17 @@ export default function ArticleDetailPage() {
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className={cn("transition-all duration-700 relative", activeStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}
                 >
-                  <div className="absolute -top-8 left-8 bottom-full w-px bg-gradient-to-b from-teal/50 to-transparent -z-10" />
-                  <div className="mb-4 sm:mb-6 pt-6 sm:pt-8 border-t border-white/5 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-foreground">Article Outline</h2>
-                      <p className="mt-1 text-[10px] sm:text-xs md:text-sm text-muted-foreground">Adjust the structure before writing begins.</p>
+                  <button
+                    onClick={() => setExpandedSteps(prev => ({ ...prev, 2: !prev[2] }))}
+                    className="w-full flex items-center justify-between gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-border bg-card/50 px-2.5 sm:px-3 py-2 sm:py-2.5 hover:bg-card transition-all mb-3"
+                  >
+                    <div className="flex items-center gap-1.5 sm:gap-2.5">
+                      <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#22d3ee]/15 text-[8px] sm:text-[9px] font-black text-[#22d3ee]">2</span>
+                      <span className="text-xs sm:text-sm font-semibold text-foreground">Outline</span>
+                      <span className="hidden sm:inline text-[10px] text-muted-foreground">— article structure</span>
                     </div>
-                    <button 
-                      onClick={() => setExpandedSteps(prev => ({ ...prev, 2: !prev[2] }))}
-                      className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                    >
-                      {expandedSteps[2] ? <ChevronRight className="rotate-90 transition-transform h-5 w-5" /> : <ChevronRight className="transition-transform h-5 w-5" />}
-                    </button>
-                  </div>
+                    <ChevronRight className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform", expandedSteps[2] && "rotate-90")} />
+                  </button>
                   
                   <AnimatePresence>
                     {expandedSteps[2] && (
@@ -1321,7 +1299,7 @@ export default function ArticleDetailPage() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
+                        className="overflow-hidden pb-8"
                       >
                         {article.outline ? (
                           <OutlinePanel
@@ -1350,19 +1328,17 @@ export default function ArticleDetailPage() {
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className={cn("transition-all duration-700 relative", activeStep >= 3 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}
                 >
-                  <div className="absolute -top-8 left-8 bottom-full w-px bg-gradient-to-b from-teal/50 to-transparent -z-10" />
-                  <div className="mb-4 sm:mb-6 pt-6 sm:pt-8 border-t border-white/5 flex items-center justify-between">
-                    <div>
-                      <h2 className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-foreground">Article Draft</h2>
-                      <p className="mt-1 text-[10px] sm:text-xs md:text-sm text-muted-foreground">Review and edit the generated content.</p>
+                  <button
+                    onClick={() => setExpandedSteps(prev => ({ ...prev, 3: !prev[3] }))}
+                    className="w-full flex items-center justify-between gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-border bg-card/50 px-2.5 sm:px-3 py-2 sm:py-2.5 hover:bg-card transition-all mb-3"
+                  >
+                    <div className="flex items-center gap-1.5 sm:gap-2.5">
+                      <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#6366f1]/20 text-[8px] sm:text-[9px] font-black text-[#818cf8]">3</span>
+                      <span className="text-xs sm:text-sm font-semibold text-foreground">Draft</span>
+                      <span className="hidden sm:inline text-[10px] text-muted-foreground">— review & edit your article</span>
                     </div>
-                    <button 
-                      onClick={() => setExpandedSteps(prev => ({ ...prev, 3: !prev[3] }))}
-                      className="p-2 rounded-lg hover:bg-white/5 transition-colors"
-                    >
-                      {expandedSteps[3] ? <ChevronRight className="rotate-90 transition-transform h-5 w-5" /> : <ChevronRight className="transition-transform h-5 w-5" />}
-                    </button>
-                  </div>
+                    <ChevronRight className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform", expandedSteps[3] && "rotate-90")} />
+                  </button>
                   
                   <AnimatePresence>
                     {expandedSteps[3] && (
@@ -1370,7 +1346,7 @@ export default function ArticleDetailPage() {
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden"
+                        className="overflow-hidden pb-8"
                       >
                         {article.draft ? (
                           <DraftPanel
@@ -1432,23 +1408,6 @@ export default function ArticleDetailPage() {
                       onGenerate={handleGenerateSocial}
                       isGenerating={socialLoading}
                     />
-                    
-                    {/* WordPress Publishing Section */}
-                    {article.socialMedia && (
-                      <div className="pt-4 border-t border-white/5">
-                        <div className="mb-3">
-                          <h3 className="text-base font-bold text-foreground">Publish to WordPress</h3>
-                          <p className="mt-1 text-xs text-muted-foreground">Push your article directly to your WordPress site.</p>
-                        </div>
-                        <Button
-                          onClick={() => setShowWordPressPublish(true)}
-                          className="w-full sm:w-auto"
-                        >
-                          <Share2 className="h-4 w-4 mr-2" />
-                          Publish to WordPress
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 </motion.div>
               )}
@@ -1478,34 +1437,29 @@ export default function ArticleDetailPage() {
         }}
       />
 
-      {/* Mobile Sticky CTA Bar */}
+      {/* ── Sticky Bottom Action Bar (all screen sizes) ────────────── */}
       {article && !showSuccess && !autoPilotRunning && !loading && (
-        <div className="fixed bottom-0 inset-x-0 p-4 bg-obsidian/80 backdrop-blur-xl border-t border-white/10 z-40 md:hidden flex items-center gap-3">
-          {!article.draft ? (
-             <button
-                onClick={handleAutoPilot}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 py-3.5 text-xs font-bold text-white shadow-lg"
-             >
-                <Zap className="h-3.5 w-3.5 fill-white" />
-                Auto-Pilot
-             </button>
-          ) : !article.optimization ? (
+        <div className="fixed bottom-0 inset-x-0 z-40 flex items-center justify-between gap-3 px-4 py-2 sm:py-3 bg-card/90 backdrop-blur-xl border-t border-border">
+          {/* Left: status pill */}
+          <div className="hidden sm:flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className={cn(
+              "h-1.5 w-1.5 rounded-full",
+              activeStep === 4 ? "bg-[#22d3ee] animate-pulse" : "bg-muted"
+            )} />
+            Step {activeStep} of 4
+          </div>
+
+          {/* Right: context CTAs */}
+          <div className="flex items-center gap-2 ml-auto w-full sm:w-auto">
             <button
-                onClick={handleOptimize}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-teal py-3.5 text-xs font-bold text-obsidian shadow-lg"
-             >
-                <TrendingUp className="h-3.5 w-3.5" />
-                Run SEO
-             </button>
-          ) : (
-            <button
-                onClick={() => setShowWordPressPublish(true)}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gold py-3.5 text-xs font-bold text-white shadow-lg"
-             >
-                <Share2 className="h-3.5 w-3.5" />
-                Publish
-             </button>
-          )}
+              onClick={() => setShowWordPressPublish(true)}
+              disabled={!wordPressSites.some(s => s.connected)}
+              className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg sm:rounded-xl bg-gradient-to-r from-[#f59e0b] to-[#f97316] px-3 py-2 sm:px-5 sm:py-2.5 text-[11px] sm:text-xs font-bold text-obsidian shadow-lg shadow-[#f59e0b]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              Publish to WordPress
+            </button>
+          </div>
         </div>
       )}
 

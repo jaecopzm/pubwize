@@ -53,7 +53,14 @@ export class GroqProvider extends BaseProvider {
           continue;
         }
 
-        return { content, provider: 'groq', model: modelName };
+        const finishReason = completion.choices?.[0]?.finish_reason || undefined;
+
+        return { 
+          content, 
+          provider: 'groq', 
+          model: modelName,
+          finishReason
+        };
 
       } catch (err: any) {
         const msg = err instanceof Error ? err.message : String(err);

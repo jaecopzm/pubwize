@@ -238,16 +238,24 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
         </header>
 
         {/* ── Page content ── */}
-        <div className="dlw-content">
-          {usageData && (
-            <UsageWarningBanner
-              articlesUsed={usageData.usage.articlesUsed}
-              articlesLimit={usageData.limits.articlesPerMonth}
-              planTier={usageData.plan}
-            />
-          )}
-          {children}
-        </div>
+        {(() => {
+          const isArticleEditor = /^\/dashboard\/articles\/[^/]+$/.test(pathname);
+          return (
+            <div
+              className="dlw-content"
+              style={isArticleEditor ? { padding: 0 } : undefined}
+            >
+              {usageData && (
+                <UsageWarningBanner
+                  articlesUsed={usageData.usage.articlesUsed}
+                  articlesLimit={usageData.limits.articlesPerMonth}
+                  planTier={usageData.plan}
+                />
+              )}
+              {children}
+            </div>
+          );
+        })()}
 
       </SidebarInset>
 

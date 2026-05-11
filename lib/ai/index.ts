@@ -70,6 +70,10 @@ export async function generateDraft(params: {
 }): Promise<DraftData> {
   const targetWords = params.targetWordCount || 2500;
   
+  // Calculate a reasonable initial token budget.
+  const draftMaxTokens = Math.min(Math.ceil(targetWords * 2.5), 7000);
+
+  // Attempt generation with initial token budget. If the model finishes due to length, retry with a higher budget.
   const response = await generateAI({
     systemPrompt: getDraftSystemPrompt({
       keyword: params.keyword,
@@ -82,9 +86,35 @@ export async function generateDraft(params: {
       targetWords
     }),
     temperature: 0.5,
-    maxTokens: Math.min(Math.ceil(targetWords * 2.2), 8000),
+    maxTokens: draftMaxTokens,
     taskType: 'draft'
   });
+
+  // Normalize finish reason for length truncation (Gemini uses 'MAX_TOKENS', others use 'length')
+  const isTruncated = response.finishReason === 'length' || response.finishReason === 'MAX_TOKENS';
+
+  // If the response indicates a length cutoff, retry once with a higher budget (up to 12k).
+  if (isTruncated) {
+    const retryResponse = await generateAI({
+      systemPrompt: getDraftSystemPrompt({
+        keyword: params.keyword,
+        targetWords,
+        outline: params.outline,
+        siteBrandVoice: params.siteBrandVoice
+      }),
+      userPrompt: getDraftUserPrompt({
+        ...params,
+        targetWords
+      }),
+      temperature: 0.5,
+      maxTokens: 7500, // Reduced from 12000 to be safer
+      taskType: 'draft'
+    });
+    return {
+      content: retryResponse.content,
+      format: "markdown"
+    };
+  }
 
   return {
     content: response.content,
@@ -107,6 +137,10 @@ export async function* generateDraftStream(params: {
 }): AsyncGenerator<string> {
   const targetWords = params.targetWordCount || 2500;
   
+  // Cap at 7000 as requested to avoid TPM/RPM limits while remaining dense.
+  const streamMaxTokens = Math.min(Math.ceil(targetWords * 3), 7000);
+
+  // Yield from stream. If a length finish occurs, the consumer will receive truncated content.
   yield* generateAIStream({
     systemPrompt: getDraftSystemPrompt({
       keyword: params.keyword,
@@ -119,7 +153,7 @@ export async function* generateDraftStream(params: {
       targetWords
     }),
     temperature: 0.5,
-    maxTokens: Math.min(Math.ceil(targetWords * 2.5), 6000),
+    maxTokens: streamMaxTokens,
     taskType: 'draft'
   });
 }

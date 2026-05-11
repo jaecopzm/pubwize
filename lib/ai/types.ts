@@ -29,6 +29,7 @@ export interface AIResponse {
   provider: AIProvider;
   model: string;
   cached?: boolean;
+  finishReason?: string;
 }
 
 export interface AIUsageLog {

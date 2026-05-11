@@ -36,58 +36,41 @@ export function AutoPilotOverlay({
   return (
     <AnimatePresence>
       <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.98 }}
+        initial={{ opacity: 0, y: 20, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: 30, scale: 0.98 }}
-        className="fixed bottom-6 right-6 z-50 w-[320px] max-w-[calc(100vw-48px)] overflow-hidden rounded-xl border border-primary/20 bg-card/70 p-4 shadow-2xl backdrop-blur-2xl sm:w-[360px]"
+        exit={{ opacity: 0, y: 20, scale: 0.95 }}
+        className="fixed bottom-6 right-6 z-50 w-[280px] max-w-[calc(100vw-48px)] overflow-hidden rounded-lg border border-border bg-card shadow-xl backdrop-blur-xl"
       >
-        <motion.div 
-          animate={{ 
-            opacity: [0.2, 0.4, 0.2],
-            scale: [1, 1.1, 1],
-          }}
-          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-          className="absolute -top-16 -right-16 w-32 h-32 bg-primary/20 blur-[50px] rounded-full pointer-events-none"
-        />
-        
-        <div className="relative z-10">
-          <div className="mb-4 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="relative flex h-7 w-7 items-center justify-center rounded-lg bg-primary/20 text-primary border border-primary/20 shadow-inner">
-                <Zap className="h-3.5 w-3.5 fill-primary" />
-                <motion.div
-                  animate={{ scale: [1, 1.3, 1], opacity: [0.3, 0, 0.3] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="absolute inset-0 bg-primary/20 rounded-lg"
-                />
+        <div className="p-3">
+          <div className="mb-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/10 text-primary">
+                <Zap className="h-3.5 w-3.5" />
               </div>
-              <div>
-                <h3 className="text-xs font-black text-foreground uppercase tracking-tight leading-none mb-0.5">Auto-Pilot</h3>
-                <p className="text-[9px] text-primary/60 font-mono uppercase tracking-widest font-bold">PRISM CORE V2</p>
-              </div>
+              <h3 className="text-xs font-bold text-foreground">Auto-Pilot</h3>
             </div>
             <button
               onClick={onCancel}
-              className="rounded-lg p-1.5 text-muted-foreground transition-all hover:bg-white/5 hover:text-foreground"
+              className="rounded-md p-1 text-muted-foreground transition-all hover:bg-muted hover:text-foreground"
             >
               <X className="h-3.5 w-3.5" />
             </button>
           </div>
 
-          <div className="space-y-1.5 mb-4">
-            <PhaseItem label="SEO STRATEGY" isDone={phasesCompleted.brief} isActive={phase === "brief"} />
-            <PhaseItem label="ARCHITECTURE" isDone={phasesCompleted.outline} isActive={phase === "outline"} />
+          <div className="space-y-1.5 mb-3">
+            <PhaseItem label="Brief" isDone={phasesCompleted.brief} isActive={phase === "brief"} />
+            <PhaseItem label="Outline" isDone={phasesCompleted.outline} isActive={phase === "outline"} />
             <PhaseItem 
-              label="CONTENT SYNTHESIS" 
+              label="Draft" 
               isDone={phasesCompleted.draft} 
               isActive={phase === "draft"} 
-              extra={phase === "draft" ? `${wordCount}/${targetWordCount}W` : undefined}
+              extra={phase === "draft" ? `${wordCount}/${targetWordCount}` : undefined}
             />
-            <PhaseItem label="SEO POLISH" isDone={phasesCompleted.seo} isActive={phase === "seo"} />
+            <PhaseItem label="SEO" isDone={phasesCompleted.seo} isActive={phase === "seo"} />
           </div>
 
           {phase && (
-            <div className="mb-4">
+            <div className="mb-3">
               <GenerationProgress 
                 phase={phase} 
                 progress={progress} 
@@ -96,16 +79,13 @@ export function AutoPilotOverlay({
             </div>
           )}
 
-          <div className="flex items-center justify-between border-t border-border/40 pt-3.5">
-             <div className="flex items-center gap-1.5">
-               <Sparkles className="h-3 w-3 text-primary opacity-40" />
-               <p className="text-[9px] text-muted-foreground/60 font-mono font-bold uppercase tracking-widest">Streaming...</p>
-             </div>
+          <div className="flex items-center justify-between border-t border-border pt-2">
+             <p className="text-[10px] text-muted-foreground font-medium">Processing...</p>
              <button 
                 onClick={onCancel}
-                className="text-[9px] font-black text-rose-500 hover:text-rose-400 transition-colors uppercase tracking-widest px-2.5 py-1.5 rounded-lg hover:bg-rose-500/10"
+                className="text-[10px] font-semibold text-destructive hover:text-destructive/80 transition-colors px-2 py-1 rounded-md hover:bg-destructive/10"
              >
-                Abort
+                Cancel
              </button>
           </div>
         </div>
@@ -117,33 +97,23 @@ export function AutoPilotOverlay({
 function PhaseItem({ label, isDone, isActive, extra }: { label: string; isDone: boolean; isActive: boolean; extra?: string }) {
   return (
     <div className={cn(
-      "flex items-center justify-between rounded-lg px-3 py-2 transition-all duration-300",
-      isActive ? 'bg-primary/5 border border-primary/10 shadow-inner' : 'bg-transparent border border-transparent'
+      "flex items-center justify-between rounded-md px-2.5 py-1.5 transition-all",
+      isActive ? 'bg-primary/5 border border-primary/20' : 'bg-transparent'
     )}>
-      <div className="flex items-center gap-3">
-        <div className="relative flex h-4 w-4 items-center justify-center">
+      <div className="flex items-center gap-2">
+        <div className="flex h-4 w-4 items-center justify-center">
           {isDone ? (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              className="h-4 w-4 rounded-full bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20"
-            >
-              <CheckCircle2 className="h-2.5 w-2.5 text-emerald-500" />
-            </motion.div>
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
           ) : isActive ? (
-            <div className="h-4 w-4 relative flex items-center justify-center">
-              <Loader2 className="h-3 w-3 animate-spin text-primary" />
-            </div>
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
           ) : (
-            <div className="h-3 w-3 rounded-full border border-muted/30 flex items-center justify-center opacity-30">
-              <div className="h-0.5 w-0.5 rounded-full bg-muted" />
-            </div>
+            <div className="h-2 w-2 rounded-full border border-muted-foreground/30" />
           )}
         </div>
         <span className={cn(
-          "text-[10px] font-black tracking-wider uppercase",
-          isActive ? 'text-foreground' : 'text-muted-foreground/80',
-          isDone && 'text-emerald-500/80 opacity-70'
+          "text-[11px] font-semibold",
+          isActive ? 'text-foreground' : 'text-muted-foreground',
+          isDone && 'text-emerald-500'
         )}>
           {label}
         </span>

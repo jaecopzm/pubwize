@@ -108,24 +108,25 @@ export function KPICard({
     <button
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col gap-3 overflow-hidden rounded-2xl border p-5 text-left",
-        "bg-card transition-all duration-300",
+        "group relative flex flex-col gap-2 sm:gap-3 overflow-hidden rounded-lg sm:rounded-xl border p-3 sm:p-4 text-left",
+        "transition-all duration-300",
         "hover:scale-[1.025] hover:shadow-xl",
         "active:scale-[0.98]",
         onClick ? "cursor-pointer" : "cursor-default",
         className
       )}
       style={{
-        borderColor: `${accentColor}22`,
-        // subtle glow on hover via box-shadow (applied via JS style for dynamic color)
+        backgroundColor: `${accentColor}10`,
+        borderColor: `${accentColor}20`,
+        color: accentColor,
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLElement).style.boxShadow = `0 8px 32px ${accentColor}22, 0 2px 8px rgba(0,0,0,0.12)`;
-        (e.currentTarget as HTMLElement).style.borderColor = `${accentColor}44`;
+        (e.currentTarget as HTMLElement).style.backgroundColor = `${accentColor}15`;
       }}
       onMouseLeave={(e) => {
         (e.currentTarget as HTMLElement).style.boxShadow = "";
-        (e.currentTarget as HTMLElement).style.borderColor = `${accentColor}22`;
+        (e.currentTarget as HTMLElement).style.backgroundColor = `${accentColor}10`;
       }}
     >
       {/* Ambient gradient blob */}
@@ -136,32 +137,29 @@ export function KPICard({
 
       {/* Top row: icon + sparkline */}
       <div className="flex items-start justify-between">
-        <div
-          className="flex h-10 w-10 items-center justify-center rounded-xl border"
-          style={{ background: `${accentColor}18`, borderColor: `${accentColor}30`, color: accentColor }}
-        >
+        <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center">
           {icon}
         </div>
         {sparklineData && <Sparkline data={sparklineData} color={accentColor} />}
       </div>
 
       {/* Value */}
-      <div className="flex items-end gap-1.5">
-        <span className="text-3xl font-black tracking-tight text-foreground leading-none">
+      <div className="flex items-end gap-1">
+        <span className="text-2xl sm:text-3xl font-black tracking-tight leading-none" style={{ color: accentColor }}>
           {animatedValue.toLocaleString()}
         </span>
         {suffix && (
-          <span className="mb-0.5 text-sm font-semibold text-muted-foreground">{suffix}</span>
+          <span className="mb-0.5 text-xs sm:text-sm font-semibold opacity-60">{suffix}</span>
         )}
       </div>
 
       {/* Label + Trend */}
       <div className="flex items-center justify-between">
-        <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+        <p className="text-[10px] sm:text-xs font-bold uppercase tracking-widest opacity-70">{label}</p>
         {trend !== undefined && (
-          <span className={cn("flex items-center gap-1 text-[10px] font-bold", trendColor)}>
-            <TrendIcon className="h-3 w-3" />
-            {Math.abs(trend)}%{trendLabel ? ` ${trendLabel}` : ""}
+          <span className={cn("flex items-center gap-0.5 sm:gap-1 text-[9px] sm:text-[10px] font-bold", trendColor)}>
+            <TrendIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3" />
+            {Math.abs(trend)}%<span className="hidden sm:inline">{trendLabel ? ` ${trendLabel}` : ""}</span>
           </span>
         )}
       </div>

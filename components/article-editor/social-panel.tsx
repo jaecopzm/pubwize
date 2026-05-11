@@ -1,17 +1,13 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
-import { Hash, Copy, Check, Loader2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
+import { motion, AnimatePresence } from "framer-motion";
+import { Hash, Copy, Check, Loader2, Sparkles, Share2 } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { GenerateCTA } from "./generate-cta";
 import type { SocialMediaData } from "@/lib/types";
 
-// Modern SVG Social Icons
 const TwitterIcon = () => (
   <svg viewBox="0 0 24 24" fill="currentColor" className="w-full h-full">
     <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -36,6 +32,13 @@ const FacebookIcon = () => (
   </svg>
 );
 
+const PLATFORMS = [
+  { key: "twitter" as const,   label: "X / Twitter", Icon: TwitterIcon,   color: "text-foreground",   accent: "rgba(0,0,0,0.06)" },
+  { key: "linkedin" as const,  label: "LinkedIn",     Icon: LinkedInIcon,  color: "text-[#0A66C2]",   accent: "rgba(10,102,194,0.08)" },
+  { key: "instagram" as const, label: "Instagram",    Icon: InstagramIcon, color: "text-[#E4405F]",   accent: "rgba(228,64,95,0.08)" },
+  { key: "facebook" as const,  label: "Facebook",     Icon: FacebookIcon,  color: "text-[#1877F2]",   accent: "rgba(24,119,242,0.08)" },
+];
+
 interface SocialPanelProps {
   socialMedia: SocialMediaData | null;
   articleId: string;
@@ -46,173 +49,150 @@ interface SocialPanelProps {
 }
 
 export function SocialPanel({ socialMedia, articleId, keyword, content, onGenerate, isGenerating }: SocialPanelProps) {
-  const [copiedIndex, setCopiedIndex] = useState<string | null>(null);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<string>("twitter");
 
-  const copyToClipboard = async (text: string, id: string) => {
+  const copy = async (text: string, id: string) => {
     await navigator.clipboard.writeText(text);
-    setCopiedIndex(id);
-    setTimeout(() => setCopiedIndex(null), 2000);
+    setCopiedId(id);
+    toast.success("Copied!");
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
+  // ── Empty state ────────────────────────────────────────────────
   if (!socialMedia) {
     return (
-      <div className="space-y-4">
-        <div className="text-center py-12 sm:py-16 px-4">
-          <div className="relative w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-6">
-            <div className="absolute inset-0 bg-gradient-to-br from-blue-500/20 to-purple-500/20 rounded-2xl blur-xl" />
-            <div className="relative w-full h-full bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
-            </div>
-          </div>
-          <h3 className="text-xl sm:text-2xl font-bold mb-3 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Ready to Amplify Your Reach
-          </h3>
-          <p className="text-sm sm:text-base text-muted-foreground mb-8 max-w-md mx-auto">
-            Generate platform-optimized social media posts from your article content in seconds.
-          </p>
-          <GenerateCTA
-            onClick={onGenerate}
-            loading={isGenerating}
-            done={false}
-            label="Generate Social Media Posts"
-            doneLabel="Social media posts generated"
-          />
+      <div className="flex flex-col items-center justify-center py-8 px-4 text-center rounded-lg border border-border bg-muted/20">
+        <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
+          <Share2 className="h-4 w-4 text-primary" />
         </div>
+        <p className="text-sm font-semibold text-foreground mb-1">No social posts yet</p>
+        <p className="text-xs text-muted-foreground mb-3">Generate platform-optimized posts from your article.</p>
+        <button
+          onClick={onGenerate}
+          disabled={isGenerating}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-xs font-bold uppercase tracking-wider hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-95 shadow-sm"
+        >
+          {isGenerating ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
+          {isGenerating ? "Generating..." : "Generate Posts"}
+        </button>
       </div>
     );
   }
 
-  const platforms = [
-    { key: 'twitter', label: '', icon: TwitterIcon, color: 'text-black dark:text-white', bgColor: 'bg-black/5 dark:bg-white/5', posts: socialMedia.twitter },
-    { key: 'linkedin', label: 'LinkedIn', icon: LinkedInIcon, color: 'text-[#0A66C2]', bgColor: 'bg-[#0A66C2]/10', posts: socialMedia.linkedin },
-    { key: 'instagram', label: 'Instagram', icon: InstagramIcon, color: 'text-[#E4405F]', bgColor: 'bg-[#E4405F]/10', posts: socialMedia.instagram },
-    { key: 'facebook', label: 'Facebook', icon: FacebookIcon, color: 'text-[#1877F2]', bgColor: 'bg-[#1877F2]/10', posts: socialMedia.facebook },
-  ];
+  const activePlatform = PLATFORMS.find(p => p.key === activeTab)!;
+  const activePosts: string[] = (socialMedia as any)[activeTab] ?? [];
 
+  // ── Filled state ───────────────────────────────────────────────
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="space-y-4"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-bold">Social Media Content</h2>
-          <p className="text-sm text-gray-600">Platform-optimized posts</p>
-        </div>
-        <Button 
-          onClick={onGenerate} 
-          disabled={isGenerating} 
-          variant="outline"
-          size="sm"
+    <div className="space-y-3 pb-16 sm:pb-8">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <p className="text-[9px] font-mono uppercase tracking-[0.12em] text-muted-foreground/50">Social Content</p>
+        <button
+          onClick={onGenerate}
+          disabled={isGenerating}
+          className="flex items-center gap-1.5 rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:bg-muted/70 disabled:opacity-50 transition-all active:scale-95"
         >
-          {isGenerating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+          {isGenerating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
           Regenerate
-        </Button>
+        </button>
       </div>
 
-      <Tabs defaultValue="twitter" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 gap-1 h-auto p-1 bg-transparent border-b border-border">
-          {platforms.map(platform => {
-            const Icon = platform.icon;
-            return (
-              <TabsTrigger 
-                key={platform.key} 
-                value={platform.key} 
-                className="flex items-center justify-center gap-2 py-2 px-2 rounded-xl border border-transparent data-[state=active]:border-border data-[state=active]:bg-card transition-all"
-              >
-                <div className={`w-5 h-5 ${platform.color}`}>
-                  <Icon />
-                </div>
-                {platform.label && <span className="hidden sm:inline text-sm">{platform.label}</span>}
-              </TabsTrigger>
-            );
-          })}
-        </TabsList>
-
-        {platforms.map(platform => (
-          <TabsContent key={platform.key} value={platform.key} className="space-y-3 mt-4">
-            <div className="grid gap-3">
-              {platform.posts.map((post, index) => (
-                <Card key={index} className="overflow-hidden border-border bg-card hover:shadow-md transition-shadow">
-                  <CardHeader className="pb-3 px-4 pt-3 bg-gradient-to-r from-transparent to-transparent hover:from-muted/30">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                        <div className={`w-4 h-4 ${platform.color}`}>
-                          <platform.icon />
-                        </div>
-                        <span>Post {index + 1}</span>
-                      </CardTitle>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-8 w-8 p-0 hover:bg-muted"
-                        onClick={() => copyToClipboard(post, `${platform.key}-${index}`)}
-                      >
-                        {copiedIndex === `${platform.key}-${index}` ? (
-                          <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-teal" />
-                        ) : (
-                          <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0 px-4 sm:px-5 pb-3 sm:pb-4">
-                    <Textarea
-                      value={post}
-                      readOnly
-                      className="min-h-[100px] resize-none text-xs sm:text-sm border-0 bg-muted/50 p-3 sm:p-4 focus:ring-0 focus:outline-none rounded-lg"
-                    />
-                    <div className="mt-2 sm:mt-3 flex flex-col sm:flex-row justify-between sm:items-center gap-1 sm:gap-0 text-xs">
-                      <div className="text-muted-foreground font-medium">
-                        {post.length} characters
-                      </div>
-                      {platform.key === 'twitter' && (
-                        <div className={`font-semibold ${post.length > 280 ? 'text-destructive' : 'text-teal'}`}>
-                          {280 - post.length} remaining
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </TabsContent>
+      {/* Platform tab strip */}
+      <div className="flex items-center gap-1 p-1 rounded-xl border border-border bg-muted/30">
+        {PLATFORMS.map(({ key, label, Icon }) => (
+          <button
+            key={key}
+            onClick={() => setActiveTab(key)}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-lg text-[10px] font-semibold transition-all",
+              activeTab === key
+                ? "bg-card border border-border shadow-sm text-foreground"
+                : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <span className={cn("h-3 w-3 shrink-0", activeTab === key ? activePlatform.color : "")}>
+              <Icon />
+            </span>
+            <span className="hidden sm:inline truncate">{label.split(" ")[0]}</span>
+          </button>
         ))}
-      </Tabs>
+      </div>
 
-      {socialMedia.hashtags.length > 0 && (
-        <Card className="border-border bg-gradient-to-br from-card to-muted/20">
-          <CardHeader className="pb-3 px-5 pt-4">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <div className="w-5 h-5 text-gold">
-                <Hash className="w-full h-full" />
-              </div>
-              Trending Hashtags
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Click any hashtag to copy
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="px-5 pb-4">
-            <div className="flex flex-wrap gap-2">
-              {socialMedia.hashtags.map((hashtag, index) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="cursor-pointer hover:bg-gold/20 hover:text-gold hover:border-gold/30 text-xs px-3 py-1.5 transition-all border border-border"
-                  onClick={() => copyToClipboard(hashtag, `hashtag-${index}`)}
+      {/* Posts */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -6 }}
+          transition={{ duration: 0.18 }}
+          className="space-y-2"
+        >
+          {activePosts.length === 0 ? (
+            <p className="text-xs text-muted-foreground text-center py-6">No posts for this platform.</p>
+          ) : (
+            activePosts.map((post, idx) => {
+              const postId = `${activeTab}-${idx}`;
+              const isTwitter = activeTab === "twitter";
+              const overLimit = isTwitter && post.length > 280;
+              return (
+                <div
+                  key={idx}
+                  className="group relative rounded-xl border border-border bg-card overflow-hidden"
                 >
-                  {hashtag}
-                  {copiedIndex === `hashtag-${index}` && (
-                    <Check className="w-3 h-3 ml-1.5 text-teal" />
-                  )}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                  {/* Post body */}
+                  <textarea
+                    value={post}
+                    readOnly
+                    rows={4}
+                    className="w-full resize-none bg-transparent px-3 pt-3 pb-1 text-xs text-foreground/80 leading-relaxed outline-none"
+                  />
+                  {/* Footer */}
+                  <div className="flex items-center justify-between px-3 pb-2.5 pt-1">
+                    <span className={cn(
+                      "text-[9px] font-mono tabular-nums",
+                      overLimit ? "text-destructive" : "text-muted-foreground/50"
+                    )}>
+                      {post.length}{isTwitter && ` / 280`}
+                    </span>
+                    <button
+                      onClick={() => copy(post, postId)}
+                      className="flex items-center gap-1 rounded-lg border border-border bg-muted/40 px-2 py-1 text-[9px] font-semibold text-muted-foreground hover:text-foreground transition-all active:scale-95"
+                    >
+                      {copiedId === postId ? <Check className="h-2.5 w-2.5 text-[#22d3ee]" /> : <Copy className="h-2.5 w-2.5" />}
+                      {copiedId === postId ? "Copied" : "Copy"}
+                    </button>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Hashtags */}
+      {socialMedia.hashtags?.length > 0 && (
+        <div className="rounded-lg border border-border bg-muted/20 p-2.5">
+          <p className="text-[9px] font-semibold uppercase tracking-wider text-muted-foreground mb-2">Hashtags</p>
+          <div className="flex flex-wrap gap-1.5">
+            {socialMedia.hashtags.map((tag, i) => {
+              const tagId = `hashtag-${i}`;
+              return (
+                <button
+                  key={i}
+                  onClick={() => copy(tag, tagId)}
+                  className="flex items-center gap-1 rounded-md border border-border bg-card px-2 py-1 text-[10px] font-semibold text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-95"
+                >
+                  {tag}
+                  {copiedId === tagId && <Check className="h-2.5 w-2.5 text-emerald-500 ml-0.5" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       )}
-    </motion.div>
+    </div>
   );
 }

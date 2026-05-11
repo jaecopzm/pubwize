@@ -38,7 +38,14 @@ export class GeminiProvider extends BaseProvider {
     const content = this.cleanContent(result.response.text());
     if (!content) throw new Error("Gemini returned empty content");
 
-    return { content, provider: 'gemini', model: modelName };
+    const finishReason = result.response.candidates?.[0]?.finishReason;
+
+    return { 
+      content, 
+      provider: 'gemini', 
+      model: modelName,
+      finishReason
+    };
   }
 
   async *stream(request: AIRequest, signal?: AbortSignal): AsyncGenerator<string> {
