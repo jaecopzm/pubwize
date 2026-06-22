@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Pillar & Cluster Strategy is available on Starter and Pro plans", upgradeRequired: true }, { status: 403 });
     }
 
-    const usageCheck = await canPerformAction(null, uid, "researchQueries");
+    const usageCheck = await canPerformAction(uid, "researchQueries");
     if (!usageCheck.allowed) {
       return NextResponse.json({ error: usageCheck.reason || "Research query limit reached", upgradeRequired: true, current: usageCheck.current, limit: usageCheck.limit }, { status: 403 });
     }
@@ -57,10 +58,10 @@ Seed Topic: "${seedTopic}"${niche ? `\nNiche: "${niche}"` : ""}`;
       return NextResponse.json({ error: "AI returned malformed strategy. Please try again." }, { status: 500 });
     }
 
-    await incrementUsage(null, uid, "researchQueries");
+    await incrementUsage(uid, "researchQueries");
     return NextResponse.json({ success: true, strategy });
   } catch (error) {
-    console.error("Error generating cluster strategy:", error);
+    logger.error("Error generating cluster strategy", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

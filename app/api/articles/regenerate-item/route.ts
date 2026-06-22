@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateAIResponse, aiUserContext } from "@/lib/ai-providers";
+import { logger } from "@/lib/logger";
 
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { withErrorHandler, QuotaExceededError, assertValid, ExternalServiceError } from "@/lib/error-handler";
@@ -15,7 +16,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
     // 2. Check usage quota
     
-    const usageCheck = await canPerformAction(null, uid, "sectionRegenerations");
+    const usageCheck = await canPerformAction(uid, "sectionRegenerations");
 
     if (!usageCheck.allowed) {
         throw new QuotaExceededError(
@@ -62,12 +63,12 @@ Return ONLY the question text, no quotes or additional formatting.`;
         // Remove quotes if any
         newValue = newValue.replace(/^["']|["']$/g, '');
     } catch (aiError) {
-        console.error("Item regeneration failed:", aiError);
+        logger.error("Item regeneration failed", aiError);
         throw new ExternalServiceError("AI regeneration service", aiError);
     }
 
     // 6. Increment usage counter
-    await incrementUsage(null, uid, "sectionRegenerations");
+    await incrementUsage(uid, "sectionRegenerations");
 
     // 7. Return success
     return NextResponse.json({ newValue });

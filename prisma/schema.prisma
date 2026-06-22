@@ -97,6 +97,10 @@ model Article {
   wordPressSiteId   String?
   publishedUrl      String?
 
+  // Blog publishing
+  blogPublishedAt DateTime?
+  blogSlug        String?   @unique
+
   // Template
   templateId      String?
 

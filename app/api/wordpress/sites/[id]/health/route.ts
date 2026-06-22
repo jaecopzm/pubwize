@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { checkConnectionHealth } from "@/lib/wordpress/service";
 import { requireAuth } from "@/lib/auth";
@@ -27,7 +28,7 @@ export async function GET(
     return NextResponse.json(health);
   } catch (error) {
     if (error instanceof Response) return error;
-    console.error("Error checking site health:", error);
+    logger.error("Error checking site health", error);
     return NextResponse.json({ error: "Failed to check site health" }, { status: 500 });
   }
 }

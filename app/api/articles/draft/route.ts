@@ -1,9 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { generateDraftStream, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
-import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
+import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
+import { checkRateLimitByIdentifier } from "@/lib/rate-limit";
 import { validateArticleId } from "@/lib/validation";
+import { invalidateArticleCache } from "@/lib/cache-invalidation";
+import { asSettings, asOptimizations, asOutline } from "@/lib/prisma-json";
 import { fetchSerpContext } from "@/lib/serper";
 import { injectImagesIntoMarkdown } from "@/lib/unsplash";
 import { clerkClient } from "@clerk/nextjs/server";
@@ -17,7 +21,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertValid(auth.success, auth.error || "Authentication failed");
   const uid = auth.uid!;
 
-  const rateLimit = checkRateLimit(uid, 30, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 30, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
@@ -34,14 +38,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertValid(article!.ownerId === uid, "You don't have permission to access this article");
   assertValid(!!article!.outline, "No outline found. Please generate an outline first.");
 
-  const settings = article!.settings as any;
+  const settings = asSettings(article!.settings);
   const tone = settings?.tone ?? "neutral";
   const targetWordCount = bodyWordCount || settings?.targetWordCount || 2000;
-  const optimizations = article!.optimizations as any;
+  const optimizations = asOptimizations(article!.optimizations);
   const lsiKeywords = optimizations?.lsiKeywords || [];
 
   const site = await prisma.site.findUnique({ where: { id: article!.siteId } });
-  const siteBrandVoice = (site as any)?.brandVoice || null;
+  const siteBrandVoice = (site as { brandVoice: any } | null)?.brandVoice || null;
 
   // Determine plan tier (used for SERP-enriched external sources).
   let user = await prisma.user.findUnique({ where: { id: uid } });
@@ -61,7 +65,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   let externalSources: Array<{ title: string; url: string; snippet?: string }> | null = null;
   if (user.planTier === "pro") {
     try {
-      const serp = await fetchSerpContext(article!.keyword, (site as any)?.targetCountry ?? "us");
+      const serp = await fetchSerpContext(article!.keyword, site?.targetCountry ?? "us");
       externalSources = serp.topResults
         .filter(r => r.title && r.link)
         .slice(0, 10)
@@ -88,11 +92,11 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     
     while (retryCount <= maxRetries) {
       try {
-        console.log(`[Draft] Starting generation for article ${articleId}, target: ${targetWordCount} words (attempt ${retryCount + 1}/${maxRetries + 1})`);
+        logger.info(`[Draft] Starting generation for article ${articleId}, target: ${targetWordCount} words (attempt ${retryCount + 1}/${maxRetries + 1})`);
         
         const generator = aiUserContext.run(uid, () =>
           generateDraftStream({
-            outline: article!.outline as any,
+            outline: asOutline(article!.outline),
             keyword: article!.keyword,
             tone,
             targetWordCount,
@@ -110,12 +114,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
         }
         
-        console.log(`[Draft] Generated ${chunkCount} chunks, total length: ${fullContent.length} chars`);
+        logger.info(`[Draft] Generated ${chunkCount} chunks, total length: ${fullContent.length} chars`);
 
         // Check if content was cut off (too short)
         const wordCount = fullContent.trim().split(/\s+/).filter(w => w.length > 0).length;
         if (wordCount < targetWordCount * 0.5 && retryCount < maxRetries) {
-          console.log(`[Draft] Content too short (${wordCount} words), retrying...`);
+          logger.info(`[Draft] Content too short (${wordCount} words), retrying...`);
           fullContent = "";
           retryCount++;
           await writer.write(encoder.encode(`data: ${JSON.stringify({ retry: retryCount })}\n\n`));
@@ -152,17 +156,19 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         await prisma.article.update({
           where: { id: articleId },
           data: {
-            draft: { content: finalContent, format: "markdown" } as any,
+            draft: { content: finalContent, format: "markdown" },
             status: "draft_generated",
-            settings: { ...settings, targetWordCount } as any,
+            settings: { ...settings, targetWordCount },
           },
         });
+
+        await invalidateArticleCache(articleId, uid);
 
         await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true, articleId })}\n\n`));
         break; // Success, exit retry loop
         
       } catch (err) {
-        console.error(`[Draft] Attempt ${retryCount + 1} failed:`, err);
+        logger.error(`[Draft] Attempt ${retryCount + 1} failed`, err);
         
         if (retryCount < maxRetries) {
           retryCount++;
@@ -170,7 +176,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           await writer.write(encoder.encode(`data: ${JSON.stringify({ retry: retryCount })}\n\n`));
           await new Promise(resolve => setTimeout(resolve, 1000 * retryCount)); // Exponential backoff
         } else {
-          console.error("[Draft] All retry attempts failed");
+          logger.error("[Draft] All retry attempts failed");
           await writer.write(
             encoder.encode(`data: ${JSON.stringify({ error: "Generation failed after multiple attempts. Please try again." })}\n\n`)
           );

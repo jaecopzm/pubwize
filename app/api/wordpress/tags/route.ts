@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ tags: tags.map((t: any) => ({ id: t.id, name: t.name, slug: t.slug })) });
   } catch (error) {
-    console.error("Error fetching tags:", error);
+    logger.error("Error fetching tags", error);
     return NextResponse.json({ error: "Failed to fetch tags" }, { status: 500 });
   }
 }

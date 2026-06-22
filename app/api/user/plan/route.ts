@@ -1,5 +1,6 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { cache, cacheKeys, cacheTTL } from "@/lib/redis";
 import { withRateLimit } from "@/lib/rate-limit";
@@ -36,7 +37,7 @@ export const GET = withRateLimit(async (req: NextRequest) => {
       user = ensured.user;
 
       if (ensured.created && user.articlesUsed === 0 && !user.email.includes("@placeholder.local")) {
-        sendWelcomeEmail(user.email, user.email.split("@")[0]).catch(console.error);
+        sendWelcomeEmail(user.email, user.email.split("@")[0]).catch((err) => logger.error("Unhandled", err));
       }
     }
 
@@ -65,7 +66,7 @@ export const GET = withRateLimit(async (req: NextRequest) => {
     await cache.set(cacheKey, response, cacheTTL.userPlan);
     return NextResponse.json(response);
   } catch (error) {
-    console.error("Error fetching user plan:", error);
+    logger.error("Error fetching user plan", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }, "read");
@@ -99,11 +100,11 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
     await cache.del(cacheKeys.userPlan(userId));
 
-    if (ensured.created) sendWelcomeEmail(email, email.split("@")[0]).catch(console.error);
+    if (ensured.created) sendWelcomeEmail(email, email.split("@")[0]).catch((err) => logger.error("Unhandled", err));
 
     return NextResponse.json({ success: true, existing: !!existing || ensured.reconciled });
   } catch (error) {
-    console.error("Error creating user:", error);
+    logger.error("Error creating user", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }, "write");

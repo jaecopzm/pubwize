@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import {
   streamBriefRaw,
@@ -9,8 +10,11 @@ import {
 } from "@/lib/ai-providers";
 import { injectImagesIntoMarkdown } from "@/lib/unsplash";
 import { withErrorHandler, assertValid } from "@/lib/error-handler";
-import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
+import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
+import { checkRateLimitByIdentifier } from "@/lib/rate-limit";
 import { validateArticleId } from "@/lib/validation";
+import { invalidateArticleCache } from "@/lib/cache-invalidation";
+import { asSettings } from "@/lib/prisma-json";
 import type { BriefData, OutlineData, SiteBrandVoice } from "@/lib/types";
 import { fetchSerpContext } from "@/lib/serper";
 
@@ -22,7 +26,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertValid(auth.success, auth.error || "Authentication failed");
   const uid = auth.uid!;
 
-  const rateLimit = checkRateLimit(uid, 10, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 10, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
@@ -40,19 +44,19 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertValid(!!article!.keyword, "Article missing keyword");
 
   const keyword = article!.keyword;
-  const settings = article!.settings as any;
+  const settings = asSettings(article!.settings);
   const tone = settings?.tone ?? "neutral";
   const targetWordCount = settings?.targetWordCount ?? null;
 
   const site = await prisma.site.findUnique({ where: { id: article!.siteId } });
-  const brandVoice = (site as any)?.brandVoice || null;
+  const brandVoice = (site as { brandVoice: any } | null)?.brandVoice || null;
 
   // Fetch SERP context for Pro users so drafts can include real, non-hallucinated external links.
   const user = await prisma.user.findUnique({ where: { id: uid } });
   let serpContext: any = null;
   if (user?.planTier === "pro") {
     try {
-      serpContext = await fetchSerpContext(keyword, (site as any)?.targetCountry ?? "us");
+      serpContext = await fetchSerpContext(keyword, site?.targetCountry ?? "us");
     } catch {
       serpContext = null;
     }
@@ -78,9 +82,9 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       for await (const item of streamBriefRaw({
         keyword,
         siteContext: {
-          niche: (site as any)?.niche,
-          targetCountry: (site as any)?.targetCountry,
-          language: (site as any)?.language,
+          niche: site?.niche,
+          targetCountry: site?.targetCountry,
+          language: site?.language,
           brandVoice: brandVoice || undefined,
         },
         serpContext: serpContext || undefined,
@@ -155,7 +159,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       await prisma.article.update({
         where: { id: articleId },
         data: {
-          draft: { content: draftContent, format: "markdown" } as any,
+          draft: { content: draftContent, format: "markdown" },
           status: "draft_generated",
         },
       });
@@ -182,14 +186,15 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         }
       } catch (seoErr) {
         // Non-fatal: article is still usable without SEO suggestions
-        console.warn("[Auto-Pilot] SEO phase failed:", seoErr);
+        logger.warn("[Auto-Pilot] SEO phase failed", seoErr);
         optimization = { lsiKeywords: [], suggestions: [] };
         await writer.write(send({ seoSkipped: true }));
       }
 
+      await invalidateArticleCache(articleId, uid);
       await writer.write(send({ done: true, articleId }));
     } catch (err: any) {
-      console.error("[Auto-Pilot] Pipeline failed:", err);
+      logger.error("[Auto-Pilot] Pipeline failed", err);
       await writer.write(send({ error: err?.message || "Generation failed." }));
     } finally {
       await writer.close();

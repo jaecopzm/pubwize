@@ -37,10 +37,14 @@ class Logger {
   /**
    * Log debug messages (only in development)
    */
+  private prefix(emoji: string): string {
+    return this.isDevelopment ? emoji : '';
+  }
+
   debug(message: string, context?: LogContext) {
     if (this.isDevelopment) {
       const log = this.formatLog('debug', message, context);
-      console.debug('🔍', message, context || '');
+      console.debug(this.prefix('🔍'), message, context || '');
     }
   }
 
@@ -49,7 +53,7 @@ class Logger {
    */
   info(message: string, context?: LogContext) {
     const log = this.formatLog('info', message, context);
-    console.log('ℹ️', message, context || '');
+    console.log(this.prefix('ℹ️'), message, context || '');
   }
 
   /**
@@ -57,7 +61,7 @@ class Logger {
    */
   warn(message: string, context?: LogContext) {
     const log = this.formatLog('warn', message, context);
-    console.warn('⚠️', message, context || '');
+    console.warn(this.prefix('⚠️'), message, context || '');
   }
 
   /**
@@ -73,7 +77,7 @@ class Logger {
       } : error,
     });
 
-    console.error('❌', message, log);
+    console.error(this.prefix('❌'), message, log);
 
     // In production, send to error tracking service
     if (this.isProduction) {

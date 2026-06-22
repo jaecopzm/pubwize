@@ -2,7 +2,7 @@
 
 import { Check, Crown, Zap, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PLAN_TIERS } from "@/lib/plan-limits";
+import { PLANS, type PlanTier } from "@/lib/pricing";
 import { useUserPlan } from "@/lib/hooks/use-user-plan";
 
 export function PricingCards() {

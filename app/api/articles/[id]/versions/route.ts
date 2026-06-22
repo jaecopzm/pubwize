@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { createSnapshot, getSnapshots } from "@/lib/services/version-history";
 
@@ -23,7 +24,7 @@ export async function GET(
     const snapshots = await getSnapshots(null, articleId, { limit, includeArchived });
     return NextResponse.json({ snapshots, count: snapshots.length });
   } catch (error) {
-    console.error("Error fetching version snapshots:", error);
+    logger.error("Error fetching version snapshots", error);
     return NextResponse.json({ error: "Failed to fetch version snapshots" }, { status: 500 });
   }
 }
@@ -50,7 +51,7 @@ export async function POST(
     const snapshotId = await createSnapshot(null, articleId, userId, changeDescription);
     return NextResponse.json({ success: true, snapshotId });
   } catch (error) {
-    console.error("Error creating version snapshot:", error);
+    logger.error("Error creating version snapshot", error);
     return NextResponse.json({ error: "Failed to create version snapshot" }, { status: 500 });
   }
 }

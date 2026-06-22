@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from "@/lib/logger";
 
 const UNSPLASH_ACCESS_KEY = process.env.UNSPLASH_ACCESS_KEY;
 
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
       total: data.total,
     });
   } catch (error) {
-    console.error('Unsplash search error:', error);
+    logger.error('Unsplash search error', error);
     return NextResponse.json(
       { error: 'Failed to search images' },
       { status: 500 }

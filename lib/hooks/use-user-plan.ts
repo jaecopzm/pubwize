@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { PlanTier, getPlanLimits } from "@/lib/plan-limits";
+import { PLANS, type PlanTier } from "@/lib/pricing";
 
 export interface UserPlanData {
   planTier: PlanTier;
@@ -16,7 +16,7 @@ export function useUserPlan() {
     articlesUsed: 0,
     articlesLimit: 5,
     optimizationsUsed: 0,
-    optimizationsLimit: 3,
+    optimizationsLimit: 10,
     loading: true,
   });
 
@@ -25,13 +25,14 @@ export function useUserPlan() {
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (!data) return;
-        const limits = getPlanLimits(data.planTier);
+        const planTier = (data.planTier || "free") as PlanTier;
+        const limits = PLANS[planTier].limits;
         setPlanData({
-          planTier: data.planTier,
+          planTier,
           articlesUsed: data.articleCountThisPeriod || 0,
           articlesLimit: limits.articlesPerMonth,
           optimizationsUsed: data.optimizationCountThisPeriod || 0,
-          optimizationsLimit: limits.aiOptimizationsPerMonth === -1 ? "unlimited" : limits.aiOptimizationsPerMonth,
+          optimizationsLimit: limits.aiImprovementsPerMonth,
           loading: false,
         });
       })

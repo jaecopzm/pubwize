@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 import { optimizeContentWithSEOSuggestions, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
-import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
+import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
+import { checkRateLimitByIdentifier } from "@/lib/rate-limit";
 import { validateContent, validateKeyword } from "@/lib/validation";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 
@@ -14,7 +16,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   // 2. Check usage limits
   
-  const usageCheck = await canPerformAction(null, uid, 'aiImprovements');
+  const usageCheck = await canPerformAction(uid, 'aiImprovements');
   
   if (!usageCheck.allowed) {
     return NextResponse.json(
@@ -29,7 +31,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // 3. Rate limit (30 req/min for AI operations)
-  const rateLimit = checkRateLimit(uid, 30, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 30, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
@@ -63,12 +65,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       suggestions
     }));
   } catch (err) {
-    console.error("OpenRouter optimization failed:", err);
+    logger.error("OpenRouter optimization failed", err);
     throw new ExternalServiceError("AI optimization service", err);
   }
 
   // 6. Increment usage counter
-  await incrementUsage(null, uid, 'aiImprovements');
+  await incrementUsage(uid, 'aiImprovements');
 
   // 7. Return success
   return NextResponse.json({

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     // This can be implemented later if needed
     return NextResponse.json({ success: true, deletedRecords: 0, message: "No cleanup needed" });
   } catch (error) {
-    console.error("Error cleaning up deleted accounts:", error);
+    logger.error("Error cleaning up deleted accounts", error);
     return NextResponse.json({ error: "Cleanup failed" }, { status: 500 });
   }
 }

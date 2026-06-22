@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateAIJSON, aiUserContext } from "@/lib/ai-providers";
+import { logger } from "@/lib/logger";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
 import { validateContent, validateKeyword } from "@/lib/validation";
@@ -83,7 +84,7 @@ Identify 3-5 sections that would benefit most from images.
       temperature: 0.7,
     }));
   } catch (aiError) {
-    console.error("Image recommendations AI failed:", aiError);
+    logger.error("Image recommendations AI failed", aiError);
     throw new ExternalServiceError("AI image recommendation service", aiError);
   }
 

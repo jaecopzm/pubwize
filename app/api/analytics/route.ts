@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { asDraft } from "@/lib/prisma-json";
 import { withRateLimit } from "@/lib/rate-limit";
 import { PLANS } from "@/lib/pricing";
 import type { PlanTier } from "@/lib/types";
@@ -29,7 +31,7 @@ export const GET = withRateLimit(async (req: NextRequest) => {
     };
 
     const articlesWithContent = articles.filter((a) => {
-      const draft = a.draft as any;
+      const draft = asDraft(a.draft);
       return draft?.content && draft.content.length > 100;
     });
 
@@ -37,7 +39,7 @@ export const GET = withRateLimit(async (req: NextRequest) => {
       articlesWithContent.length > 0
         ? Math.round(
             articlesWithContent.reduce((sum, a) => {
-              const content = (a.draft as any)?.content || "";
+              const content = asDraft(a.draft)?.content || "";
               return sum + content.replace(/\s+/g, " ").trim().split(/\s+/).filter((w: string) => w.length > 0).length;
             }, 0) / articlesWithContent.length
           )
@@ -77,7 +79,7 @@ export const GET = withRateLimit(async (req: NextRequest) => {
       roi: { costPerArticle, timeSavedHours, valueGenerated, breakEven: roiMultiple },
     });
   } catch (error) {
-    console.error("Analytics error:", error);
+    logger.error("Analytics error", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }, "read");

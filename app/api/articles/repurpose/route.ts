@@ -1,8 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { aiUserContext, logAIUsage } from "@/lib/ai-providers";
+import { invalidateArticleCache } from "@/lib/cache-invalidation";
+import { asDraft, asOptimizations } from "@/lib/prisma-json";
 
 const MODEL_NAME = "gemini-2.5-flash-lite";
 
@@ -18,7 +21,7 @@ export async function POST(req: NextRequest) {
     if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
     if (article.ownerId !== userId) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const draft = article.draft as any;
+    const draft = asDraft(article.draft);
     if (!draft?.content) return NextResponse.json({ error: "Article has no draft content to repurpose." }, { status: 400 });
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -47,10 +50,11 @@ ${draft.content.slice(0, 6000)}`;
       return NextResponse.json({ error: "AI returned malformed response. Please try again." }, { status: 500 });
     }
 
-    await prisma.article.update({ where: { id: articleId }, data: { optimizations: { ...(article.optimizations as any), socialAssets } as any } });
+    await prisma.article.update({ where: { id: articleId }, data: { optimizations: { ...asOptimizations(article.optimizations), socialAssets } as any } });
+    await invalidateArticleCache(articleId, userId);
     return NextResponse.json({ success: true, socialAssets });
   } catch (error) {
-    console.error("Error in repurpose endpoint:", error);
+    logger.error("Error in repurpose endpoint", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

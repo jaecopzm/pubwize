@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { withRateLimit } from "@/lib/rate-limit";
 
@@ -26,7 +27,7 @@ export const POST = withRateLimit(async (req: NextRequest) => {
 
     return NextResponse.json({ versionId: snapshot.id });
   } catch (error) {
-    console.error("Version save error:", error);
+    logger.error("Version save error", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }, "write");
@@ -48,7 +49,7 @@ export const GET = withRateLimit(async (req: NextRequest) => {
 
     return NextResponse.json({ versions });
   } catch (error) {
-    console.error("Version fetch error:", error);
+    logger.error("Version fetch error", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }, "read");

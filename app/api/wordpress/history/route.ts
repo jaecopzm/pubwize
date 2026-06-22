@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
@@ -21,7 +22,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ history });
   } catch (error) {
     if (error instanceof Response) return error;
-    console.error("Error fetching publish history:", error);
+    logger.error("Error fetching publish history", error);
     return NextResponse.json({ error: "Failed to fetch history" }, { status: 500 });
   }
 }
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, historyId: record.id });
   } catch (error) {
     if (error instanceof Response) return error;
-    console.error("Error logging publish history:", error);
+    logger.error("Error logging publish history", error);
     return NextResponse.json({ error: "Failed to log history" }, { status: 500 });
   }
 }

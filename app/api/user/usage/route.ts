@@ -1,5 +1,6 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { PLANS, type PlanTier } from "@/lib/pricing";
 import { ensureUserRecord } from "@/lib/ensure-user";
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
       periodEnd: user.periodEnd,
     });
   } catch (error) {
-    console.error("Error fetching usage:", error);
+    logger.error("Error fetching usage", error);
     return NextResponse.json({ error: "Failed to fetch usage" }, { status: 500 });
   }
 }

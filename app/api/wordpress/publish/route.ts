@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withErrorHandler, assertValid, NotFoundError, ExternalServiceError } from "@/lib/error-handler";
-import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
+import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
 import { validateArticleId } from "@/lib/validation";
-import { withRateLimit } from "@/lib/rate-limit";
+import { withRateLimit, checkRateLimitByIdentifier } from "@/lib/rate-limit";
 import { invalidateArticleCache } from "@/lib/cache-invalidation";
 import { logger } from "@/lib/logger";
+import { asDraft } from "@/lib/prisma-json";
 import { looksLikeHtml, markdownToHtml } from "@/lib/wordpress/markdown";
 
 async function publishHandler(request: NextRequest) {
@@ -13,7 +14,7 @@ async function publishHandler(request: NextRequest) {
   assertValid(auth.success, auth.error || "Authentication failed");
   const uid = auth.uid!;
 
-  const rateLimit = checkRateLimit(uid, 10, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 10, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many publish requests." }, { status: 429 });
   }
@@ -40,19 +41,18 @@ async function publishHandler(request: NextRequest) {
   const article = await prisma.article.findUnique({ where: { id: articleId } });
   if (!article) throw new NotFoundError("Article");
   assertValid(article.ownerId === uid, "You don't have permission to publish this article");
-  const draftJson = (article as any).draft as any;
+  const draftJson = asDraft(article.draft);
   const draftContent =
     typeof draftJson === "object" && draftJson
-      ? (draftJson.content ?? draftJson.html ?? "")
+      ? (draftJson.content ?? "")
       : draftJson;
 
   const title = (incomingTitle ??
-    (article as any).metaTitle ??
-    (article as any).keyword ??
+    article.metaTitle ??
+    article.keyword ??
     "").toString().trim();
 
   const content = (incomingContent ??
-    (article as any).content ??
     draftContent ??
     "").toString();
   assertValid(title.length > 0, "Missing article title");

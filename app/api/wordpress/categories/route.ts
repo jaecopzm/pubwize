@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(request: NextRequest) {
@@ -28,7 +29,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ categories: categories.map((c: any) => ({ id: c.id, name: c.name, slug: c.slug })) });
   } catch (error) {
-    console.error("Error fetching categories:", error);
+    logger.error("Error fetching categories", error);
     return NextResponse.json({ error: "Failed to fetch categories" }, { status: 500 });
   }
 }

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withErrorHandler, assertValid, NotFoundError } from "@/lib/error-handler";
-import { authenticateRequest, checkRateLimit } from "@/lib/api-security";
+import { authenticateRequest } from "@/lib/api-security";
+import { checkRateLimitByIdentifier } from "@/lib/rate-limit";
 import { validateArticleId } from "@/lib/validation";
+import { invalidateArticleCache } from "@/lib/cache-invalidation";
 
 export const PATCH = withErrorHandler(async (
   req: NextRequest,
@@ -12,7 +14,7 @@ export const PATCH = withErrorHandler(async (
   assertValid(auth.success, auth.error || "Authentication failed");
   const uid = auth.uid!;
 
-  const rateLimit = checkRateLimit(uid, 60, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 60, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
@@ -32,8 +34,10 @@ export const PATCH = withErrorHandler(async (
   // { url, photographer?, photographerUrl?, unsplashId? }
   await prisma.article.update({
     where: { id },
-    data: { featuredImage: featuredImage as any },
+    data: { featuredImage },
   });
+
+  await invalidateArticleCache(id, uid);
 
   return NextResponse.json({ success: true, featuredImage });
 });

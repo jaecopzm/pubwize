@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Paddle, Environment, EventName } from "@paddle/paddle-node-sdk";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { cache, cacheKeys } from "@/lib/redis";
 import type { SubscriptionStatus } from "@/lib/types";
@@ -84,7 +85,7 @@ async function updateUserSubscription(
   }
 
   if (!user) {
-    console.error(`[Paddle webhook] No user found for customerId=${customerId}`);
+    logger.error(`[Paddle webhook] No user found for customerId=${customerId}`);
     return null;
   }
 
@@ -171,7 +172,7 @@ export async function POST(req: NextRequest) {
             if (user?.email) {
               const billingCycle = priceId.includes("annual") ? "annual" : "monthly";
               const amount = plan === "pro" ? (billingCycle === "annual" ? "348" : "29") : (billingCycle === "annual" ? "228" : "19");
-              await sendPaymentSuccessEmail({ userEmail: user.email, userName: user.displayName || "there", plan: plan.charAt(0).toUpperCase() + plan.slice(1), amount, billingCycle, nextBillingDate: new Date(currentPeriodEnd).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) }).catch(console.error);
+              await sendPaymentSuccessEmail({ userEmail: user.email, userName: user.displayName || "there", plan: plan.charAt(0).toUpperCase() + plan.slice(1), amount, billingCycle, nextBillingDate: new Date(currentPeriodEnd).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) }).catch((err) => logger.error("Unhandled", err));
             }
           }
         } else {
@@ -197,7 +198,7 @@ export async function POST(req: NextRequest) {
           if (user?.email) {
             const billingCycle = priceId.includes("annual") ? "annual" : "monthly";
             const amount = plan === "pro" ? (billingCycle === "annual" ? "348" : "29") : (billingCycle === "annual" ? "228" : "19");
-            await sendPaymentSuccessEmail({ userEmail: user.email, userName: user.displayName || "there", plan: plan.charAt(0).toUpperCase() + plan.slice(1), amount, billingCycle, nextBillingDate: new Date(currentPeriodEnd).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) }).catch(console.error);
+            await sendPaymentSuccessEmail({ userEmail: user.email, userName: user.displayName || "there", plan: plan.charAt(0).toUpperCase() + plan.slice(1), amount, billingCycle, nextBillingDate: new Date(currentPeriodEnd).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) }).catch((err) => logger.error("Unhandled", err));
           }
         }
         break;
@@ -213,7 +214,7 @@ export async function POST(req: NextRequest) {
           const user = await prisma.user.findUnique({ where: { id: resolvedUserId } });
           if (user?.email) {
             const endDate = data.currentBillingPeriod?.endsAt || data.canceledAt;
-            await sendSubscriptionCancelledEmail({ userEmail: user.email, userName: user.displayName || "there", plan: user.planTier?.charAt(0).toUpperCase() + user.planTier?.slice(1) || "Premium", endDate: new Date(endDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) }).catch(console.error);
+            await sendSubscriptionCancelledEmail({ userEmail: user.email, userName: user.displayName || "there", plan: user.planTier?.charAt(0).toUpperCase() + user.planTier?.slice(1) || "Premium", endDate: new Date(endDate).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }) }).catch((err) => logger.error("Unhandled", err));
           }
         }
         break;
@@ -240,7 +241,7 @@ export async function POST(req: NextRequest) {
           const user = await prisma.user.findUnique({ where: { id: resolvedUserId } });
           if (user?.email) {
             const billingCycle = priceId.includes("annual") ? "annual" : "monthly";
-            await sendPaymentSuccessEmail({ userEmail: user.email, userName: user.displayName || "there", plan: plan.charAt(0).toUpperCase() + plan.slice(1), amount: plan === "pro" ? "29" : "19", billingCycle, nextBillingDate: "" }).catch(console.error);
+            await sendPaymentSuccessEmail({ userEmail: user.email, userName: user.displayName || "there", plan: plan.charAt(0).toUpperCase() + plan.slice(1), amount: plan === "pro" ? "29" : "19", billingCycle, nextBillingDate: "" }).catch((err) => logger.error("Unhandled", err));
           }
         }
         break;
@@ -251,7 +252,7 @@ export async function POST(req: NextRequest) {
         if (resolvedUserId) {
           const user = await prisma.user.findUnique({ where: { id: resolvedUserId } });
           if (user?.email) {
-            await sendPaymentFailedEmail({ userEmail: user.email, userName: user.displayName || "there", plan: user.planTier?.charAt(0).toUpperCase() + user.planTier?.slice(1) || "Premium", amount: user.planTier === "pro" ? "29" : "19", reason: data.payments?.[0]?.errorCode || "Payment method declined" }).catch(console.error);
+            await sendPaymentFailedEmail({ userEmail: user.email, userName: user.displayName || "there", plan: user.planTier?.charAt(0).toUpperCase() + user.planTier?.slice(1) || "Premium", amount: user.planTier === "pro" ? "29" : "19", reason: data.payments?.[0]?.errorCode || "Payment method declined" }).catch((err) => logger.error("Unhandled", err));
           }
         }
         break;
@@ -261,7 +262,7 @@ export async function POST(req: NextRequest) {
     await cache.set(idempotencyKey, "1", WEBHOOK_PROCESSED_TTL);
     return NextResponse.json({ received: true });
   } catch (err) {
-    console.error("[Paddle webhook] Handler error:", err);
+    logger.error("[Paddle webhook] Handler error", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

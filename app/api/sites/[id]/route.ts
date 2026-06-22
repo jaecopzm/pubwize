@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { cache, cacheKeys, cacheTTL } from "@/lib/redis";
 import { invalidateSiteCache } from "@/lib/cache-invalidation";
@@ -24,7 +25,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting site:", error);
+    logger.error("Error deleting site", error);
     return NextResponse.json({ error: "Failed to delete site" }, { status: 500 });
   }
 }
@@ -44,7 +45,7 @@ export async function PATCH(
     if (!site) return NextResponse.json({ error: "Site not found" }, { status: 404 });
     if (site.ownerId !== userId) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
-    const existingBrandVoice = (site.brandVoice as any) || {};
+    const existingBrandVoice = (site.brandVoice as Record<string, unknown>) || {};
     const brandVoice = (body.brandVoiceAdjectives || body.brandVoiceTone || body.brandVoiceTargetAudience || body.brandVoiceFormattingRules)
       ? {
           ...existingBrandVoice,
@@ -72,7 +73,7 @@ export async function PATCH(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error updating site:", error);
+    logger.error("Error updating site", error);
     return NextResponse.json({ error: "Failed to update site" }, { status: 500 });
   }
 }
@@ -97,7 +98,7 @@ export async function GET(
     await cache.set(cacheKey, site, cacheTTL.site);
     return NextResponse.json({ site });
   } catch (error) {
-    console.error("Error fetching site:", error);
+    logger.error("Error fetching site", error);
     return NextResponse.json({ error: "Failed to fetch site" }, { status: 500 });
   }
 }

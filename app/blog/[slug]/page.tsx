@@ -1,24 +1,26 @@
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
 import { getAllPosts, getPost } from "@/lib/blog";
+import { markdownToHtml } from "@/lib/wordpress/markdown";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowLeft, Calendar, Clock, User, Share2 } from "lucide-react";
 import { ReadingProgress } from "@/components/blog/reading-progress";
 import { TableOfContents } from "@/components/blog/table-of-contents";
 import { CopyLinkButton } from "@/components/blog/copy-link-button";
+import type { DbPost } from "@/lib/blog";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
 export async function generateStaticParams() {
-  return getAllPosts().map((p) => ({ slug: p.slug }));
+  return (await getAllPosts()).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPost(slug);
   if (!post) return {};
   return {
     title: `${post.title} — Pubwize Blog`,
@@ -29,12 +31,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function BlogPostPage({ params }: Props) {
   const { slug } = await params;
-  const post = getPost(slug);
+  const post = await getPost(slug);
   if (!post) notFound();
 
-  const allPosts = getAllPosts();
+  const allPosts = await getAllPosts();
   const currentIndex = allPosts.findIndex(p => p.slug === slug);
   const relatedPosts = allPosts.filter((p, i) => i !== currentIndex).slice(0, 2);
+
+  const isDbPost = "_source" in post && (post as DbPost)._source === "db";
 
   return (
     <main className="min-h-screen aurora-bg noise-overlay">
@@ -110,7 +114,11 @@ export default async function BlogPostPage({ params }: Props) {
           prose-ul:my-6 prose-li:my-2 prose-li:text-foreground/90
           prose-blockquote:border-l-4 prose-blockquote:border-gold prose-blockquote:bg-gold/5 prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:rounded-r-xl prose-blockquote:not-italic prose-blockquote:text-foreground/90
         ">
-          <MDXRemote source={post.content} />
+          {isDbPost ? (
+            <div dangerouslySetInnerHTML={{ __html: markdownToHtml(post.content) }} />
+          ) : (
+            <MDXRemote source={post.content} />
+          )}
         </div>
 
         {/* Bottom Divider */}

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/auth";
 
@@ -19,7 +20,7 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     if (error instanceof Response) return error;
-    console.error("Error disconnecting WordPress site:", error);
+    logger.error("Error disconnecting WordPress site", error);
     return NextResponse.json({ error: "Failed to disconnect site" }, { status: 500 });
   }
 }

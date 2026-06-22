@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from "@/lib/logger";
 import { 
   sendWelcomeEmail, 
   sendArticlePublishedEmail, 
@@ -93,7 +94,7 @@ export async function GET(request: NextRequest) {
       note: 'Check your email inbox (and spam folder) and Resend dashboard logs',
     });
   } catch (error: any) {
-    console.error('Failed to send test email:', error);
+    logger.error('Failed to send test email', error);
     return NextResponse.json(
       { 
         error: 'Failed to send email',
@@ -201,7 +202,7 @@ export async function POST(request: NextRequest) {
       message: `${type} email sent to ${email}`,
     });
   } catch (error) {
-    console.error('Failed to send test email:', error);
+    logger.error('Failed to send test email', error);
     return NextResponse.json(
       { error: 'Failed to send email' },
       { status: 500 }

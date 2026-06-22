@@ -1,8 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { OptimizationData } from "@/lib/types";
 import { optimizeDraft, getInternalLinkSuggestions, getQualityMetricsWithOpenRouter } from "@/lib/ai-providers";
+import { invalidateArticleCache } from "@/lib/cache-invalidation";
+import { asDraft } from "@/lib/prisma-json";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -19,7 +22,7 @@ export async function POST(req: NextRequest) {
     if (!article) return NextResponse.json({ error: "Article not found" }, { status: 404 });
     if (article.ownerId !== uid) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-    const draft = article.draft as any;
+    const draft = asDraft(article.draft);
     if (!draft?.content) return NextResponse.json({ error: "Article has no draft" }, { status: 400 });
     if (!article.keyword) return NextResponse.json({ error: "Article missing keyword" }, { status: 400 });
 
@@ -43,9 +46,11 @@ export async function POST(req: NextRequest) {
 
     await prisma.article.update({ where: { id: articleId }, data: { optimizations: optimization as any, status: "optimized" } });
 
+    await invalidateArticleCache(articleId, uid);
+
     return NextResponse.json({ articleId, optimization });
   } catch (error) {
-    console.error("Error in /api/articles/optimize", error);
+    logger.error("Error in /api/articles/optimize", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

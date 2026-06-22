@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   },
 };
 
-export default function BlogPage() {
-  const posts = getAllPosts();
+export default async function BlogPage() {
+  const posts = await getAllPosts();
   const featuredPost = posts[0];
   const regularPosts = posts.slice(1);
 

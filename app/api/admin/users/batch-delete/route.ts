@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAdminRequest } from "@/lib/admin-auth";
+import { logger } from "@/lib/logger";
 
 export async function POST(req: NextRequest) {
   const admin = await verifyAdminRequest(req);
@@ -21,5 +22,6 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  return NextResponse.json({ results });
+  logger.info("Admin batch delete users", { adminId: admin.uid, results });
+  return NextResponse.json({ success: true, results });
 }

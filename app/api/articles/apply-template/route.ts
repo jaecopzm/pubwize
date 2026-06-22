@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateAIJSON, aiUserContext } from "@/lib/ai-providers";
+import { logger } from "@/lib/logger";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
 import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
 import { validateKeyword } from "@/lib/validation";
@@ -68,7 +69,7 @@ ${structure.map((section: string, i: number) => `${i + 1}. ${section}`).join('\n
       temperature: 0.7,
     }));
   } catch (aiError) {
-    console.error("Template application AI failed:", aiError);
+    logger.error("Template application AI failed", aiError);
     throw new ExternalServiceError("AI template service", aiError);
   }
 

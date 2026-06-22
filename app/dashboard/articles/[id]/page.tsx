@@ -22,6 +22,7 @@ import { StatPill, CopyButton } from "@/components/article-editor/shared-ui";
 
 import { UnsplashSearch } from "@/components/unsplash-search";
 import { AIImprovePanel } from "@/components/article-editor/ai-improve-panel";
+import { SERPPreviewCard, SERPMetaEditor } from "@/components/serp-preview";
 import { SectionRegenerate } from "@/components/article-editor/section-regenerate";
 import { GenerationProgress } from "@/components/article-editor/generation-progress";
 import { AutoPilotOverlay } from "@/components/article-editor/auto-pilot-overlay";
@@ -34,6 +35,7 @@ import { calculateReadabilityScores, detectReadabilityIssues } from "@/lib/reada
 import { calculateSEOScore } from "@/lib/seo-scoring";
 import { getAuthHeaders } from "@/lib/hooks/use-auth";
 import type { BriefData, OutlineData, DraftData, OptimizationData, SocialMediaData, WordPressSite, ReadabilityScores, ReadabilityIssue } from "@/lib/types";
+import { useIsAdmin } from "@/lib/hooks/use-is-admin";
 import { toast } from "sonner";
 
 interface ArticleState {
@@ -693,6 +695,10 @@ export default function ArticleDetailPage() {
   const [genStartTime, setGenStartTime] = useState<number | null>(null);
   const [genDuration, setGenDuration] = useState("");
 
+  const { isAdmin, isLoaded: adminLoaded } = useIsAdmin();
+  const [blogPublishing, setBlogPublishing] = useState(false);
+  const [blogPublished, setBlogPublished] = useState(false);
+
   // Upgrade modal state
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeReason, setUpgradeReason] = useState("");
@@ -993,6 +999,27 @@ export default function ArticleDetailPage() {
         setAutoPilotPhase(null);
         setEtaSeconds(null);
       }
+    }
+  };
+
+  // Handle publish to Pubwize blog
+  const handlePublishToBlog = async () => {
+    if (blogPublishing || !article) return;
+    setBlogPublishing(true);
+    try {
+      const res = await fetch("/api/admin/blog/publish", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articleId: article.articleId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to publish");
+      setBlogPublished(true);
+      toast.success(`Published! View at /blog/${data.slug}`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to publish to blog");
+    } finally {
+      setBlogPublishing(false);
     }
   };
 
@@ -1383,6 +1410,34 @@ export default function ArticleDetailPage() {
                 </motion.div>
               )}
 
+              {/* Step 3.5: SEO & SERP Preview */}
+              {article.optimization && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: 0.15 }}
+                  className="mb-6"
+                >
+                  <div className="mb-4 pt-6">
+                    <h2 className="text-lg font-bold tracking-tight text-foreground">SEO & SERP Preview</h2>
+                    <p className="mt-1 text-xs text-muted-foreground">Fine-tune how your article appears in search results.</p>
+                  </div>
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <SERPMetaEditor
+                      title={metaTitle || article.optimization.suggestedTitle || article.keyword}
+                      description={metaDescription || article.optimization.suggestedMetaDescription || ""}
+                      onTitleChange={setMetaTitle}
+                      onDescriptionChange={setMetaDescription}
+                    />
+                    <SERPPreviewCard
+                      title={metaTitle || article.optimization.suggestedTitle || article.keyword}
+                      description={metaDescription || article.optimization.suggestedMetaDescription || ""}
+                      url={article.siteDomain || "yoursite.com"}
+                    />
+                  </div>
+                </motion.div>
+              )}
+
               {/* Step 4: Social Media & Publishing */}
               {(article.socialMedia || activeStep >= 4) && (
                 <motion.div
@@ -1451,6 +1506,31 @@ export default function ArticleDetailPage() {
 
           {/* Right: context CTAs */}
           <div className="flex items-center gap-2 ml-auto w-full sm:w-auto">
+            {article.draft?.content && (
+              <button
+                onClick={() => window.open(`/dashboard/articles/${article.articleId}/preview`, '_blank')}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg border border-white/10 bg-card/50 px-3 py-2 sm:px-4 sm:py-2.5 text-[11px] sm:text-xs font-medium text-gray-300 hover:text-white hover:bg-card transition-all"
+              >
+                <FileText className="h-3.5 w-3.5" />
+                Preview
+              </button>
+            )}
+            {isAdmin && (
+              <button
+                onClick={handlePublishToBlog}
+                disabled={blogPublishing || blogPublished}
+                className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg sm:rounded-xl border border-teal/30 bg-teal/10 px-3 py-2 sm:px-5 sm:py-2.5 text-[11px] sm:text-xs font-bold text-teal shadow-lg shadow-teal/10 hover:bg-teal/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+              >
+                {blogPublishing ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : blogPublished ? (
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                {blogPublishing ? "Publishing..." : blogPublished ? "Published" : "Publish to Blog"}
+              </button>
+            )}
             <button
               onClick={() => setShowWordPressPublish(true)}
               disabled={!wordPressSites.some(s => s.connected)}

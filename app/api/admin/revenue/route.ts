@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAdminRequest } from "@/lib/admin-auth";
+import { withErrorHandler } from "@/lib/error-handler";
 
 const PLAN_PRICES: Record<string, number> = { starter: 19, pro: 49 };
 
-export async function GET(req: NextRequest) {
+export const GET = withErrorHandler(async (req: NextRequest) => {
   const admin = await verifyAdminRequest(req);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -37,4 +38,4 @@ export async function GET(req: NextRequest) {
     conversionRate: totalUsers > 0 ? ((paidUsers / totalUsers) * 100).toFixed(1) : "0",
     churnedThisMonth,
   });
-}
+});

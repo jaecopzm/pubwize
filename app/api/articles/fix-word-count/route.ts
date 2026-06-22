@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { asDraft, asOutline, asSettings } from "@/lib/prisma-json";
 import { withErrorHandler } from "@/lib/error-handler";
 import { authenticateRequest } from "@/lib/api-security";
+import { invalidateArticleCache } from "@/lib/cache-invalidation";
 
 function calculateWordCount(content: string): number {
   if (!content) return 0;
@@ -25,8 +27,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   let updated = 0;
   for (const article of articles) {
-    const draft = article.draft as any;
-    const outline = article.outline as any;
+    const draft = asDraft(article.draft);
+    const outline = asOutline(article.outline);
     let wordCount = 0;
 
     if (draft?.content) {
@@ -36,7 +38,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       wordCount = calculateWordCount(text);
     }
 
-    await prisma.article.update({ where: { id: article.id }, data: { settings: { ...(article.settings as any), wordCount } as any } });
+    await prisma.article.update({ where: { id: article.id }, data: { settings: { ...asSettings(article.settings), wordCount } } });
+    await invalidateArticleCache(article.id, auth.uid!);
     updated++;
   }
 

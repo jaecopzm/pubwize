@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     const prompt = `You are an SEO content strategist. Based on the following information, suggest ONE specific, actionable article topic.
 
 Site Niche: ${site.niche}
-Target Country: ${(site as any).targetCountry || "Global"}
+Target Country: ${site.targetCountry || "Global"}
 Existing Topics: ${existingTopics.length > 0 ? existingTopics.join(", ") : "None yet"}
 
 Requirements: relevant to niche, not duplicate, trending or evergreen, specific, under 60 characters.
@@ -45,7 +46,7 @@ Return ONLY the topic title, nothing else.`;
 
     return NextResponse.json({ topic: cleanTopic });
   } catch (error) {
-    console.error("Topic suggestion error:", error);
+    logger.error("Topic suggestion error", error);
     return NextResponse.json({ error: "Failed to generate suggestion" }, { status: 500 });
   }
 }

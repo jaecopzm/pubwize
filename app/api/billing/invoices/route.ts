@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { getPaddleClient } from "@/lib/paddle";
 
 export async function GET(req: NextRequest) {
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ invoices: items || [] });
   } catch (error: any) {
-    console.error("Get invoices error:", error);
+    logger.error("Get invoices error", error);
     return NextResponse.json({ error: error?.message || "Failed to fetch invoices" }, { status: 500 });
   }
 }

@@ -1,7 +1,7 @@
 import { getAllPosts } from "@/lib/blog";
 
 export async function GET() {
-  const posts = getAllPosts();
+  const posts = await getAllPosts();
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://pubwize.com";
 
   const items = posts

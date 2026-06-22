@@ -5,8 +5,10 @@ import { generateBrief, aiUserContext } from "@/lib/ai-providers";
 import { fetchSerpContext } from "@/lib/serper";
 import { canPerformAction, incrementUsage } from "@/lib/usage-tracking";
 import { withErrorHandler, QuotaExceededError, assertValid, ExternalServiceError } from "@/lib/error-handler";
-import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
+import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
+import { checkRateLimitByIdentifier } from "@/lib/rate-limit";
 import { validateKeyword } from "@/lib/validation";
+import { invalidateArticleCache } from "@/lib/cache-invalidation";
 import { clerkClient } from "@clerk/nextjs/server";
 import { ensureUserRecord } from "@/lib/ensure-user";
 
@@ -18,7 +20,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertValid(auth.success, auth.error || "Authentication failed");
   const uid = auth.uid!;
 
-  const rateLimit = checkRateLimit(uid, 30, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 30, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },
@@ -34,7 +36,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertValid(validateKeyword(keyword).valid, validateKeyword(keyword).error || "Invalid keyword");
 
   // Check usage quota
-  const usageCheck = await canPerformAction(null, uid, "articles");
+  const usageCheck = await canPerformAction(uid, "articles");
   if (!usageCheck.allowed) {
     throw new QuotaExceededError(
       usageCheck.reason || "Article limit reached",
@@ -67,23 +69,23 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   let serpContext;
   if (user.planTier === "pro") {
     try {
-      const siteData = site!.brandVoice as any;
-      serpContext = await fetchSerpContext(keyword, siteData?.targetCountry ?? "us");
+      const siteData = site!.brandVoice as Record<string, unknown>;
+      serpContext = await fetchSerpContext(keyword, (siteData as { targetCountry?: string })?.targetCountry ?? "us");
     } catch {
       // non-fatal
     }
   }
 
-  const siteData = site!.brandVoice as any;
+  const siteData = site!.brandVoice as Record<string, unknown>;
   let brief;
   try {
     brief = await aiUserContext.run(uid, () =>
       generateBrief({
         keyword,
         siteContext: {
-          niche: (site as any).niche,
-          targetCountry: (site as any).targetCountry,
-          language: (site as any).language,
+          niche: site!.niche,
+          targetCountry: site!.targetCountry,
+          language: site!.language,
           brandVoice: siteData || undefined,
         },
         serpContext,
@@ -105,11 +107,13 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       settings: {
         tone: body.tone ?? "neutral",
         targetWordCount: body.targetWordCount ?? null,
-      } as any,
+      },
     },
   });
 
-  await incrementUsage(null, uid, "articles");
+  await incrementUsage(uid, "articles");
+
+  await invalidateArticleCache(article.id, uid);
 
   const response: GenerateBriefResponse = {
     articleId: article.id,

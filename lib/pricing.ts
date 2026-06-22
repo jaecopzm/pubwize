@@ -274,7 +274,7 @@ export function formatPrice(price: number): string {
 /**
  * Get user's current plan from database
  */
-export async function getUserPlan(_db: any, uid: string): Promise<PlanDetails> {
+export async function getUserPlan(uid: string): Promise<PlanDetails> {
   try {
     const { prisma } = await import("@/lib/prisma");
     const user = await prisma.user.findUnique({ where: { id: uid }, select: { planTier: true } });

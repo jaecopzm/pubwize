@@ -3,8 +3,11 @@ import { prisma } from "@/lib/prisma";
 import type { OutlineData } from "@/lib/types";
 import { generateOutline, aiUserContext } from "@/lib/ai-providers";
 import { withErrorHandler, assertValid, ExternalServiceError } from "@/lib/error-handler";
-import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
+import { asBrief } from "@/lib/prisma-json";
+import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
+import { checkRateLimitByIdentifier } from "@/lib/rate-limit";
 import { validateArticleId } from "@/lib/validation";
+import { invalidateArticleCache } from "@/lib/cache-invalidation";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -14,7 +17,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertValid(auth.success, auth.error || "Authentication failed");
   const uid = auth.uid!;
 
-  const rateLimit = checkRateLimit(uid, 30, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 30, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json({ error: "Too many requests." }, { status: 429 });
   }
@@ -35,7 +38,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   try {
     outline = await aiUserContext.run(uid, () =>
       generateOutline({
-        brief: article!.brief as any,
+        brief: asBrief(article!.brief),
         keyword: article!.keyword,
       })
     );
@@ -47,6 +50,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     where: { id: articleId },
     data: { outline: outline as any, status: "outline_generated" },
   });
+
+  await invalidateArticleCache(articleId, uid);
 
   return NextResponse.json({ articleId, outline });
 });

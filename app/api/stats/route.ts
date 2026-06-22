@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       planTier: plan,
     });
   } catch (error) {
-    console.error("Error fetching stats", error);
+    logger.error("Error fetching stats", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

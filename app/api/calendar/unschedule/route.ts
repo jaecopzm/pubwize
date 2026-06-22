@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
@@ -17,7 +18,7 @@ export async function POST(request: NextRequest) {
     await prisma.article.update({ where: { id: articleId }, data: { scheduledDate: null } });
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error unscheduling article:", error);
+    logger.error("Error unscheduling article", error);
     return NextResponse.json({ error: "Failed to unschedule article" }, { status: 500 });
   }
 }

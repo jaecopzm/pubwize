@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { getPaddleClient } from "@/lib/paddle";
 
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error("Cancel subscription error:", error);
+    logger.error("Cancel subscription error", error);
     return NextResponse.json({ error: error?.message || "Failed to cancel subscription" }, { status: 500 });
   }
 }

@@ -1,9 +1,6 @@
-/**
- * Usage tracking utilities - Neon/Prisma
- */
-
 import { prisma } from "@/lib/prisma";
-import { PLANS, hasReachedLimit, type PlanTier } from "./pricing";
+import { PLANS, hasReachedLimit, type PlanTier, type PlanLimits } from "./pricing";
+import { invalidateUsageCache } from "./cache-invalidation";
 
 export type UsageType =
   | "articles"
@@ -23,80 +20,95 @@ export interface UserUsage {
   periodEnd: Date;
 }
 
+type UsageField = "articlesUsed" | "aiImprovementsUsed" | "sectionRegenerationsUsed" | "researchQueriesUsed" | "socialGenerationUsed";
+type NumericLimitKey = {
+  [K in keyof PlanLimits]: PlanLimits[K] extends number ? K : never;
+}[keyof PlanLimits];
+
+interface UsageConfig {
+  field: UsageField;
+  limitKey: NumericLimitKey;
+  allowRollover: boolean;
+}
+
+const USAGE_CONFIG: Record<UsageType, UsageConfig> = {
+  articles:            { field: "articlesUsed",            limitKey: "articlesPerMonth",            allowRollover: true },
+  aiImprovements:      { field: "aiImprovementsUsed",      limitKey: "aiImprovementsPerMonth",      allowRollover: false },
+  sectionRegenerations: { field: "sectionRegenerationsUsed", limitKey: "sectionRegenerationsPerMonth", allowRollover: false },
+  researchQueries:     { field: "researchQueriesUsed",     limitKey: "researchQueriesPerMonth",     allowRollover: false },
+  socialGeneration:    { field: "socialGenerationUsed",    limitKey: "socialGenerationsPerMonth",   allowRollover: false },
+};
+
+interface UsageUser {
+  planTier: string;
+  rolloverArticles: number;
+  articlesUsed: number;
+  aiImprovementsUsed: number;
+  sectionRegenerationsUsed: number;
+  researchQueriesUsed: number;
+  socialGenerationUsed: number;
+}
+
+function resolveUsage(user: UsageUser, type: UsageType) {
+  const cfg = USAGE_CONFIG[type];
+  const plan = (user.planTier as PlanTier) || "free";
+  const limits = PLANS[plan].limits;
+  const current = user[cfg.field];
+  const limit = limits[cfg.limitKey] as number;
+  const rollover = cfg.allowRollover ? user.rolloverArticles : 0;
+  return { plan, limit, current, rollover, totalLimit: limit + rollover };
+}
+
 export async function incrementUsage(
-  _db: unknown,
   userId: string,
   type: UsageType
 ): Promise<void> {
-  const field: Record<UsageType, string> = {
-    articles: "articlesUsed",
-    aiImprovements: "aiImprovementsUsed",
-    sectionRegenerations: "sectionRegenerationsUsed",
-    researchQueries: "researchQueriesUsed",
-    socialGeneration: "socialGenerationUsed",
-  };
+  const cfg = USAGE_CONFIG[type];
 
-  await prisma.user.update({
-    where: { id: userId },
-    data: { [field[type]]: { increment: 1 }, updatedAt: new Date() },
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.findUnique({ where: { id: userId } });
+    if (!user) throw new Error("User not found");
+
+    const { plan, current, totalLimit, rollover } = resolveUsage(user, type);
+
+    if (hasReachedLimit(current, totalLimit - rollover, rollover)) {
+      const nextTier = plan === "free" ? "Starter" : "Pro";
+      throw Object.assign(
+        new Error(`You've used ${current}/${totalLimit} this month. Upgrade to ${nextTier} for more.`),
+        { code: "QUOTA_EXCEEDED" as const, current, limit: totalLimit, quotaType: type }
+      );
+    }
+
+    await tx.user.update({
+      where: { id: userId },
+      data: { [cfg.field]: { increment: 1 }, updatedAt: new Date() },
+    });
   });
+
+  await invalidateUsageCache(userId);
 }
 
 export async function canPerformAction(
-  _db: unknown,
   userId: string,
   type: UsageType
 ): Promise<{ allowed: boolean; reason?: string; current?: number; limit?: number }> {
   try {
     const user = await prisma.user.findUnique({ where: { id: userId } });
-
     if (!user) return { allowed: false, reason: "User not found" };
 
-    const plan = (user.planTier as PlanTier) || "free";
-    const limits = PLANS[plan].limits;
+    const { plan, current, totalLimit, rollover } = resolveUsage(user, type);
 
-    let current: number;
-    let limit: number;
-    let rollover = user.rolloverArticles;
-
-    switch (type) {
-      case "articles":
-        current = user.articlesUsed;
-        limit = limits.articlesPerMonth;
-        break;
-      case "aiImprovements":
-        current = user.aiImprovementsUsed;
-        limit = limits.aiImprovementsPerMonth;
-        rollover = 0;
-        break;
-      case "sectionRegenerations":
-        current = user.sectionRegenerationsUsed;
-        limit = limits.sectionRegenerationsPerMonth;
-        rollover = 0;
-        break;
-      case "researchQueries":
-        current = user.researchQueriesUsed;
-        limit = limits.researchQueriesPerMonth;
-        rollover = 0;
-        break;
-      case "socialGeneration":
-        current = user.socialGenerationUsed;
-        limit = limits.socialGenerationsPerMonth;
-        rollover = 0;
-        break;
-    }
-
-    if (hasReachedLimit(current, limit, rollover)) {
+    if (hasReachedLimit(current, totalLimit - rollover, rollover)) {
       const nextTier = plan === "free" ? "Starter" : "Pro";
       return {
         allowed: false,
-        reason: `You've used ${current}/${limit + rollover} this month. Upgrade to ${nextTier} for more.`,
+        reason: `You've used ${current}/${totalLimit} this month. Upgrade to ${nextTier} for more.`,
         current,
-        limit: limit + rollover,
+        limit: totalLimit,
       };
     }
 
-    return { allowed: true, current, limit: limit + rollover };
+    return { allowed: true, current, limit: totalLimit };
   } catch (error) {
     console.error("Error checking usage limits:", error);
     return { allowed: false, reason: "Failed to check usage limits" };
@@ -104,7 +116,6 @@ export async function canPerformAction(
 }
 
 export async function getUserUsage(
-  _db: unknown,
   userId: string
 ): Promise<UserUsage | null> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -123,7 +134,6 @@ export async function getUserUsage(
 }
 
 export async function resetMonthlyUsage(
-  _db: unknown,
   userId: string
 ): Promise<void> {
   const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -148,4 +158,6 @@ export async function resetMonthlyUsage(
       updatedAt: new Date(),
     },
   });
+
+  await invalidateUsageCache(userId);
 }

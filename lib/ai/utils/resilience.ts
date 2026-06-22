@@ -127,16 +127,32 @@ export interface ErrorClassification {
 
 export function classifyError(error: unknown): ErrorClassification {
   const msg = error instanceof Error ? error.message : String(error);
-  
-  const statusMatch = msg.match(/:\s*(\d{3})\s*[-–]/);
-  const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : undefined;
+  const errObj = error as any;
+
+  // Try multiple strategies to extract status code:
+  // 1. Direct property (fetch Response, Axios error, etc.)
+  let statusCode: number | undefined =
+    errObj?.status ?? errObj?.statusCode ?? errObj?.response?.status;
+
+  // 2. Provider-specific error messages
+  if (statusCode === undefined) {
+    const statusPatterns = [
+      /:\s*(\d{3})\s*-/,       // "error: 429 -"
+      /status\s*(\d{3})/i,     // "status 429"
+      /HTTP\s*(\d{3})/i,       // "HTTP 429"
+      /(\d{3})\s+error/i,      // "429 error"
+    ];
+    for (const pattern of statusPatterns) {
+      const m = msg.match(pattern);
+      if (m) { statusCode = parseInt(m[1], 10); break; }
+    }
+  }
 
   const isRateLimit =
     statusCode === 429 ||
-    statusCode === 413 || // "request too large" — treat like rate limit (transient)
     msg.includes("rate_limit_exceeded") ||
     msg.toLowerCase().includes("rate limit") ||
-    msg.toLowerCase().includes("too large");
+    msg.toLowerCase().includes("too many requests");
 
   const isServerError =
     (statusCode !== undefined && statusCode >= 500) ||

@@ -1,6 +1,8 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
+import { asOptimizations } from "@/lib/prisma-json";
 
 export async function POST(req: NextRequest) {
   try {
@@ -15,13 +17,13 @@ export async function POST(req: NextRequest) {
     if (article.ownerId !== uid) return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
 
     // Track view in optimizations JSON field
-    const opts = (article.optimizations as any) || {};
-    const views = (opts.views || 0) + 1;
+    const opts = (asOptimizations(article.optimizations) || {}) as Record<string, unknown>;
+    const views = ((opts.views as number) || 0) + 1;
     await prisma.article.update({ where: { id: articleId }, data: { optimizations: { ...opts, views, lastViewedAt: new Date().toISOString() } as any } });
 
     return NextResponse.json({ success: true, views });
   } catch (error) {
-    console.error("Track view error:", error);
+    logger.error("Track view error", error);
     return NextResponse.json({ error: "Failed to track view" }, { status: 500 });
   }
 }

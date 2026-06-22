@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validateCredentials, type WordPressCredentials } from "@/lib/wordpress/service";
 import { withErrorHandler, assertValid } from "@/lib/error-handler";
-import { authenticateRequest, checkRateLimit, validateRequestBody } from "@/lib/api-security";
+import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
+import { checkRateLimitByIdentifier } from "@/lib/rate-limit";
 import { validateWordPressCredentials } from "@/lib/validation";
 
 export const POST = withErrorHandler(async (request: NextRequest) => {
@@ -11,7 +12,7 @@ export const POST = withErrorHandler(async (request: NextRequest) => {
   const uid = auth.uid!;
 
   // 2. Rate limit (30 req/min for WordPress operations)
-  const rateLimit = checkRateLimit(uid, 30, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 30, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: "Too many requests. Please try again later." },

@@ -47,7 +47,9 @@ export class OpenRouterProvider extends BaseProvider {
     const content = this.cleanContent(data.choices?.[0]?.message?.content ?? "");
     if (!content) throw new Error("OpenRouter returned empty content");
 
-    return { content, provider: 'openrouter', model: modelName };
+    const finishReason = data.choices?.[0]?.finish_reason || undefined;
+
+    return { content, provider: 'openrouter', model: modelName, finishReason };
   }
 
   async *stream(request: AIRequest, signal?: AbortSignal): AsyncGenerator<string> {

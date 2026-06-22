@@ -126,19 +126,18 @@ export function validateWordPressCredentials(data: {
 }
 
 /**
- * Validate article ID format
+ * Validate article ID format (Prisma CUID)
  */
 export function validateArticleId(id: string): ValidationResult {
   if (!id || typeof id !== "string") {
     return { valid: false, error: "Article ID is required" };
   }
 
-  // Firestore document IDs are alphanumeric
   if (!/^[a-zA-Z0-9_-]+$/.test(id)) {
     return { valid: false, error: "Invalid article ID format" };
   }
 
-  if (id.length < 10 || id.length > 100) {
+  if (id.length < 5 || id.length > 128) {
     return { valid: false, error: "Invalid article ID length" };
   }
 
@@ -165,17 +164,23 @@ export function validateWordCount(count: number): ValidationResult {
 }
 
 /**
- * Sanitize HTML (basic XSS prevention)
+ * Sanitize HTML using regex-based stripping.
+ * For production use, replace with DOMPurify (isomorphic-dompurify).
  */
 export function sanitizeHtml(html: string): string {
   if (!html || typeof html !== "string") return "";
 
   return html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-    .replace(/javascript:/gi, "")
-    .replace(/onerror=/gi, "")
-    .replace(/onclick=/gi, "")
-    .replace(/onload=/gi, "");
+    .replace(/<[^>]*\s(on\w+)\s*=\s*["'][^"']*["'][^>]*>/gi, "")
+    .replace(/<[^>]*\s(on\w+)\s*=\s*\S+[^>]*>/gi, "")
+    .replace(/javascript\s*:/gi, "")
+    .replace(/data\s*:\s*text\s*\/\s*html/gi, "")
+    .replace(/vbscript\s*:/gi, "")
+    .replace(/<embed\b[^>]*>/gi, "")
+    .replace(/<object\b[^>]*>/gi, "")
+    .replace(/<iframe\b[^>]*>/gi, "")
+    .replace(/<\/?(script|style|meta|link|base|form|input|select|textarea|button)\b[^>]*>/gi, "");
 }
 
 /**

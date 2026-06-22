@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { verifyAdminRequest } from "@/lib/admin-auth";
+import { withErrorHandler } from "@/lib/error-handler";
 
-export async function GET(req: NextRequest) {
+export const GET = withErrorHandler(async (req: NextRequest) => {
   const admin = await verifyAdminRequest(req);
   if (!admin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
@@ -19,4 +20,4 @@ export async function GET(req: NextRequest) {
     .slice(0, 40);
 
   return NextResponse.json({ events });
-}
+});

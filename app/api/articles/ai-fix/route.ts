@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { logger } from "@/lib/logger";
 
 import { generateAIStream, aiUserContext } from '@/lib/ai-providers';
 import { withErrorHandler, assertValid } from '@/lib/error-handler';
-import { authenticateRequest, checkRateLimit, validateRequestBody } from '@/lib/api-security';
+import { authenticateRequest, validateRequestBody } from '@/lib/api-security';
+import { checkRateLimitByIdentifier } from '@/lib/rate-limit';
 import { validateArticleId, validateContent, validateKeyword } from '@/lib/validation';
 import { canPerformAction, incrementUsage } from '@/lib/usage-tracking';
+import { invalidateArticleCache } from '@/lib/cache-invalidation';
+import { asDraft } from '@/lib/prisma-json';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -17,7 +21,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   // 2. Check usage limits
   
-  const usageCheck = await canPerformAction(null, uid, 'aiImprovements');
+  const usageCheck = await canPerformAction(uid, 'aiImprovements');
   
   if (!usageCheck.allowed) {
     return NextResponse.json(
@@ -32,7 +36,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   }
 
   // 3. Rate limit (30 req/min for AI operations)
-  const rateLimit = checkRateLimit(uid, 30, 60000);
+  const rateLimit = await checkRateLimitByIdentifier(uid, 30, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
       { error: 'Too many requests. Please try again later.' },
@@ -110,18 +114,20 @@ Fix this content based on the suggestions above.`;
 
       // Update the article with fixed content
       const { prisma } = await import('@/lib/prisma');
-      const existingDraft = (article?.draft as any) || {};
+      const existingDraft = asDraft(article?.draft) || {};
       await prisma.article.update({
         where: { id: articleId },
-        data: { draft: { ...existingDraft, content: fixedContent } as any },
+        data: { draft: { ...existingDraft, content: fixedContent } },
       });
 
       // Increment usage counter
-      await incrementUsage(null, uid, 'aiImprovements');
+      await incrementUsage(uid, 'aiImprovements');
+
+      await invalidateArticleCache(articleId, uid);
 
       await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
     } catch (err) {
-      console.error('AI fix streaming failed:', err);
+      logger.error('AI fix streaming failed', err);
       await writer.write(
         encoder.encode(`data: ${JSON.stringify({ error: "Failed to apply fixes. Please try again." })}\n\n`)
       );
