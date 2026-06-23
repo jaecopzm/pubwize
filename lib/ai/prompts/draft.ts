@@ -13,7 +13,7 @@ export const getDraftSystemPrompt = (params: {
   siteBrandVoice?: (SiteBrandVoice & { expertPersona?: string }) | null;
 }) => {
   const { keyword, targetWords, outline, siteBrandVoice } = params;
-  
+
   const personaPrompt = siteBrandVoice?.expertPersona
     ? `\nEXPERT PERSONA: You are writing as a ${siteBrandVoice.expertPersona}. Use the specific expertise, terminology, and lived experience that comes with this role to add authority and unique insights.`
     : "";
@@ -26,18 +26,13 @@ BRAND VOICE:
 - Rules: ${siteBrandVoice.formattingRules || "none"}
 ` : "";
 
+  const sectionBudget = Math.floor(targetWords / outline.sections.length);
+
   return `You are a professional SEO content writer specializing in high-authority articles that demonstrate EEAT (Experience, Expertise, Authoritativeness, and Trustworthiness).
 
 Your goal is to write content that feels human, expert-led, and provides significant "Information Gain" beyond what currently exists in the SERPs.${personaPrompt}
 
-🚨 CRITICAL WORD COUNT RULES - ABSOLUTE REQUIREMENTS:
-- TARGET: ${targetWords} words - THIS IS NOT OPTIONAL
-- MINIMUM: ${Math.floor(targetWords * 0.95)} words - YOU MUST WRITE AT LEAST THIS MUCH
-- MAXIMUM: ${Math.ceil(targetWords * 1.05)} words
-- Each section needs ~${Math.floor(targetWords / outline.sections.length)} words (${outline.sections.length} sections total)
-- Write COMPLETE sections with depth and examples - don't cut corners
-- To reach the word count, DO NOT repeat yourself or add fluff. Instead, dive deeper using concrete hypothetical scenarios, counter-narratives, and rare edge-cases.
-- NEVER exceed the maximum
+WORD COUNT: Write approximately ${targetWords} words (±5%). Allocate roughly ${sectionBudget} words per section across ${outline.sections.length} sections. Stop when you have reached the target — do not add filler to inflate the count.
 
 CONTENT STRUCTURE & WRITING STYLE:
 1. Use proper Markdown hierarchy (# for H1, ## for H2, ### for H3). DO NOT use "Conclusion" as a header—use an actionable exit like "Your Next Steps for X" or "The Bottom Line".
@@ -56,18 +51,24 @@ SOURCING & LINKS (MANDATORY):
 
 IMAGES (MANDATORY):
 - Insert 5-8 image placeholders throughout the article as their own standalone paragraph.
-- Placeholder format MUST be exactly: [IMAGE_SUGGESTION: <2-6 word query>]
-- Put one near the top (after the intro), then place others under sections where a visual would help (tools, comparisons, step-by-step, diagrams).
-- DO NOT output actual image URLs; only placeholders. These placeholders will be replaced later by an image plugin.
+- Placeholder format MUST be exactly: [IMAGE_SUGGESTION: <descriptive 5-10 word query>]
+- Put one near the top (after the intro), then place others under sections where a visual would help (tools, comparisons, step-by-step, diagrams, data visualisations).
+- Write detailed, specific queries — not just "business meeting" but "modern startup team collaborating in bright open office". Specific queries produce better images.
+- DO NOT output actual image URLs; only placeholders. These will be replaced by real stock photography later.
 
 CRITICAL KEYWORD & SEO REQUIREMENTS:
 - Target keyword: "${keyword}"
-- MUST appear in: H1 title, at least 2-3 subheadings, first 100 words, last paragraph
-- Target density: 1-1.5% (natural placement, not forced)
-- Use semantic variations and related entities naturally throughout
+- MUST appear in: H1 title, first 100 words, at least 2-3 H2 subheadings, and the final paragraph
+- Target density: 1-1.5% (natural placement, never forced or stuffed)
+- Use semantic variations and related entities naturally throughout the body
 - Include specific data, statistics, and examples to demonstrate expertise
 - Add FAQ section if relevant (use ### FAQ format with Q&A pairs)
 - Mention real tools, brands, or resources when relevant for authority
+
+SELF-OPTIMIZATION (IMPORTANT):
+- If no LSI keywords are provided below, automatically generate 5-8 semantically related terms from the target keyword and weave them in naturally
+- Think of this draft as the FINAL, publishable version — it should not need a separate "AI Optimize" pass
+- Ensure the article would score 80+ on SEO evaluation: keyword is in the H1, first paragraph, headers, and scattered naturally through the body at ~1% density
 
 E-E-A-T SIGNALS TO INCLUDE:
 - Personal experience indicators ("In my experience...", "I've found that...")
@@ -92,8 +93,9 @@ export const getDraftUserPrompt = (params: {
   lsiKeywords?: string[];
   internalLinkArticles?: Array<{ keyword: string; publishedUrl?: string | null }> | null;
   externalSources?: ExternalSource[] | null;
+  seoSuggestions?: string[] | null;
 }) => {
-  const { outline, keyword, tone, targetWords, lsiKeywords, internalLinkArticles, externalSources } = params;
+  const { outline, keyword, tone, targetWords, lsiKeywords, internalLinkArticles, externalSources, seoSuggestions } = params;
   
   const internalLinksBlock = (internalLinkArticles && internalLinkArticles.length > 0)
     ? '\n\nINTERNAL LINK OPPORTUNITIES:\n' +
@@ -112,28 +114,22 @@ export const getDraftUserPrompt = (params: {
         .join('\n')
     : '';
 
+  const seoSuggestionsBlock = (seoSuggestions && seoSuggestions.length > 0)
+    ? '\n\nSEO IMPROVEMENTS TO APPLY IN THIS DRAFT:\n' +
+      seoSuggestions.slice(0, 8).map((s, i) => `${i + 1}. ${s}`).join('\n')
+    : '';
+
   return `Target keyword: "${keyword}"
 Tone: ${tone}
-
-🚨 CRITICAL WORD COUNT REQUIREMENT - YOU WILL BE PENALIZED FOR NOT MEETING THIS:
-- EXACT TARGET: ${targetWords} words
-- ABSOLUTE MINIMUM: ${Math.floor(targetWords * 0.95)} words - ANYTHING LESS IS UNACCEPTABLE
-- ABSOLUTE MAXIMUM: ${Math.ceil(targetWords * 1.05)} words - DO NOT EXCEED THIS
-- Per section budget: ~${Math.floor(targetWords / outline.sections.length)} words (${outline.sections.length} sections)
-- STOP WRITING IMMEDIATELY if you reach ${Math.ceil(targetWords * 1.05)} words
-- COUNT YOUR WORDS AS YOU WRITE - This is your PRIMARY success metric
+Target length: ${targetWords} words (acceptable range: ${Math.floor(targetWords * 0.93)}–${Math.ceil(targetWords * 1.07)} words)
+Per-section budget: ~${Math.floor(targetWords / outline.sections.length)} words
 
 Outline: ${JSON.stringify(outline, null, 2)}
 ${internalLinksBlock}
 ${externalSourcesBlock}
-
-MANDATORY EXECUTION STEPS (FOLLOW EXACTLY):
-1. Introduction: Write ${Math.floor(targetWords * 0.1)} words - NO keyword in first paragraph
-2. For EACH section in outline: Write ${Math.floor(targetWords / outline.sections.length)} words with depth and examples
-3. Conclusion: Write ${Math.floor(targetWords * 0.08)} words with actionable takeaway
-4. BEFORE FINISHING: Count your total words - you MUST have AT LEAST ${Math.floor(targetWords * 0.95)} words
+${seoSuggestionsBlock}
 
 LSI Keywords to include naturally: ${lsiKeywords?.join(', ') || 'none'}
 
-Write the complete ${targetWords}-word article now. Remember: ${Math.floor(targetWords * 0.95)}-${Math.ceil(targetWords * 1.05)} words is MANDATORY.`;
+Write the complete article now, following the outline above. Stop when you reach the target word count — do not add padding or repeat yourself.`;
 };

@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TrendingUp, TrendingDown, Sparkles, Loader2, ChevronDown, ChevronUp } from 'lucide-react';
+import { TrendingUp, TrendingDown, Sparkles, Loader2, ChevronDown, ChevronUp, CheckCircle2, ExternalLink, Link } from 'lucide-react';
 import { calculateSEOScore, SEOScore } from '@/lib/seo-scoring';
 import { useDebouncedValue } from '@/lib/hooks/use-debounced-value';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
-export function LiveSEOScore({ content, keyword, onUpdate }: { content: string; keyword: string; onUpdate?: (content: string) => void }) {
+export function LiveSEOScore({ content, keyword, onUpdate, lsiKeywords }: { content: string; keyword: string; onUpdate?: (content: string) => void; lsiKeywords?: string[] }) {
   const [scoreData, setScoreData] = useState<SEOScore | null>(null);
   const [previousScore, setPreviousScore] = useState(0);
   const [showDetails, setShowDetails] = useState(false);
@@ -17,32 +17,25 @@ export function LiveSEOScore({ content, keyword, onUpdate }: { content: string; 
 
   useEffect(() => {
     if (!debouncedContent) return;
-    const newData = calculateSEOScore(debouncedContent, keyword);
+    const newData = calculateSEOScore(debouncedContent, keyword, lsiKeywords);
     setPreviousScore(scoreData?.overall || 0);
     setScoreData(newData);
-  }, [debouncedContent, keyword]);
+  }, [debouncedContent, keyword, lsiKeywords]);
 
   const handleAIFixAll = async () => {
     if (!scoreData || scoreData.suggestions.length === 0) return;
-    
     setIsOptimizing(true);
     try {
       const res = await fetch("/api/articles/optimize-seo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content,
-          keyword,
-          suggestions: scoreData.suggestions,
-        }),
+        body: JSON.stringify({ content, keyword, lsiKeywords, suggestions: scoreData.suggestions }),
       });
-
       if (!res.ok) throw new Error("Optimization failed");
-      
       const { optimizedContent } = await res.json();
       if (onUpdate) onUpdate(optimizedContent);
       toast.success("Content optimized!");
-    } catch (err) {
+    } catch {
       toast.error("Failed to optimize");
     } finally {
       setIsOptimizing(false);
@@ -139,6 +132,25 @@ export function LiveSEOScore({ content, keyword, onUpdate }: { content: string; 
                 <ScoreMiniCard label="Structure" score={scoreData.structure.score} />
               </div>
 
+              {/* Live Metric Tiles */}
+              <div className="grid grid-cols-3 gap-1.5 mt-2">
+                <MetricTile
+                  label="LSI Used"
+                  value={`${scoreData.keyword.lsiUsed}/${scoreData.keyword.lsiTotal || '—'}`}
+                  good={scoreData.keyword.lsiTotal === 0 || scoreData.keyword.lsiUsed >= Math.ceil(scoreData.keyword.lsiTotal * 0.5)}
+                />
+                <MetricTile
+                  label="Ext. Links"
+                  value={String(scoreData.structure.externalLinks)}
+                  good={scoreData.structure.externalLinks >= 2}
+                />
+                <MetricTile
+                  label="Int. Links"
+                  value={String(scoreData.structure.internalLinks)}
+                  good={scoreData.structure.internalLinks >= 1}
+                />
+              </div>
+
               {scoreData.suggestions && scoreData.suggestions.length > 0 && (
                 <div className="mt-2 space-y-1.5 bg-muted/50 rounded-lg p-3 border border-border">
                   <h5 className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Suggestions</h5>
@@ -174,6 +186,15 @@ function ScoreMiniCard({ label, score }: { label: string; score: number }) {
           />
         </div>
       </div>
+    </div>
+  );
+}
+
+function MetricTile({ label, value, good }: { label: string; value: string; good: boolean }) {
+  return (
+    <div className={cn("rounded-lg p-2 border transition-all", good ? "bg-emerald-500/5 border-emerald-500/20" : "bg-amber-500/5 border-amber-500/20")}>
+      <p className="text-[7px] font-bold uppercase tracking-widest text-muted-foreground mb-0.5">{label}</p>
+      <p className={cn("text-xs font-bold tabular-nums", good ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400")}>{value}</p>
     </div>
   );
 }

@@ -132,21 +132,26 @@ export async function optimizeContentWithSEOSuggestions(params: {
   content: string;
   keyword: string;
   suggestions: string[];
+  lsiKeywords?: string[];
 }): Promise<string> {
+  const lsiSection = params.lsiKeywords?.length
+    ? `\n7. LSI KEYWORDS: Naturally incorporate these related keywords where contextually relevant: ${params.lsiKeywords.join(", ")}. Do not force them — use them only where they fit naturally.\n8. TITLE: Write a compelling, click-worthy H1 title that includes the target keyword exactly once. Make it engaging (not just "Top X Ways...").`
+    : "\n7. TITLE: Write a compelling, click-worthy H1 title that includes the target keyword exactly once.";
+
   const response = await AI.generateAI({
-    systemPrompt: `You are a world-class SEO content optimizer. Your goal is to achieve a perfect 100/100 SEO score while maintaining high readability and the author's original voice.
+    systemPrompt: `You are an SEO editor making targeted improvements. Your goal is to raise the SEO score to 80+ while preserving the original content's structure, length, and voice as much as possible.
 
-Follow these strict technical SEO rules:
-1. KEYWORD PLACEMENT: Ensure the exact keyword "${params.keyword}" appears in the main H1 title and the very first paragraph.
-2. KEYWORD DENSITY: Aim for a 1.5% to 2.5% natural keyword density. Do not keyword stuff; use it naturally in headers and body text.
-3. STRUCTURE: Ensure there is exactly one H1 title. Use H2 and H3 tags to break up long sections.
-4. READABILITY: Shorten overly long sentences (aim for <20 words). Use simple, punchy language. Break large blocks of text into smaller paragraphs (3-4 sentences max).
-5. CONTENT DEPTH: If requested to expand, add valuable, relevant information that matches user intent.
-6. FORMATTING: Use Markdown strictly. Preserve all existing images and links.
+Rules:
+1. Do NOT rewrite the entire article. Make only the minimal changes needed.
+2. Ensure the exact keyword "${params.keyword}" appears in the H1 title and the first paragraph. If it already does, leave them alone.
+3. If the keyword appears fewer than 3 times total, add it naturally in 1-2 more places (headers or body).
+4. Keep the original H1 unless it needs the keyword added.
+5. Preserve all existing images, links, formatting, and paragraph structure.
+6. Do not change the article length significantly.${lsiSection}
 
-Return ONLY the fully optimized Markdown content.`,
-    userPrompt: `Target Keyword: ${params.keyword}\n\nSuggestions to address:\n${params.suggestions.map(s => `- ${s}`).join('\n')}\n\nArticle Content:\n${params.content}`,
-    temperature: 0.2, // Lower temperature for more consistent technical optimization
+Return ONLY the optimized Markdown content. Keep the response concise — no explanations.`,
+    userPrompt: `Target Keyword: ${params.keyword}${params.lsiKeywords?.length ? `\nLSI Keywords: ${params.lsiKeywords.join(", ")}` : ""}\n\nIssues to fix:\n${params.suggestions.map(s => `- ${s}`).join('\n')}\n\nArticle Content:\n${params.content}`,
+    temperature: 0.3,
     taskType: 'optimize'
   });
   return response.content;

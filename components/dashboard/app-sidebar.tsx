@@ -14,8 +14,10 @@ import {
   ChevronRight,
   Crown,
   BarChart3,
+  BookOpen,
 } from "lucide-react";
 import { usePathname, useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { useUserPlan } from "@/lib/hooks/use-swr-fetch";
 import { useUsage } from "@/lib/hooks/use-usage";
 
@@ -73,6 +75,8 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
   const { plan, usage, isLoading } = useUserPlan();
   const { data: detailedUsage } = useUsage();
   const { setOpenMobile, isMobile, setOpen } = useSidebar();
+  const { user } = useUser();
+  const isAdmin = (user?.publicMetadata as Record<string, unknown>)?.admin === true;
 
   // Auto-close sidebar on mobile when navigating
   const handleNavigation = React.useCallback((url: string) => {
@@ -142,6 +146,48 @@ export function AppSidebar({ userEmail, onSignOut, ...props }: AppSidebarProps) 
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {/* Admin Section */}
+        {isAdmin && (
+          <SidebarGroup className="py-0">
+            <div className="sb-group-label group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:h-0 group-data-[collapsible=icon]:overflow-hidden" style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'opacity 0.2s, height 0.2s'
+            }}>
+              <Crown size={12} className="text-[#f59e0b]" />
+              <span>Admin</span>
+            </div>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">
+                {[{ title: "Blog", url: "/dashboard/blog", icon: BookOpen }].map((item) => {
+                  const isActive = pathname === item.url;
+                  return (
+                    <SidebarMenuItem key={item.title}>
+                      <SidebarMenuButton
+                        tooltip={item.title}
+                        isActive={isActive}
+                        onClick={() => handleNavigation(item.url)}
+                        asChild
+                      >
+                        <div className={`sb-nav-item${isActive ? " active" : ""} group-data-[collapsible=icon]:justify-center`}>
+                          <item.icon className="h-5 w-5 flex-shrink-0" />
+                          <span className="group-data-[collapsible=icon]:hidden">
+                            {item.title}
+                          </span>
+                          {isActive && (
+                            <ChevronRight size={11} className="sb-item-arrow group-data-[collapsible=icon]:hidden" />
+                          )}
+                        </div>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        )}
 
         {/* Pro Features Section */}
         {plan === 'pro' && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
 interface DraftGenerationProps {
@@ -25,8 +25,15 @@ export function useDraftGeneration({
   setCurrentView,
 }: DraftGenerationProps) {
   const updateTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => { abortRef.current?.abort(); };
+  }, []);
   
   const handleGenerateDraft = async (wordCount: number) => {
+    abortRef.current?.abort();
+    abortRef.current = new AbortController();
     console.log('[Draft Hook] Starting generation, wordCount:', wordCount);
     setDraftLoading(true);
     setError(null);
@@ -35,6 +42,7 @@ export function useDraftGeneration({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ articleId, targetWordCount: wordCount }),
+        signal: abortRef.current?.signal,
       });
 
       if (!res.ok) {
@@ -68,10 +76,23 @@ export function useDraftGeneration({
           try {
             const payload = JSON.parse(dataStr);
             if (payload.error) throw new Error(payload.error);
+
+            // Server is retrying — reset accumulator so we don't double content
+            if (payload.retry !== undefined) {
+              draftContentRef.current = "";
+              if (updateTimerRef.current) {
+                clearTimeout(updateTimerRef.current);
+                updateTimerRef.current = null;
+              }
+              setDraftAccumulated("");
+              setWordCount(0);
+              continue;
+            }
+
             if (payload.chunk) {
               draftContentRef.current += payload.chunk;
               
-              // Batch updates using a timer
+              // Batch UI updates to avoid excessive re-renders
               if (updateTimerRef.current) {
                 clearTimeout(updateTimerRef.current);
               }
@@ -79,7 +100,7 @@ export function useDraftGeneration({
               updateTimerRef.current = setTimeout(() => {
                 setDraftAccumulated(draftContentRef.current);
                 setWordCount(draftContentRef.current.trim().split(/\s+/).length);
-              }, 100);
+              }, 80);
             }
             if (payload.done) {
               console.log('[Draft Hook] Stream done, final content length:', draftContentRef.current.length);
@@ -102,6 +123,10 @@ export function useDraftGeneration({
         }
       }
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        toast.info("Draft generation cancelled.");
+        return;
+      }
       const msg = err.message || "Draft generation failed";
       setError(msg);
       toast.error(msg);

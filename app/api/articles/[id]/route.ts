@@ -27,7 +27,10 @@ export const GET = withErrorHandler(async (
 
   assertValid(article.ownerId === uid, "You don't have permission to access this article");
 
-  return NextResponse.json({ article });
+  return NextResponse.json(
+    { article },
+    { headers: { "Cache-Control": "private, max-age=30" } }
+  );
 });
 
 export const DELETE = withErrorHandler(async (

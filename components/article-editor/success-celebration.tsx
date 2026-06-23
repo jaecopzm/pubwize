@@ -99,7 +99,7 @@ export function SuccessCelebration({
                   className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 py-3.5 text-sm font-bold text-white shadow-lg shadow-indigo-500/20 hover:scale-[1.02] transition-all active:scale-95"
                 >
                   <Share2 className="h-4 w-4" />
-                  Publish Now
+                  Continue
                 </button>
               </div>
             </div>

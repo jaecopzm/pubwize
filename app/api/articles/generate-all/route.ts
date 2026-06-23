@@ -51,15 +51,12 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const site = await prisma.site.findUnique({ where: { id: article!.siteId } });
   const brandVoice = (site as { brandVoice: any } | null)?.brandVoice || null;
 
-  // Fetch SERP context for Pro users so drafts can include real, non-hallucinated external links.
-  const user = await prisma.user.findUnique({ where: { id: uid } });
+  // Fetch SERP context so drafts can include real, non-hallucinated external links.
   let serpContext: any = null;
-  if (user?.planTier === "pro") {
-    try {
-      serpContext = await fetchSerpContext(keyword, site?.targetCountry ?? "us");
-    } catch {
-      serpContext = null;
-    }
+  try {
+    serpContext = await fetchSerpContext(keyword, site?.targetCountry ?? "us");
+  } catch {
+    serpContext = null;
   }
 
   const internalLinkArticles = await prisma.article.findMany({

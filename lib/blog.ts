@@ -80,65 +80,77 @@ function draftText(article: { draft: unknown }): string {
 }
 
 export async function getAllDbPosts(): Promise<DbPostMeta[]> {
-  const articles = await prisma.article.findMany({
-    where: { blogPublishedAt: { not: null } },
-    select: {
-      blogSlug: true,
-      keyword: true,
-      metaDescription: true,
-      blogPublishedAt: true,
-      draft: true,
-      featuredImage: true,
-      owner: { select: { displayName: true } },
-    },
-    orderBy: { blogPublishedAt: "desc" },
-  });
+  try {
+    const articles = await prisma.article.findMany({
+      where: { blogPublishedAt: { not: null } },
+      select: {
+        blogSlug: true,
+        keyword: true,
+        metaTitle: true,
+        metaDescription: true,
+        blogPublishedAt: true,
+        blogTags: true,
+        draft: true,
+        featuredImage: true,
+        owner: { select: { displayName: true } },
+      },
+      orderBy: { blogPublishedAt: "desc" },
+    });
 
-  return articles.map((a) => {
-    const content = draftText(a);
-    return {
-      _source: "db",
-      slug: a.blogSlug!,
-      title: a.keyword,
-      description: a.metaDescription || content.slice(0, 200).replace(/#+\s*/g, "").trim() || "",
-      date: a.blogPublishedAt!.toISOString(),
-      author: a.owner.displayName || "Pubwize Team",
-      tags: [],
-      readingTime: content ? readingTime(content).text : "< 1 min read",
-      coverImage: (a.featuredImage as { url?: string } | null)?.url,
-    };
-  });
+    return articles.map((a) => {
+      const content = draftText(a);
+      return {
+        _source: "db",
+        slug: a.blogSlug!,
+        title: a.metaTitle || a.keyword,
+        description: a.metaDescription || content.slice(0, 200).replace(/#+\s*/g, "").trim() || "",
+        date: a.blogPublishedAt!.toISOString(),
+        author: a.owner.displayName || "Pubwize Team",
+        tags: a.blogTags ? a.blogTags.split(",").filter(Boolean) : [],
+        readingTime: content ? readingTime(content).text : "< 1 min read",
+        coverImage: (a.featuredImage as { url?: string } | null)?.url,
+      };
+    });
+  } catch {
+    return [];
+  }
 }
 
 export async function getDbPost(slug: string): Promise<DbPost | null> {
-  const article = await prisma.article.findUnique({
-    where: { blogSlug: slug },
-    select: {
-      blogSlug: true,
-      keyword: true,
-      metaDescription: true,
-      blogPublishedAt: true,
-      draft: true,
-      featuredImage: true,
-      owner: { select: { displayName: true } },
-    },
-  });
+  try {
+    const article = await prisma.article.findUnique({
+      where: { blogSlug: slug },
+      select: {
+        blogSlug: true,
+        keyword: true,
+        metaTitle: true,
+        metaDescription: true,
+        blogPublishedAt: true,
+        blogTags: true,
+        draft: true,
+        featuredImage: true,
+        owner: { select: { displayName: true } },
+      },
+    });
 
-  if (!article || !article.blogPublishedAt) return null;
+    if (!article || !article.blogPublishedAt) return null;
 
-  const content = draftText(article);
-  return {
-    _source: "db",
-    slug: article.blogSlug!,
-    title: article.keyword,
-    description: article.metaDescription || content.slice(0, 200).replace(/#+\s*/g, "").trim() || "",
-    date: article.blogPublishedAt.toISOString(),
-    author: article.owner.displayName || "Pubwize Team",
-    tags: [],
-    readingTime: content ? readingTime(content).text : "< 1 min read",
-    coverImage: (article.featuredImage as { url?: string } | null)?.url,
-    content,
-  };
+    const content = draftText(article);
+    return {
+      _source: "db",
+      slug: article.blogSlug!,
+      title: article.metaTitle || article.keyword,
+      description: article.metaDescription || content.slice(0, 200).replace(/#+\s*/g, "").trim() || "",
+      date: article.blogPublishedAt.toISOString(),
+      author: article.owner.displayName || "Pubwize Team",
+      tags: article.blogTags ? article.blogTags.split(",").filter(Boolean) : [],
+      readingTime: content ? readingTime(content).text : "< 1 min read",
+      coverImage: (article.featuredImage as { url?: string } | null)?.url,
+      content,
+    };
+  } catch {
+    return null;
+  }
 }
 
 // ── Merged public API ────────────────────────────────────────

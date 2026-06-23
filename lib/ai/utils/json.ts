@@ -64,6 +64,12 @@ export function parseJsonResponse<T = any>(text: string, label = "response"): T 
         trimmed = trimmed.replace(/^```[a-zA-Z]*\s*/, "").replace(/```$/, "").trim();
     }
 
+    // 2. Strip natural-language prefix before JSON (e.g. "Here's the content:\n\n{...}")
+    const jsonStart = trimmed.search(/[{\[]/);
+    if (jsonStart > 0) {
+        trimmed = trimmed.slice(jsonStart);
+    }
+
     const attempt = (s: string) => {
         try {
             return JSON.parse(s);
@@ -72,11 +78,11 @@ export function parseJsonResponse<T = any>(text: string, label = "response"): T 
         }
     };
 
-    // 2. Try direct parse
+    // 3. Try direct parse
     let result = attempt(trimmed);
     if (result) return result as T;
 
-    // 3. Try extracting JSON object/array
+    // 4. Try extracting JSON object/array with brace/bracket matching
     const firstBrace = trimmed.indexOf("{");
     const lastBrace = trimmed.lastIndexOf("}");
     if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
@@ -91,7 +97,7 @@ export function parseJsonResponse<T = any>(text: string, label = "response"): T 
         if (result) return result as T;
     }
 
-    // 4. Try to fix truncation
+    // 5. Try to fix truncation (already stripped of prefix)
     console.warn(`Attempting to fix potentially truncated JSON for ${label}...`);
     const fixed = tryFixTruncatedJson(trimmed);
     result = attempt(fixed);
@@ -100,7 +106,7 @@ export function parseJsonResponse<T = any>(text: string, label = "response"): T 
         return result as T;
     }
 
-    // 5. Regex attempt for objects
+    // 6. Last resort: regex + truncation fix
     const objMatch = trimmed.match(/\{[\s\S]*/);
     if (objMatch) {
         const fixedRegex = tryFixTruncatedJson(objMatch[0]);

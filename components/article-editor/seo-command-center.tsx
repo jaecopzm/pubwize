@@ -7,12 +7,13 @@ interface SEOCommandCenterProps {
   keyword: string;
   targetWordCount: number;
   onUpdate?: (content: string) => void;
+  lsiKeywords?: string[];
 }
 
-export function SEOCommandCenter({ content, keyword, targetWordCount, onUpdate }: SEOCommandCenterProps) {
+export function SEOCommandCenter({ content, keyword, targetWordCount, onUpdate, lsiKeywords }: SEOCommandCenterProps) {
   return (
     <div className="space-y-4">
-      <LiveSEOScore content={content} keyword={keyword} onUpdate={onUpdate} />
+      <LiveSEOScore content={content} keyword={keyword} onUpdate={onUpdate} lsiKeywords={lsiKeywords} />
     </div>
   );
 }

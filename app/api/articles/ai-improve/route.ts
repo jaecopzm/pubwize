@@ -8,6 +8,7 @@ import { authenticateRequest, validateRequestBody } from "@/lib/api-security";
 import { validateContent, validateKeyword } from "@/lib/validation";
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
   // 1. Authenticate
@@ -16,9 +17,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const uid = auth.uid!;
 
   // 2. Check usage quota
-  
   const usageCheck = await canPerformAction(uid, "aiImprovements");
-
   if (!usageCheck.allowed) {
     throw new QuotaExceededError(
       usageCheck.reason || "AI improvement limit reached",
@@ -35,75 +34,95 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   const { content, keyword, improvementType } = body;
 
-  // 5. Validate content and keyword
   const contentValidation = validateContent(content);
   assertValid(contentValidation.valid, contentValidation.error || "Invalid content");
 
   const keywordValidation = validateKeyword(keyword);
   assertValid(keywordValidation.valid, keywordValidation.error || "Invalid keyword");
 
-  // 6. Build prompts based on improvement type
+  // Estimate word count to constrain output
+  const originalWordCount = content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+
+  // 4. Build prompts per improvement type — all constrained to return ONLY the improved text
   let systemPrompt = "";
   let userPrompt = "";
+  let maxTokens = 2000;
 
   switch (improvementType) {
     case "rewrite":
-      systemPrompt = `You are an expert content writer.
+      systemPrompt = `You are a precise content editor.
 
-Rewrite the following text to say the same thing in a completely fresh way. Different sentence structure, different word choices, same meaning and facts.
+Rewrite the provided text with:
+- Different sentence structure and word choices
+- Same meaning, facts, and information — nothing added or removed
+- Same approximate length (${originalWordCount} words ±10%)
+- Same markdown formatting (bold, italics, lists, headings) preserved
 
-Keep it the same length. Return ONLY the rewritten text with no explanation.`;
+Return ONLY the rewritten text. No introduction, no explanation.`;
       userPrompt = `Target keyword: "${keyword}"\n\nText to rewrite:\n${content}`;
+      maxTokens = Math.ceil(originalWordCount * 2);
       break;
 
     case "shorten":
       systemPrompt = `You are a professional editor specializing in concise writing.
 
-Shorten the following text to roughly half its length while keeping all the key information and meaning. Cut filler words, redundant phrases, and unnecessary qualifiers.
+Shorten the provided text to roughly 60% of its original length (${Math.ceil(originalWordCount * 0.6)} words) while keeping:
+- All key information and facts
+- The original tone
+- Any markdown formatting (bold, lists, headings)
 
-Return ONLY the shortened text with no explanation.`;
+Cut filler words, redundant phrases, and unnecessary qualifiers. Do NOT cut any headings.
+
+Return ONLY the shortened text. No introduction, no explanation.`;
       userPrompt = `Text to shorten:\n${content}`;
+      maxTokens = Math.ceil(originalWordCount * 1.5);
       break;
 
     case "expand":
-      systemPrompt = `You are a professional content writer specializing in detailed, practical content.
+      systemPrompt = `You are a professional content writer.
 
-Expand this text with more detail, examples, and practical information.
+Expand the provided text to roughly 160% of its original length (${Math.ceil(originalWordCount * 1.6)} words) by adding:
+- Real-world examples and scenarios
+- Practical tips and actionable advice  
+- More detailed explanations of key points
 
-Add:
-- Real-world examples
-- Practical tips and actionable advice
-- More detailed explanations
+Keep sentences short (15-20 words) and maintain the original tone and markdown formatting.
 
-Keep sentences short (15-20 words) and maintain easy readability.
-
-Return ONLY the expanded content.`;
-      userPrompt = `Target keyword: "${keyword}"\n\nCurrent content:\n${content}`;
+Return ONLY the expanded text. No introduction, no explanation.`;
+      userPrompt = `Target keyword: "${keyword}"\n\nText to expand:\n${content}`;
+      maxTokens = Math.ceil(originalWordCount * 3);
       break;
 
     case "formal":
-      systemPrompt = `You are a professional content writer.
+      systemPrompt = `You are a professional editor.
 
-Rewrite the following text in a formal, professional tone. Use precise vocabulary, complete sentences, and an authoritative voice.
+Rewrite the provided text in a formal, authoritative tone using:
+- Precise vocabulary and complete sentences
+- No contractions, no slang
+- Same length (${originalWordCount} words ±10%) and same markdown formatting
 
-Return ONLY the rewritten text with no explanation.`;
+Return ONLY the rewritten text. No introduction, no explanation.`;
       userPrompt = `Text to formalize:\n${content}`;
+      maxTokens = Math.ceil(originalWordCount * 2);
       break;
 
     case "casual":
       systemPrompt = `You are a friendly content writer.
 
-Rewrite the following text in a casual, conversational tone. Use simple language, contractions, and a friendly voice as if talking to a friend.
+Rewrite the provided text in a casual, conversational tone using:
+- Simple language, contractions, and a friendly voice
+- Same length (${originalWordCount} words ±10%) and same markdown formatting
 
-Return ONLY the rewritten text with no explanation.`;
-      userPrompt = `Text to casualize:\n${content}`;
+Return ONLY the rewritten text. No introduction, no explanation.`;
+      userPrompt = `Text to make casual:\n${content}`;
+      maxTokens = Math.ceil(originalWordCount * 2);
       break;
 
     default:
       assertValid(false, "Invalid improvement type");
   }
 
-  // 7. Stream improved content using Groq
+  // 5. Stream improved content
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
@@ -113,8 +132,8 @@ Return ONLY the rewritten text with no explanation.`;
       const generator = aiUserContext.run(uid, () => generateAIStream({
         systemPrompt,
         userPrompt,
-        temperature: 0.7,
-        maxTokens: 4096,
+        temperature: 0.4, // Precise enough to not hallucinate, creative enough to vary phrasing
+        maxTokens,
         taskType: 'draft',
       }));
 
@@ -122,9 +141,7 @@ Return ONLY the rewritten text with no explanation.`;
         await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
       }
 
-      // Increment usage after successful generation
       await incrementUsage(uid, "aiImprovements");
-
       await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
     } catch (err) {
       logger.error("AI improvement streaming failed", err);

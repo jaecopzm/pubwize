@@ -39,7 +39,9 @@ export function ImageSelector({ keyword, onImageSelect }: ImageSelectorProps) {
     await triggerUnsplashDownload(image.links.download_location);
     
     // Insert markdown
-    const markdown = getUnsplashMarkdown(image);
+    const altText = (image.alt_description || image.description || "Image")
+      .replace(/^./, c => c.toUpperCase());
+    const markdown = getUnsplashMarkdown(image, altText);
     onImageSelect(markdown);
     
     toast.success("Image added to content");

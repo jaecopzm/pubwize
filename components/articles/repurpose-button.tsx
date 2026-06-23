@@ -247,7 +247,7 @@ export function RepurposeButton({
                         {/* Header */}
                         <div className="relative flex items-center justify-between border-b border-border px-4 sm:px-6 py-3 sm:py-5 bg-card/50 backdrop-blur-xl">
                             <div className="flex items-center gap-2 sm:gap-4 min-w-0 flex-1">
-                                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-lilac via-lilac/80 to-purple-500 text-white shadow-lg shadow-lilac/30">
+                                <div className="flex h-10 w-10 sm:h-12 sm:w-12 shrink-0 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 via-blue-400 to-cyan-400 text-white shadow-lg shadow-blue-500/20">
                                     <ShareIcon className="h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
                                 <div className="min-w-0 flex-1">
@@ -270,7 +270,7 @@ export function RepurposeButton({
                             {!assets ? (
                                 <div className="flex items-center justify-center h-full p-4 sm:p-8">
                                     <div className="text-center max-w-md">
-                                        <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl sm:rounded-3xl bg-gradient-to-br from-lilac/20 to-purple-500/10 mx-auto mb-4 sm:mb-6 border border-lilac/20">
+                                        <div className="flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-2xl sm:rounded-3xl bg-gradient-to-br from-blue-500/10 to-cyan-400/10 mx-auto mb-4 sm:mb-6 border border-blue-500/20">
                                             <SparklesIcon className="h-8 w-8 sm:h-10 sm:w-10 text-lilac" />
                                         </div>
                                         <h3 className="font-display font-bold text-foreground mb-2 sm:mb-3 text-lg sm:text-xl">

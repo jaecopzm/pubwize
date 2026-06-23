@@ -47,7 +47,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const validation = validateRequestBody(body, ["content", "keyword", "suggestions"]);
   assertValid(validation.valid, validation.error || "Invalid request");
 
-  const { content, keyword, suggestions } = body;
+  const { content, keyword, suggestions, lsiKeywords } = body;
 
   // 4. Validate content and keyword
   const contentValidation = validateContent(content);
@@ -62,7 +62,8 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     optimizedContent = await aiUserContext.run(uid, () => optimizeContentWithSEOSuggestions({
       content,
       keyword,
-      suggestions
+      suggestions,
+      lsiKeywords
     }));
   } catch (err) {
     logger.error("OpenRouter optimization failed", err);

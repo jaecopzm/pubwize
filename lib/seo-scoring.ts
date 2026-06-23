@@ -19,6 +19,8 @@ export interface KeywordScore {
   inFirstParagraph: boolean;
   inHeadings: number;
   optimal: boolean;
+  lsiUsed: number;
+  lsiTotal: number;
 }
 
 export interface ReadabilityScore {
@@ -26,6 +28,7 @@ export interface ReadabilityScore {
   avgSentenceLength: number;
   avgWordLength: number;
   complexWords: number;
+  longParagraphs: number;
 }
 
 export interface StructureScore {
@@ -35,6 +38,8 @@ export interface StructureScore {
   paragraphCount: number;
   wordCount: number;
   imageCount: number;
+  externalLinks: number;
+  internalLinks: number;
 }
 
 /**
@@ -125,12 +130,11 @@ function countImages(markdown: string): number {
 /**
  * Calculate comprehensive SEO score for content
  */
-export function calculateSEOScore(content: string, keyword: string): SEOScore {
-  const keywordScore = analyzeKeywordUsage(content, keyword);
+export function calculateSEOScore(content: string, keyword: string, lsiKeywords?: string[]): SEOScore {
+  const keywordScore = analyzeKeywordUsage(content, keyword, lsiKeywords);
   const readabilityScore = analyzeReadability(content);
   const structureScore = analyzeStructure(content);
 
-  // Calculate overall score (weighted average)
   const overall = Math.round(
     keywordScore.score * 0.4 +
     readabilityScore.score * 0.3 +
@@ -151,54 +155,61 @@ export function calculateSEOScore(content: string, keyword: string): SEOScore {
 /**
  * Analyze keyword usage and placement
  */
-function analyzeKeywordUsage(content: string, keyword: string): KeywordScore {
-  // Convert to plain text for accurate word counting
+function analyzeKeywordUsage(content: string, keyword: string, lsiKeywords?: string[]): KeywordScore {
   const plainText = markdownToText(content);
   const lowerKeyword = keyword.toLowerCase();
 
-  // Count keyword occurrences in plain text
+  // Count keyword occurrences
   const escapedKeyword = lowerKeyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const regex = new RegExp(`\\b${escapedKeyword}\\b`, 'gi');
   const matches = plainText.match(regex) || [];
   const count = matches.length;
 
-  // Calculate word count and density from plain text
   const words = plainText.split(/\s+/).filter(w => w.length > 0).length;
   const density = words > 0 ? (count / words) * 100 : 0;
 
-  // Check keyword placement
+  // Check placement
   const headings = extractHeadings(content);
   const paragraphs = extractParagraphs(content);
 
   const inTitle = headings.length > 0 && headings[0].level === 1 &&
                   headings[0].text.toLowerCase().includes(lowerKeyword);
 
-  const firstParagraphText = paragraphs.length > 0 ?
-    markdownToText(paragraphs[0]).toLowerCase() : '';
+  const firstParagraphText = paragraphs.length > 0
+    ? markdownToText(paragraphs[0]).toLowerCase() : '';
   const inFirstParagraph = firstParagraphText.includes(lowerKeyword);
 
-  // Count in headings
   const inHeadings = headings.filter(h =>
     h.text.toLowerCase().includes(lowerKeyword)
   ).length;
 
-  // Optimal density is 1-2%
+  // LSI keyword tracking
+  let lsiUsed = 0;
+  if (lsiKeywords?.length) {
+    const lowerContent = plainText.toLowerCase();
+    for (const lsi of lsiKeywords) {
+      if (lowerContent.includes(lsi.toLowerCase())) lsiUsed++;
+    }
+  }
+
   const densityOptimal = density >= 0.5 && density <= 2.5;
   const placementOptimal = inTitle && inFirstParagraph && inHeadings > 0;
   const optimal = densityOptimal && placementOptimal && count >= 3;
 
-  // Calculate score
   let score = 0;
-  if (count >= 3) score += 20;
+  if (count >= 3) score += 15;
   if (count >= 6) score += 10;
   if (inTitle) score += 20;
   if (inFirstParagraph) score += 20;
   if (inHeadings > 0) score += 15;
-  if (densityOptimal) score += 15;
+  if (densityOptimal) score += 10;
   
-  // Bonus for placement in first 100 words
-  const first100Words = words > 100 ? plainText.split(/\s+/).slice(0, 100).join(' ').toLowerCase() : plainText.toLowerCase();
+  const first100Words = words > 100
+    ? plainText.split(/\s+/).slice(0, 100).join(' ').toLowerCase()
+    : plainText.toLowerCase();
   if (first100Words.includes(lowerKeyword)) score += 5;
+
+  if (lsiKeywords?.length && lsiUsed >= Math.ceil(lsiKeywords.length * 0.5)) score += 5;
 
   return {
     score: Math.min(score, 100),
@@ -208,6 +219,8 @@ function analyzeKeywordUsage(content: string, keyword: string): KeywordScore {
     inFirstParagraph,
     inHeadings,
     optimal,
+    lsiUsed,
+    lsiTotal: lsiKeywords?.length || 0,
   };
 }
 
@@ -215,16 +228,13 @@ function analyzeKeywordUsage(content: string, keyword: string): KeywordScore {
  * Analyze readability
  */
 function analyzeReadability(content: string): ReadabilityScore {
-  // Convert to plain text
   const plainText = markdownToText(content);
   
-  // Split into sentences (more accurate)
   const sentences = plainText
     .split(/[.!?]+/)
     .map(s => s.trim())
     .filter(s => s.length > 0);
   
-  // Split into words
   const words = plainText
     .split(/\s+/)
     .filter(w => w.length > 0 && /[a-zA-Z]/.test(w));
@@ -234,21 +244,32 @@ function analyzeReadability(content: string): ReadabilityScore {
     ? words.reduce((sum, w) => sum + w.replace(/[^a-zA-Z]/g, '').length, 0) / words.length 
     : 0;
   
-  // Count complex words (3+ syllables, rough estimate based on length)
   const complexWords = words.filter(w => w.length > 12).length;
 
-  // Score based on readability metrics
+  // Count long paragraphs (5+ sentences or 100+ words in non-list, non-heading blocks)
+  const rawParagraphs = content
+    .split(/\n\n+/)
+    .map(p => p.trim())
+    .filter(p => p.length > 0 && !p.startsWith('#') && !p.match(/^[-*+]\s/) && !p.match(/^\d+\.\s/));
+  const longParagraphs = rawParagraphs.filter(p => {
+    const wordCount = p.split(/\s+/).filter(Boolean).length;
+    const sentenceCount = p.split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+    return wordCount > 100 || sentenceCount > 5;
+  }).length;
+
   let score = 100;
-  if (avgSentenceLength > 25) score -= 20;
+  if (avgSentenceLength > 25) score -= 15;
   if (avgSentenceLength > 30) score -= 10;
-  if (avgWordLength > 6) score -= 15;
-  if (complexWords > words.length * 0.15) score -= 15;
+  if (avgWordLength > 6) score -= 10;
+  if (complexWords > words.length * 0.15) score -= 10;
+  if (longParagraphs > 0) score -= Math.min(longParagraphs * 5, 15);
 
   return {
     score: Math.max(score, 0),
     avgSentenceLength: Math.round(avgSentenceLength * 10) / 10,
     avgWordLength: Math.round(avgWordLength * 10) / 10,
     complexWords,
+    longParagraphs,
   };
 }
 
@@ -263,16 +284,25 @@ function analyzeStructure(content: string): StructureScore {
   const words = plainText.split(/\s+/).filter(w => w.length > 0 && /[a-zA-Z]/.test(w)).length;
   const images = countImages(content);
 
+  // Count links
+  const externalLinkRegex = /\[([^\]]+)\]\((https?:\/\/[^)]+)\)/g;
+  const internalLinkRegex = /\[([^\]]+)\]\((\/[^)]+)\)/g;
+  const externalLinks = (content.match(externalLinkRegex) || []).length;
+  const internalLinks = (content.match(internalLinkRegex) || []).length;
+
   let score = 0;
-  if (h1Count === 1) score += 20;
-  if (headings.length >= 3) score += 15;
+  if (h1Count === 1) score += 15;
+  if (headings.length >= 3) score += 10;
   if (headings.length >= 5) score += 5;
-  if (paragraphs.length >= 5) score += 15;
+  if (paragraphs.length >= 5) score += 10;
   if (paragraphs.length >= 10) score += 5;
-  if (words >= 600) score += 10;
+  if (words >= 600) score += 5;
   if (words >= 1000) score += 10;
-  if (words >= 1500) score += 10;
-  if (images >= 1) score += 10;
+  if (words >= 1500) score += 5;
+  if (images >= 1) score += 5;
+  if (externalLinks >= 2) score += 10;
+  if (externalLinks >= 4) score += 5;
+  if (internalLinks >= 1) score += 5;
 
   return {
     score: Math.min(score, 100),
@@ -281,6 +311,8 @@ function analyzeStructure(content: string): StructureScore {
     paragraphCount: paragraphs.length,
     wordCount: words,
     imageCount: images,
+    externalLinks,
+    internalLinks,
   };
 }
 
@@ -306,15 +338,24 @@ function generateSuggestions(
     suggestions.push(`Use "${targetKeyword}" in at least one subheading`);
   }
   if (keyword.count < 3) {
-    suggestions.push(`Increase keyword usage (currently ${keyword.count} times, aim for 5-8)`);
+    suggestions.push(`Increase keyword usage (currently ${keyword.count}x, aim for 5-8x)`);
   }
   if (keyword.density > 2.5) {
-    suggestions.push(`Reduce keyword density (${keyword.density.toFixed(1)}% is too high, aim for 1-2%)`);
+    suggestions.push(`Reduce keyword density (${keyword.density.toFixed(1)}% — aim for 0.5-2.5%)`);
+  }
+
+  // LSI suggestions
+  if (keyword.lsiTotal > 0 && keyword.lsiUsed < keyword.lsiTotal) {
+    const remaining = keyword.lsiTotal - keyword.lsiUsed;
+    suggestions.push(`Use ${remaining} more LSI keyword${remaining > 1 ? 's' : ''} for semantic relevance`);
   }
 
   // Readability suggestions
   if (readability.avgSentenceLength > 25) {
     suggestions.push(`Shorten sentences (avg ${readability.avgSentenceLength} words, aim for <20)`);
+  }
+  if (readability.longParagraphs > 0) {
+    suggestions.push(`Break up ${readability.longParagraphs} long paragraph${readability.longParagraphs > 1 ? 's' : ''} (aim for 2-4 sentences each)`);
   }
   if (readability.complexWords > 20) {
     suggestions.push(`Simplify language (${readability.complexWords} complex words detected)`);
@@ -333,8 +374,14 @@ function generateSuggestions(
   if (structure.imageCount === 0) {
     suggestions.push('Add at least one image to improve engagement');
   }
+  if (structure.externalLinks < 2) {
+    suggestions.push('Add external links to authoritative sources');
+  }
+  if (structure.internalLinks === 0) {
+    suggestions.push('Add internal links to other articles');
+  }
 
-  return suggestions.slice(0, 5); // Top 5 suggestions
+  return suggestions.slice(0, 6);
 }
 
 /**

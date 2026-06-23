@@ -10,7 +10,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { articleId, slug: customSlug } = await req.json();
+  const { articleId, slug: customSlug, title, description, tags, featuredImage } = await req.json();
   if (!articleId) {
     return NextResponse.json({ error: "articleId is required" }, { status: 400 });
   }
@@ -33,13 +33,37 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     blogSlug = `${blogSlug}-${suffix}`;
   }
 
+  // Normalize tags
+  const blogTags = Array.isArray(tags)
+    ? tags.filter(Boolean).map((t: string) => t.trim().toLowerCase()).join(",")
+    : typeof tags === "string" && tags.trim()
+      ? tags.split(",").map((t: string) => t.trim().toLowerCase()).join(",")
+      : article.articleType?.toLowerCase() || null;
+
+  let featuredImageJson = undefined;
+  if (featuredImage) {
+    if (typeof featuredImage === "string") {
+      featuredImageJson = { url: featuredImage };
+    } else if (typeof featuredImage === "object") {
+      featuredImageJson = featuredImage;
+    }
+  }
+
   const updated = await prisma.article.update({
     where: { id: articleId },
-    data: { blogSlug, blogPublishedAt: new Date() },
+    data: {
+      blogSlug,
+      blogPublishedAt: new Date(),
+      blogTags,
+      ...(title ? { metaTitle: title } : {}),
+      ...(description ? { metaDescription: description } : {}),
+      ...(featuredImageJson ? { featuredImage: featuredImageJson } : {}),
+    },
   });
 
   return NextResponse.json({
     slug: blogSlug,
+    tags: blogTags,
     publishedAt: updated.blogPublishedAt,
     url: `/blog/${blogSlug}`,
   });

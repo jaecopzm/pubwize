@@ -100,6 +100,7 @@ model Article {
   // Blog publishing
   blogPublishedAt DateTime?
   blogSlug        String?   @unique
+  blogTags        String?
 
   // Template
   templateId      String?

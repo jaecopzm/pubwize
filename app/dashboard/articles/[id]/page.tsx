@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowLeft, Loader2, Sparkles, CheckCircle2, FileText, List, PenLine, TrendingUp, Copy, Check, Download, FileCode, FileJson, Plus, Trash2, Code, Share2, Zap, ChevronRight, Globe } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, CheckCircle2, FileText, List, PenLine, Copy, Check, Code, ChevronRight, Globe, Lock, RefreshCw, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import { useSidebar } from "@/components/ui/sidebar";
 import { BriefPanel } from "@/components/article-editor/brief-panel";
 import { OutlinePanel } from "@/components/article-editor/outline-panel";
 import { DraftPanel } from "@/components/article-editor/draft-panel";
-import { SocialPanel } from "@/components/article-editor/social-panel";
+
 import { StatPill, CopyButton } from "@/components/article-editor/shared-ui";
 
 import { UnsplashSearch } from "@/components/unsplash-search";
@@ -61,595 +61,131 @@ interface ArticleState {
 const STEPS = [
   { id: 1, key: "brief", label: "SEO Brief", icon: FileText, description: "Keyword research & content map" },
   { id: 2, key: "outline", label: "Outline", icon: List, description: "Structure your article" },
-  { id: 3, key: "draft", label: "Draft", icon: PenLine, description: "Full AI-written article" },
-  { id: 4, key: "social", label: "Social & Publish", icon: Share2, description: "Social posts & WordPress" },
+  { id: 3, key: "draft", label: "Draft & Optimize", icon: PenLine, description: "Full article with SEO scoring" },
 ] as const;
 
 function getActiveStep(article: ArticleState): number {
-  if (!article.outline) return 1;      // Show Brief + "Generate Outline" CTA
-  if (!article.draft) return 2;        // Show Outline + "Generate Draft" CTA
-  if (!article.socialMedia) return 3;  // Show Draft + "Generate Social" CTA
-  return 4;                             // Show Social results
+  if (!article.outline) return 1;
+  if (!article.draft) return 2;
+  return 3;
 }
 
 
-// ── Step 4: SEO ──────────────────────────────────────────────────────
-function SEOPanel({ optimization, articleId, keyword, content, featuredImage, brief, onGenerateSocial, isGeneratingSocial, onContentUpdate }: {
-  optimization: OptimizationData;
-  articleId: string;
-  keyword: string;
-  content: string;
-  featuredImage?: string | null;
-  brief: BriefData | null;
-  onGenerateSocial: () => void;
-  isGeneratingSocial?: boolean;
-  onContentUpdate?: (content: string) => void;
+// ── StepHeader Helper ───────────────────────────────────────────────
+function StepHeader({ 
+  number, 
+  label, 
+  description, 
+  icon: Icon, 
+  status, 
+  isExpanded, 
+  onToggle 
+}: { 
+  number: number; 
+  label: string; 
+  description: string; 
+  icon: any; 
+  status: "completed" | "active" | "locked"; 
+  isExpanded: boolean; 
+  onToggle: () => void; 
 }) {
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
-  const [showWordPressPublish, setShowWordPressPublish] = useState(false);
-  const [fixingAll, setFixingAll] = useState(false);
-  const [wordPressSites, setWordPressSites] = useState<WordPressSite[]>([]);
-  const [loadingSites, setLoadingSites] = useState(true);
+  return (
+    <button
+      onClick={status === "locked" ? undefined : onToggle}
+      disabled={status === "locked"}
+      className={cn(
+        "w-full flex items-center justify-between gap-3 rounded-xl border p-4 transition-all text-left relative overflow-hidden",
+        status === "locked" && "opacity-45 bg-muted/20 border-border/40 cursor-not-allowed",
+        status === "active" && "bg-card border-primary/40 shadow-sm",
+        status === "completed" && "bg-card hover:bg-accent/40 border-border/80"
+      )}
+    >
+      {/* Active step indicator strip */}
+      {status === "active" && (
+        <div className={cn(
+          "absolute left-0 top-0 bottom-0 w-1",
+          number === 1 ? "bg-cyan-500" :
+          number === 2 ? "bg-indigo-500" :
+          number === 3 ? "bg-violet-500" : "bg-teal-500"
+        )} />
+      )}
 
-  // Fetch WordPress sites
+      <div className="flex items-center gap-3.5 min-w-0">
+        <div className={cn(
+          "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border text-sm font-semibold transition-all duration-300",
+          status === "completed" && "bg-emerald-500/10 border-emerald-500/20 text-emerald-500",
+          status === "active" && (
+            number === 1 ? "bg-cyan-500/10 border-cyan-500/30 text-cyan-500" :
+            number === 2 ? "bg-indigo-500/10 border-indigo-500/30 text-indigo-500" :
+            number === 3 ? "bg-violet-500/10 border-violet-500/30 text-violet-500" :
+            "bg-teal-500/10 border-teal-500/30 text-teal-500"
+          ),
+          status === "locked" && "bg-muted border-border/30 text-muted-foreground/50"
+        )}>
+          {status === "completed" ? (
+            <Check className="h-4.5 w-4.5 font-bold" />
+          ) : status === "locked" ? (
+            <Lock className="h-4 w-4" />
+          ) : (
+            <Icon className="h-4.5 w-4.5" />
+          )}
+        </div>
+
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[9px] font-mono font-bold tracking-wider text-muted-foreground/60 uppercase">Step {number}</span>
+            {status === "active" && (
+              <span className="flex h-1.5 w-1.5 rounded-full bg-primary animate-pulse" />
+            )}
+          </div>
+          <h4 className="text-sm font-bold text-foreground mt-0.5 leading-tight">{label}</h4>
+          <p className="text-[10px] sm:text-xs text-muted-foreground/80 mt-0.5 font-medium truncate">{description}</p>
+        </div>
+      </div>
+
+      {status !== "locked" && (
+        <ChevronRight className={cn("h-4 w-4 text-muted-foreground/60 transition-transform duration-200 shrink-0", isExpanded && "rotate-90")} />
+      )}
+    </button>
+  );
+}
+
+// ── FocusTrap Helper ────────────────────────────────────────────────
+function FocusTrap({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    const fetchWordPressSites = async () => {
-      try {
-        const response = await fetch('/api/wordpress/sites', {});
+    const el = containerRef.current;
+    if (!el) return;
+    const focusable = el.querySelectorAll<HTMLElement>('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    first?.focus();
 
-        if (response.ok) {
-          const data = await response.json();
-          setWordPressSites(data.sites || []);
-        }
-      } catch (error) {
-        console.error('Error fetching WordPress sites:', error);
-      } finally {
-        setLoadingSites(false);
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return; }
+      if (e.key !== 'Tab') return;
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
       }
     };
-
-    fetchWordPressSites();
-  }, []);
-
-  const copyToClipboard = (text: string, index: number) => {
-    navigator.clipboard.writeText(text);
-    setCopiedIndex(index);
-    setTimeout(() => setCopiedIndex(null), 2000);
-  };
-
-  const handleAIFixAll = async () => {
-    setFixingAll(true);
-    let fixedContent = "";
-    
-    try {
-
-      toast.info("AI is fixing all issues...");
-
-      // Combine all suggestions into one request
-      const allSuggestions = optimization.suggestions?.join('\n') || '';
-
-      const res = await fetch('/api/articles/ai-fix', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          articleId,
-          content,
-          suggestion: allSuggestions,
-          keyword,
-        }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to apply fixes');
-      }
-
-      // Stream the fixes and update content in real-time
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let accumulatedRaw = "";
-
-      while (true) {
-        const { done: rdDone, value } = await reader.read();
-        if (rdDone) break;
-
-        accumulatedRaw += decoder.decode(value, { stream: true });
-        const lines = accumulatedRaw.split("\n");
-        accumulatedRaw = lines.pop() || "";
-
-        for (const line of lines) {
-          const trimmed = line.trim();
-          if (!trimmed.startsWith("data: ")) continue;
-
-          const dataStr = trimmed.slice(6);
-          if (dataStr === "[DONE]") continue;
-
-          try {
-            const payload = JSON.parse(dataStr);
-            if (payload.error) throw new Error(payload.error);
-            
-            if (payload.chunk) {
-              fixedContent += payload.chunk;
-              // Update content in real-time
-              if (onContentUpdate) {
-                onContentUpdate(fixedContent);
-              }
-            }
-            
-            if (payload.done) {
-              toast.success("All fixes applied!");
-            }
-          } catch (parseErr) {
-            // Ignore malformed chunks
-          }
-        }
-      }
-    } catch (error) {
-      console.error('AI fix error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to apply fixes');
-    } finally {
-      setFixingAll(false);
-    }
-  };
-
-  // Calculate SEO score using comprehensive algorithm
-  const seoScoreData = useMemo(() => calculateSEOScore(content, keyword), [content, keyword]);
-  const seoScore = seoScoreData.overall;
-
-  const getScoreColor = (score: number) => {
-    if (score >= 80) return 'var(--teal)';
-    if (score >= 60) return 'var(--gold)';
-    return '#ff6b6b';
-  };
-
-  const readability = useMemo(() => calculateReadabilityScores(content), [content]);
-  const readingTime = Math.ceil(content.trim().split(/\s+/).length / 250);
-
-  const keywordCoverage = useMemo(() => {
-    if (!optimization.lsiKeywords || optimization.lsiKeywords.length === 0) return [];
-    return optimization.lsiKeywords.map(kw => {
-      // Basic check for keyword presence
-      const regex = new RegExp(`\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
-      return { keyword: kw, found: regex.test(content) };
-    });
-  }, [content, optimization.lsiKeywords]);
-
-  const handleExport = (format: "markdown" | "html") => {
-    if (format === "html") {
-      const plain = content.replace(/\n\n/g, "</p><p>").replace(/\n/g, "<br>");
-      navigator.clipboard.writeText(`<p>${plain}</p>`);
-      toast.success("HTML copied to clipboard!");
-    } else {
-      navigator.clipboard.writeText(content);
-      toast.success("Markdown copied to clipboard!");
-    }
-  };
+    el.addEventListener('keydown', handleKeyDown);
+    return () => el.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[1fr_2fr] xl:grid-cols-[360px_1fr] gap-3 sm:gap-4 items-start">
-      {/* ── Left Column: Metrics & Analysis ── */}
-      <div className="space-y-2.5 sm:space-y-3 md:space-y-4">
-
-        {/* SEO Score Card */}
-        <div className="rounded-xl border border-[#6366f1]/20 bg-gradient-to-br from-[#6366f1]/10 via-[#6366f1]/5 to-transparent p-4 sm:p-5 shadow-lg hover:shadow-[#6366f1]/10 transition-all duration-300">
-          <div className="flex items-start justify-between gap-2 mb-3">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider mb-1 text-foreground">SEO Score</h3>
-              <p className="text-[10px] sm:text-xs text-muted-foreground leading-snug">Overall rating</p>
-            </div>
-            <div className="text-center shrink-0">
-              <div className="text-2xl sm:text-3xl md:text-4xl font-black text-[#818cf8] leading-none tracking-tighter">{seoScore}</div>
-              <div className="text-[10px] sm:text-xs font-mono text-[#6366f1]/70 mt-0.5">/ 100</div>
-            </div>
-          </div>
-          <div className="h-2 sm:h-2.5 rounded-full overflow-hidden bg-black/20 shadow-inner mb-4">
-            <div
-              className="h-full transition-all duration-1000 rounded-full"
-              style={{
-                width: `${seoScore}%`,
-                background: getScoreColor(seoScore)
-              }}
-            />
-          </div>
-
-          {/* Score Breakdown */}
-          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-white/5">
-            <div className="text-center p-2 rounded-lg bg-black/10 border border-white/5">
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Keyword</p>
-              <p className="text-base sm:text-lg font-black text-[#818cf8]">{seoScoreData.keyword.score}</p>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-black/10 border border-white/5">
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Structure</p>
-              <p className="text-base sm:text-lg font-black text-[#818cf8]">{seoScoreData.structure.score}</p>
-            </div>
-            <div className="text-center p-2 rounded-lg bg-black/10 border border-white/5">
-              <p className="text-[9px] sm:text-[10px] text-muted-foreground uppercase tracking-widest mb-1">Readable</p>
-              <p className="text-base sm:text-lg font-black text-[#818cf8]">{seoScoreData.readability.score}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Meta Title */}
-        {optimization?.suggestedTitle && (
-          <div className="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent p-4 sm:p-5 shadow-lg hover:shadow-emerald-500/10 transition-all duration-300">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-foreground">Meta Title</h3>
-              <span className={cn(
-                "text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0",
-                optimization.suggestedTitle.length <= 60
-                  ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                  : "bg-amber-400/10 text-amber-400 border-amber-400/20"
-              )}>
-                {optimization.suggestedTitle.length} chars
-              </span>
-            </div>
-            <div className="group flex items-start justify-between gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2.5 hover:border-emerald-500/30 hover:bg-emerald-500/5 transition-all">
-              <p className="text-xs sm:text-sm leading-snug flex-1 text-foreground/90 break-words font-medium">{optimization.suggestedTitle}</p>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(optimization.suggestedTitle || '');
-                  toast.success("Title copied!");
-                }}
-                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 p-1.5 rounded-lg hover:bg-white/10 active:scale-95"
-              >
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Meta Description */}
-        {optimization?.suggestedMetaDescription && (
-          <div className="rounded-xl border border-cyan-500/20 bg-gradient-to-br from-cyan-500/10 via-cyan-500/5 to-transparent p-4 sm:p-5 shadow-lg hover:shadow-cyan-500/10 transition-all duration-300">
-            <div className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-foreground">Meta Description</h3>
-              <span className={cn(
-                "text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0",
-                optimization.suggestedMetaDescription.length >= 150 && optimization.suggestedMetaDescription.length <= 160
-                  ? "bg-cyan-500/10 text-cyan-500 border-cyan-500/20"
-                  : "bg-amber-400/10 text-amber-400 border-amber-400/20"
-              )}>
-                {optimization.suggestedMetaDescription.length} chars
-              </span>
-            </div>
-            <div className="group flex items-start justify-between gap-2 rounded-lg border border-white/5 bg-black/20 px-3 py-2.5 hover:border-cyan-500/30 hover:bg-cyan-500/5 transition-all">
-              <p className="text-xs sm:text-sm leading-snug flex-1 text-foreground/80 break-words">{optimization.suggestedMetaDescription}</p>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(optimization.suggestedMetaDescription || '');
-                  toast.success("Description copied!");
-                }}
-                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 p-1.5 rounded-lg hover:bg-white/10 active:scale-95"
-              >
-                <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Readability Metrics - Hidden for now due to poor scores from AI */}
-        {/* TODO: Re-enable once AI generates more readable content (target Flesch 65-70) */}
-
-        {/* Keyword Optimization - Hidden for now due to unreliable AI keyword placement */}
-        {/* TODO: Re-enable once AI properly optimizes keyword density and placement */}
-
-        {/* Quality Shield Audit - Hidden for now due to unreliable metrics */}
-        {/* TODO: Re-enable once quality metrics are stable and accurate */}
-
-        {/* LSI Keyword Coverage - Hidden for now due to unreliable AI generation */}
-        {/* TODO: Re-enable once AI properly includes LSI keywords in content */}
-        {/* Strategic Advantage (Competitor Insights) */}
-        {brief?.competitorInsights && (
-          <div className="rounded-xl border border-[#8b5cf6]/20 bg-gradient-to-br from-[#8b5cf6]/10 via-[#8b5cf6]/5 to-transparent p-4 sm:p-5 shadow-xl hover:shadow-[#8b5cf6]/10 transition-all duration-300">
-            <h3 className="text-xs sm:text-sm font-bold font-mono uppercase tracking-wider mb-4 text-[#a78bfa] flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Strategic Advantage
-            </h3>
-            <div className="space-y-4">
-              {brief.competitorInsights.contentGaps.length > 0 && (
-                <div className="p-3 rounded-lg bg-black/20 border border-[#8b5cf6]/10">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2.5 uppercase tracking-tight font-semibold">Content Gaps Filled</p>
-                  <ul className="space-y-2">
-                    {brief.competitorInsights.contentGaps.slice(0, 3).map((gap, i) => (
-                      <li key={i} className="flex items-start gap-2 text-[11px] sm:text-xs text-foreground/80 leading-relaxed">
-                        <span className="text-[#a78bfa] mt-0.5 shrink-0">•</span>
-                        <span>{gap}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {brief.competitorInsights.headingPatterns.length > 0 && (
-                <div className="p-3 rounded-lg bg-black/20 border border-[#8b5cf6]/10">
-                  <p className="text-[10px] sm:text-xs text-muted-foreground mb-2.5 uppercase tracking-tight font-semibold">Competitor Patterns</p>
-                  <p className="text-[11px] sm:text-xs text-foreground/80 leading-relaxed italic">
-                    {brief.competitorInsights.headingPatterns[0]}
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Right Column: Optimizations & Actions ── */}
-      <div className="space-y-2.5 sm:space-y-3 md:space-y-4">
-
-        {optimization.suggestedTitle && (
-          <div className="space-y-2">
-            <h3 className="flex items-center gap-2 text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-foreground">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#f59e0b] animate-pulse" />
-              Optimized Title
-            </h3>
-            <div className="group flex items-start justify-between gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 sm:px-4 sm:py-3 hover:border-[#f59e0b]/30 hover:bg-[#f59e0b]/5 transition-all duration-300">
-              <p className="text-xs sm:text-sm font-medium flex-1 text-foreground break-words leading-snug">{optimization.suggestedTitle}</p>
-              <button
-                onClick={() => copyToClipboard(optimization.suggestedTitle || '', 0)}
-                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 p-1.5 rounded-lg hover:bg-white/10 active:scale-95"
-                aria-label="Copy title"
-              >
-                {copiedIndex === 0 ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {optimization.suggestedMetaDescription && (
-          <div className="space-y-2">
-            <h3 className="flex items-center gap-2 text-xs sm:text-sm font-bold font-mono uppercase tracking-wider text-foreground">
-              <span className="inline-block h-1.5 w-1.5 rounded-full bg-[#22d3ee] animate-pulse" />
-              <span>Meta Description</span>
-              <span className={cn(
-                "ml-auto text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0",
-                optimization.suggestedMetaDescription.length >= 150 && optimization.suggestedMetaDescription.length <= 160
-                  ? "bg-[#22d3ee]/10 text-[#22d3ee] border-[#22d3ee]/20"
-                  : "bg-amber-400/10 text-amber-400 border-amber-400/20"
-              )}>
-                {optimization.suggestedMetaDescription.length} chars
-              </span>
-            </h3>
-            <div className="group flex items-start justify-between gap-2 rounded-xl border border-white/5 bg-black/20 px-3 py-2.5 sm:px-4 sm:py-3 hover:border-[#22d3ee]/30 hover:bg-[#22d3ee]/5 transition-all duration-300">
-              <p className="text-xs sm:text-sm leading-snug flex-1 text-foreground/80 break-words">{optimization.suggestedMetaDescription}</p>
-              <button
-                onClick={() => copyToClipboard(optimization.suggestedMetaDescription || '', 1)}
-                className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0 p-1.5 rounded-lg hover:bg-white/10 active:scale-95"
-                aria-label="Copy meta description"
-              >
-                {copiedIndex === 1 ? (
-                  <Check className="h-3.5 w-3.5 text-emerald-400" />
-                ) : (
-                  <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {optimization.internalLinks && optimization.internalLinks.length > 0 && (
-          <details className="group/details">
-            <summary className="cursor-pointer list-none">
-              <div className="flex items-center justify-between gap-2 rounded-lg border border-blue-400/20 bg-blue-400/5 px-3 py-2 hover:border-blue-400/30 transition-all">
-                <div className="flex items-center gap-2">
-                  <span className="inline-block h-1.5 w-1.5 rounded-full bg-blue-400 animate-pulse" />
-                  <span className="text-xs sm:text-sm font-semibold text-text-1">Internal Links</span>
-                  <span className="text-[9px] sm:text-[10px] px-1.5 py-0.5 rounded-full bg-blue-400/20 text-blue-400 font-bold">
-                    {optimization.internalLinks.length}
-                  </span>
-                </div>
-                <svg className="h-4 w-4 text-text-3 transition-transform group-open/details:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-              </div>
-            </summary>
-            <div className="mt-2 space-y-2">
-              {optimization.internalLinks.map((link, idx) => (
-                <div key={idx} className="group rounded-lg border border-white/5 bg-surface-1 p-2.5 sm:p-3 transition-all hover:border-blue-400/30 duration-300">
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <p className="text-[9px] sm:text-[10px] font-bold text-blue-400 uppercase tracking-tight">Link {idx + 1}</p>
-                    <button
-                      onClick={() => {
-                        const linkMarkdown = `[${link.anchorText}](${link.targetArticleUrl})`;
-                        navigator.clipboard.writeText(linkMarkdown);
-                        toast.success("Link copied!");
-                      }}
-                      className="text-[10px] sm:text-xs text-text-3 hover:text-text-1 flex items-center gap-1 px-2 py-0.5 rounded hover:bg-white/5 transition-colors active:scale-95"
-                    >
-                      <Copy className="h-3 w-3" />
-                      <span className="hidden sm:inline">Copy</span>
-                    </button>
-                  </div>
-                  <p className="text-xs sm:text-sm font-semibold text-text-1 mb-1 leading-snug line-clamp-1">{link.targetArticleTitle}</p>
-                  <p className="text-[10px] sm:text-xs text-blue-400/80 bg-blue-400/5 px-2 py-1 rounded inline-block">"{link.anchorText}"</p>
-                </div>
-              ))}
-            </div>
-          </details>
-        )}
-
-        {optimization.suggestions?.length > 0 && (
-          <details className="group/tips">
-            <summary className="cursor-pointer list-none">
-              <div className="flex items-center justify-between gap-2 rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 hover:border-amber-400/30 transition-all">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-amber-400/20 text-amber-400 border border-amber-400/30">
-                    <span className="text-[10px] font-bold">{optimization.suggestions.length}</span>
-                  </div>
-                  <span className="text-xs sm:text-sm font-semibold text-text-1">Optimization Tips</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleAIFixAll();
-                    }}
-                    disabled={fixingAll}
-                    className="flex items-center gap-1 rounded-lg border border-gold/30 bg-gold/10 px-2 py-1 text-[10px] sm:text-xs font-semibold text-gold hover:bg-gold/20 disabled:opacity-50 active:scale-95 transition-all"
-                  >
-                    {fixingAll ? (
-                      <>
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                        <span className="hidden sm:inline">Fixing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-3 w-3" />
-                        <span className="hidden sm:inline">Fix All</span>
-                        <span className="sm:hidden">Fix</span>
-                      </>
-                    )}
-                  </button>
-                  <svg className="h-4 w-4 text-text-3 transition-transform group-open/tips:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </div>
-              </div>
-            </summary>
-            <div className="mt-2 rounded-lg border border-amber-400/20 bg-amber-400/5 p-2.5 sm:p-3">
-              <ul className="space-y-1.5">
-                {optimization.suggestions?.map((s, i) => (
-                  <li key={i} className="flex items-start gap-2 text-[10px] sm:text-xs text-text-2 leading-snug">
-                    <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-400/20 text-amber-400 text-[9px] font-bold mt-0.5">
-                      {i + 1}
-                    </span>
-                    <span className="flex-1">{s}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </details>
-        )}
-
-        {/* Schema Markup Preview */}
-        {optimization.generatedSchema && (
-          <div className="space-y-3">
-            <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold font-mono-dm text-text-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-lilac animate-pulse" />
-              <span>Automated Schema (JSON-LD)</span>
-              <span className="ml-auto text-[10px] sm:text-xs font-normal text-text-3 px-2 py-0.5 rounded border border-white/5 bg-surface-2">
-                Article/FAQ
-              </span>
-            </h3>
-            <div className="group relative rounded-xl border border-white/5 bg-surface-1 p-3.5 sm:p-4 card-premium overflow-hidden">
-              <div className="absolute top-3 right-3 z-10">
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText(optimization.generatedSchema || '');
-                    toast.success("Schema copied to clipboard!");
-                  }}
-                  className="p-2 rounded-lg bg-surface-1/80 backdrop-blur-sm border border-white/10 text-text-3 hover:text-text-1 transition-all active:scale-95"
-                  title="Copy JSON-LD"
-                >
-                  <Copy className="h-4 w-4" />
-                </button>
-              </div>
-              <pre className="text-[10px] sm:text-xs font-mono text-text-3 max-h-48 overflow-y-auto custom-scrollbar leading-relaxed">
-                {optimization.generatedSchema}
-              </pre>
-            </div>
-            <p className="text-[10px] text-text-4 italic px-1">Tip: This code is automatically injected into your WordPress post if using our connector.</p>
-          </div>
-        )}
-
-        {/* Internal Linking Strategy */}
-        {optimization.internalLinkingNotes && (
-          <div className="space-y-3">
-            <h3 className="flex items-center gap-2 text-sm sm:text-base font-semibold font-mono-dm text-text-1">
-              <span className="inline-block h-2 w-2 rounded-full bg-blue-400 animate-pulse" />
-              <span>Linking Strategy</span>
-            </h3>
-            <div className="rounded-xl border border-blue-400/20 bg-blue-400/5 p-4 sm:p-5">
-              <p className="text-[11px] sm:text-xs leading-relaxed text-text-2">
-                {optimization.internalLinkingNotes}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Complete badge */}
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 to-transparent px-5 py-4 shadow-lg hover:shadow-emerald-500/10 transition-all duration-300">
-          <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-500" />
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-bold text-emerald-400">Article Complete</p>
-            <p className="text-xs text-emerald-500/70 leading-relaxed">Your article is optimized and ready to publish.</p>
-          </div>
-        </div>
-
-        {/* Premium Export & Publish Options */}
-        <div className="grid grid-cols-2 gap-2 sm:gap-3 mt-4 sm:mt-6 md:mt-8 pt-4 sm:pt-6 border-t border-white/5">
-          <button
-            onClick={() => handleExport("markdown")}
-            className="w-full flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-white/10 bg-surface-2 px-3 sm:px-4 py-2.5 sm:py-3.5 text-[10px] sm:text-xs font-medium text-text-2 transition-all hover:bg-white/5 hover:text-text-1 hover:border-white/20 active:scale-95 touch-manipulation"
-          >
-            <FileCode className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Markdown</span>
-            <span className="sm:hidden">MD</span>
-          </button>
-          <button
-            onClick={() => handleExport("html")}
-            className="w-full flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-white/10 bg-surface-2 px-3 sm:px-4 py-2.5 sm:py-3.5 text-[10px] sm:text-xs font-medium text-text-2 transition-all hover:bg-white/5 hover:text-text-1 hover:border-white/20 active:scale-95 touch-manipulation"
-          >
-            <Code className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span className="hidden sm:inline">Raw HTML</span>
-            <span className="sm:hidden">HTML</span>
-          </button>
-          <button
-            onClick={onGenerateSocial}
-            disabled={isGeneratingSocial}
-            className="col-span-2 w-full flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-teal/30 bg-teal px-3 sm:px-5 py-2.5 sm:py-4 text-[10px] sm:text-sm font-semibold text-obsidian transition-all shadow-lg shadow-teal/10 hover:shadow-teal/20 hover:scale-[1.02] active:scale-95 touch-manipulation disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-          >
-            {isGeneratingSocial ? (
-              <>
-                <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 border-2 border-obsidian/30 border-t-obsidian rounded-full animate-spin" />
-                <span>Generating...</span>
-              </>
-            ) : (
-              <>
-                <Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                <span>Generate Social Media</span>
-              </>
-            )}
-          </button>
-          <button
-            onClick={() => setShowWordPressPublish(true)}
-            className="col-span-2 w-full flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-gold/30 bg-gold px-3 sm:px-5 py-2.5 sm:py-4 text-[10px] sm:text-sm font-semibold text-obsidian transition-all shadow-lg shadow-gold/10 hover:shadow-gold/20 hover:scale-[1.02] active:scale-95 touch-manipulation"
-          >
-            <TrendingUp className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            <span>Publish to WordPress</span>
-          </button>
-        </div>
-
-        {/* WordPress Publish Modal */}
-        {showWordPressPublish && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4" onClick={() => setShowWordPressPublish(false)}>
-            <div className="w-full max-w-2xl rounded-xl sm:rounded-2xl border border-white/10 bg-surface-1 p-4 sm:p-6 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between mb-4 sm:mb-6 gap-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-base sm:text-lg md:text-xl font-bold font-display text-text-1 truncate">Publish to WordPress</h3>
-                  <p className="text-[10px] sm:text-xs md:text-sm mt-1 text-text-3">Configure and publish your article</p>
-                </div>
-                <button onClick={() => setShowWordPressPublish(false)} className="text-xl sm:text-2xl shrink-0 p-1 hover:bg-white/5 rounded transition-colors" style={{ color: 'var(--text-3)' }}>×</button>
-              </div>
-              <WordPressPublishPanel
-                articleId={articleId}
-                title={keyword}
-                content={content}
-                sites={wordPressSites}
-                featuredImageUrl={featuredImage || undefined}
-                onPublishSuccess={(url) => {
-                  toast.success("Published to WordPress!");
-                  setShowWordPressPublish(false);
-                }}
-              />
-            </div>
-          </div>
-        )}
-      </div>
+    <div
+      ref={containerRef}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Publish to WordPress"
+    >
+      {children}
     </div>
   );
 }
@@ -666,12 +202,13 @@ export default function ArticleDetailPage() {
   const [outlineLoading, setOutlineLoading] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
   const [optLoading, setOptLoading] = useState(false);
-  const [socialLoading, setSocialLoading] = useState(false);
   const [currentView, setCurrentView] = useState<number>(1); // Track which step to show
   const [error, setError] = useState<string | null>(null);
   const [zenMode, setZenMode] = useState(false);
   const { setOpen, setOpenMobile } = useSidebar();
   const draftContentRef = useRef("");
+  const autoPilotAbortRef = useRef<AbortController | null>(null);
+  const draftDirtyRef = useRef(false);
 
   const toggleZenMode = () => {
     const nextState = !zenMode;
@@ -696,8 +233,6 @@ export default function ArticleDetailPage() {
   const [genDuration, setGenDuration] = useState("");
 
   const { isAdmin, isLoaded: adminLoaded } = useIsAdmin();
-  const [blogPublishing, setBlogPublishing] = useState(false);
-  const [blogPublished, setBlogPublished] = useState(false);
 
   // Upgrade modal state
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
@@ -711,6 +246,21 @@ export default function ArticleDetailPage() {
   const [readabilityScores, setReadabilityScores] = useState<ReadabilityScores | null>(null);
   const [readabilityIssues, setReadabilityIssues] = useState<ReadabilityIssue[]>([]);
   const [showWordPressPublish, setShowWordPressPublish] = useState(false);
+
+  // Publish to Blog dialog state
+  const [showBlogPublish, setShowBlogPublish] = useState(false);
+  const [blogTitle, setBlogTitle] = useState("");
+  const [blogSlug, setBlogSlug] = useState("");
+  const [blogDescription, setBlogDescription] = useState("");
+  const [blogTagsInput, setBlogTagsInput] = useState("");
+  const [blogPublishing, setBlogPublishing] = useState(false);
+  const [blogPublished, setBlogPublished] = useState(false);
+  const [blogPublishedUrl, setBlogPublishedUrl] = useState("");
+
+  // Auto-derive slug from title
+  useEffect(() => {
+    setBlogSlug(blogTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+  }, [blogTitle]);
   
   // New premium UI state
   const [draftAccumulated, setDraftAccumulated] = useState("");
@@ -718,13 +268,25 @@ export default function ArticleDetailPage() {
   const [expandedSteps, setExpandedSteps] = useState<Record<number, boolean>>({ 1: true });
   const [wordCount, setWordCount] = useState(0);
 
+  // Fallback: extract meta description from article content if not provided by optimization
+  const extractedDescription = useMemo(() => {
+    if (!article) return "";
+    if (article.draft?.content) {
+      const stripped = article.draft.content
+        .replace(/<[^>]+>/g, "")
+        .replace(/\n+/g, " ")
+        .trim();
+      return stripped.slice(0, 160) + (stripped.length > 160 ? "…" : "");
+    }
+    return "";
+  }, [article?.draft?.content]);
+
   // Custom hooks for API calls and draft generation
-  const { handleGenerateOutline, handleOptimize, handleGenerateSocial } = useApiCalls({
+  const { handleGenerateOutline, handleOptimize } = useApiCalls({
     articleId,
     setLoader,
     setOutlineLoading,
     setOptLoading,
-    setSocialLoading,
     setArticle,
     setError,
   });
@@ -753,10 +315,14 @@ export default function ArticleDetailPage() {
     return 0;
   }, [autoPilotRunning, autoPilotPhase, wordCount, article?.settings?.targetWordCount]);
 
+  const [fetchErrorCode, setFetchErrorCode] = useState<string | null>(null);
+  const [fetchErrorRetryAfter, setFetchErrorRetryAfter] = useState<number | null>(null);
+
   useEffect(() => {
     const fetchArticle = async () => {
       try {
-        const res = await fetch(`/api/articles/${articleId}`, {});
+        const headers = await getAuthHeaders();
+        const res = await fetch(`/api/articles/${articleId}`, { headers });
 
         if (res.ok) {
           const { article: data } = await res.json();
@@ -778,9 +344,20 @@ export default function ArticleDetailPage() {
             settings: data.settings,
           });
         } else {
-          console.error("Failed to fetch article:", res.status);
+          const errorBody = await res.json().catch(() => ({}));
+          const code = errorBody.code || '';
+          const message = errorBody.error || `Request failed (${res.status})`;
+
+          setError(message);
+          setFetchErrorCode(code);
+
+          if (res.status === 429) {
+            const retryAfter = parseInt(res.headers.get('Retry-After') || '30', 10);
+            setFetchErrorRetryAfter(retryAfter);
+          }
         }
       } catch (err) {
+        setError('Network error — please check your connection and try again.');
         console.error("Error fetching article:", err);
       }
       finally { setLoading(false); }
@@ -790,11 +367,13 @@ export default function ArticleDetailPage() {
     // Track view (only once per session)
     const trackView = async () => {
       try {
+        const headers = await getAuthHeaders();
 
         await fetch('/api/articles/track-view', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            ...headers,
           },
           body: JSON.stringify({ articleId }),
         });
@@ -806,8 +385,27 @@ export default function ArticleDetailPage() {
     trackView();
   }, [articleId]);
 
-  // Fetch WordPress sites
   useEffect(() => {
+    return () => { autoPilotAbortRef.current?.abort(); };
+  }, []);
+
+  // Warn on unsaved changes before page reload/close
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (draftDirtyRef.current) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, []);
+
+  // Fetch WordPress sites (only once — cached in state, avoid re-fetch)
+  const wpSitesFetchedRef = useRef(false);
+  useEffect(() => {
+    if (wpSitesFetchedRef.current) return;
+    wpSitesFetchedRef.current = true;
     let cancelled = false;
 
     (async () => {
@@ -823,7 +421,7 @@ export default function ArticleDetailPage() {
     })();
 
     return () => { cancelled = true; };
-  }, [showWordPressPublish]);
+  }, []);
 
   // Update currentView when article loads
   useEffect(() => {
@@ -859,6 +457,8 @@ export default function ArticleDetailPage() {
     setEtaSeconds(180); // Start with 3 minutes
     setGenStartTime(Date.now());
     setError(null);
+    autoPilotAbortRef.current?.abort();
+    autoPilotAbortRef.current = new AbortController();
 
     try {
 
@@ -866,6 +466,7 @@ export default function ArticleDetailPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ articleId }),
+        signal: autoPilotAbortRef.current.signal,
       });
 
       if (!res.ok) {
@@ -990,15 +591,17 @@ export default function ArticleDetailPage() {
         }
       }
     } catch (err: any) {
+      if (err.name === 'AbortError') {
+        toast.info("Auto-Pilot cancelled.");
+        return;
+      }
       const msg = err.message || 'Auto-Pilot encountered an error';
       setError(msg);
       toast.error(msg);
     } finally {
-      if (etaSeconds !== null) {
-        setAutoPilotRunning(false);
-        setAutoPilotPhase(null);
-        setEtaSeconds(null);
-      }
+      setAutoPilotRunning(false);
+      setAutoPilotPhase(null);
+      setEtaSeconds(null);
     }
   };
 
@@ -1007,15 +610,27 @@ export default function ArticleDetailPage() {
     if (blogPublishing || !article) return;
     setBlogPublishing(true);
     try {
+      const tags = blogTagsInput
+        .split(",")
+        .map(t => t.trim())
+        .filter(Boolean);
       const res = await fetch("/api/admin/blog/publish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ articleId: article.articleId }),
+        body: JSON.stringify({
+          articleId: article.articleId,
+          slug: blogSlug || undefined,
+          title: blogTitle || undefined,
+          description: blogDescription || undefined,
+          tags: tags.length ? tags : undefined,
+          featuredImage: article.featuredImage || undefined,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to publish");
       setBlogPublished(true);
-      toast.success(`Published! View at /blog/${data.slug}`);
+      setBlogPublishedUrl(`/blog/${data.slug}`);
+      toast.success("Published to the Pubwize blog!");
     } catch (err: any) {
       toast.error(err.message || "Failed to publish to blog");
     } finally {
@@ -1029,39 +644,94 @@ export default function ArticleDetailPage() {
     setShowUpgradeModal(true);
   };
 
-  const renderVal = (v: any) => {
-    if (typeof v === 'object' && v !== null && 'value' in v) return v.value;
-    return v;
-  };
-
   // ── Loading ───────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative h-14 w-14">
-            <div className="absolute inset-0 rounded-2xl bg-gold/20 blur-2xl animate-pulse" />
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-gold to-orange-500 shadow-lg shadow-gold/30">
-              <Sparkles className="h-6 w-6 text-white" />
+      <div className="min-h-screen bg-background">
+        {/* Top bar skeleton */}
+        <div className="flex items-center gap-2 px-3 sm:px-4 lg:px-6 py-2 sm:py-2.5 border-b border-border">
+          <div className="h-3 w-16 bg-muted animate-pulse rounded" />
+          <div className="h-3 w-px bg-border" />
+          <div className="h-5 w-20 bg-muted animate-pulse rounded-md" />
+          <div className="ml-auto h-5 w-24 bg-muted animate-pulse rounded-md" />
+        </div>
+        {/* Command rail skeleton */}
+        <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="h-8 w-24 bg-muted/50 animate-pulse rounded-lg" />
+          ))}
+          <div className="ml-auto h-8 w-32 bg-muted/50 animate-pulse rounded-lg" />
+        </div>
+        {/* Step cards skeleton */}
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-6 pt-6 space-y-6">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-xl border border-border/60 p-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="h-9 w-9 bg-muted animate-pulse rounded-lg" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-3 w-16 bg-muted/60 animate-pulse rounded" />
+                  <div className="h-4 w-40 bg-muted animate-pulse rounded" />
+                </div>
+              </div>
+              <div className="space-y-2 pl-12">
+                <div className="h-3 w-full bg-muted/40 animate-pulse rounded" />
+                <div className="h-3 w-5/6 bg-muted/40 animate-pulse rounded" />
+                <div className="h-3 w-4/6 bg-muted/40 animate-pulse rounded" />
+              </div>
             </div>
-          </div>
-          <p className="text-sm font-medium text-muted-foreground font-mono-dm">Loading your article…</p>
+          ))}
+        </div>
+        {/* Loading indicator */}
+        <div className="flex items-center justify-center gap-2.5 pt-8">
+          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          <p className="text-xs font-medium text-muted-foreground">Retrieving article workspace...</p>
         </div>
       </div>
     );
   }
 
   if (!article) {
+    const isRateLimited = fetchErrorCode === 'RATE_LIMIT_EXCEEDED';
+    const isAuthError = fetchErrorCode === 'AUTHENTICATION_ERROR';
+    const isNotFound = fetchErrorCode === 'NOT_FOUND';
+
     return (
       <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground">Article not found</h1>
-          <button
-            onClick={() => router.push("/dashboard/articles")}
-            className="mt-4 text-sm text-gold underline underline-offset-2 hover:text-gold/80"
-          >
-            ← Back to Articles
-          </button>
+        <div className="text-center max-w-md mx-auto p-6 space-y-4">
+          <h1 className="text-2xl font-bold text-foreground">
+            {isNotFound ? 'Article not found' : isAuthError ? 'Authentication error' : isRateLimited ? 'Rate limit reached' : 'Unable to load article'}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {error || 'The article could not be loaded. It may have been deleted or you may not have permission to view it.'}
+          </p>
+          {isRateLimited && fetchErrorRetryAfter && (
+            <p className="text-xs text-amber-400">
+              Please wait {fetchErrorRetryAfter} seconds before retrying.
+            </p>
+          )}
+          {isAuthError && (
+            <button
+              onClick={() => router.push("/login")}
+              className="mt-2 text-sm text-gold underline underline-offset-2 hover:text-gold/80"
+            >
+              Go to login →
+            </button>
+          )}
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button
+              onClick={() => { setLoading(true); setError(null); setFetchErrorCode(null); window.location.reload(); }}
+              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-accent transition-colors"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              Retry
+            </button>
+            <button
+              onClick={() => router.push("/dashboard/articles")}
+              className="text-sm text-muted-foreground underline underline-offset-2 hover:text-foreground"
+            >
+              ← Back to Articles
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -1077,6 +747,7 @@ export default function ArticleDetailPage() {
       {/* ══ Neural Background (Animated) ══════════════════════════════ */}
       <div className="fixed inset-0 pointer-events-none -z-10 overflow-hidden bg-background">
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150" />
+        <div className="motion-reduce:hidden">
         <svg className="absolute inset-0 w-full h-full opacity-[0.05]" viewBox="0 0 100 100" preserveAspectRatio="none">
           <motion.path
             d="M0,50 Q25,30 50,50 T100,50"
@@ -1120,6 +791,13 @@ export default function ArticleDetailPage() {
             activeStep === 3 ? "bg-fuchsia-500/10" : "bg-emerald-500/10"
           )} 
         />
+      </div>
+      </div>
+
+      {/* Screen reader announcement region for streaming updates */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {(draftLoading || autoPilotRunning) && 'Generating content, please wait.'}
+        {!draftLoading && !autoPilotRunning && article?.draft?.content && 'Draft generation complete.'}
       </div>
 
       {/* Zen Toggle — mobile only floating (md+ shows when in zen mode) */}
@@ -1182,24 +860,24 @@ export default function ArticleDetailPage() {
                 </button>
               </div>
             </div>
-
-            {/* Error banner */}
-            {error && (
-              <div className="border-t border-destructive/30 bg-destructive/10 px-3 sm:px-4 lg:px-8 py-2 sm:py-3">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="text-[10px] sm:text-xs text-destructive flex-1">{error}</p>
-                  <button
-                    onClick={() => setError(null)}
-                    className="text-[10px] sm:text-xs font-semibold text-destructive/70 hover:text-destructive underline shrink-0 active:scale-95 touch-manipulation"
-                  >
-                    Dismiss
-                  </button>
-                </div>
-              </div>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Error banner — always visible regardless of zen mode */}
+      {error && (
+        <div className="border-b border-destructive/30 bg-destructive/10 px-3 sm:px-4 lg:px-8 py-2 sm:py-3 z-50 relative">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[10px] sm:text-xs text-destructive flex-1">{error}</p>
+            <button
+              onClick={() => setError(null)}
+              className="text-[10px] sm:text-xs font-semibold text-destructive/70 hover:text-destructive underline shrink-0 active:scale-95 touch-manipulation"
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ── Two-column Command Center body ─────────────────────────── */}
       <div className="flex flex-col flex-1 md:h-[calc(100vh-36px)] relative">
@@ -1220,9 +898,8 @@ export default function ArticleDetailPage() {
                 hasBrief={!!article.brief}
                 hasOutline={!!article.outline}
                 hasDraft={!!article.draft}
-                hasSocial={!!article.socialMedia}
                 seoScore={article.optimization ? Math.round(
-                  (article.optimization as any).seoScore ?? 0
+                  article.optimization.seoScore ?? 0
                 ) : 0}
                 wordCount={wordCount}
                 targetWordCount={article.settings?.targetWordCount ?? 2000}
@@ -1259,18 +936,16 @@ export default function ArticleDetailPage() {
                 transition={{ duration: 0.5 }}
                 className={cn("transition-all duration-700", activeStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10 hidden")}
               >
-                <div className="mb-3 sm:mb-4 lg:mb-6 flex items-center justify-between">
-                  <button
-                    onClick={() => setExpandedSteps(prev => ({ ...prev, 1: !prev[1] }))}
-                    className="w-full flex items-center justify-between gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-border bg-card/50 px-2.5 sm:px-3 py-2 sm:py-2.5 hover:bg-card transition-all"
-                  >
-                    <div className="flex items-center gap-1.5 sm:gap-2.5">
-                      <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#22d3ee]/15 text-[8px] sm:text-[9px] font-black text-[#22d3ee]">1</span>
-                      <span className="text-xs sm:text-sm font-semibold text-foreground">SEO Brief</span>
-                      <span className="hidden sm:inline text-[10px] text-muted-foreground">— keyword research & content map</span>
-                    </div>
-                    <ChevronRight className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform", expandedSteps[1] && "rotate-90")} />
-                  </button>
+                <div className="mb-3.5">
+                  <StepHeader
+                    number={1}
+                    label="SEO Brief"
+                    description="Keyword research & content map"
+                    icon={FileText}
+                    status={activeStep > 1 ? "completed" : "active"}
+                    isExpanded={!!expandedSteps[1]}
+                    onToggle={() => setExpandedSteps(prev => ({ ...prev, 1: !prev[1] }))}
+                  />
                 </div>
                 
                 <AnimatePresence>
@@ -1308,17 +983,17 @@ export default function ArticleDetailPage() {
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className={cn("transition-all duration-700 relative", activeStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}
                 >
-                  <button
-                    onClick={() => setExpandedSteps(prev => ({ ...prev, 2: !prev[2] }))}
-                    className="w-full flex items-center justify-between gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-border bg-card/50 px-2.5 sm:px-3 py-2 sm:py-2.5 hover:bg-card transition-all mb-3"
-                  >
-                    <div className="flex items-center gap-1.5 sm:gap-2.5">
-                      <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#22d3ee]/15 text-[8px] sm:text-[9px] font-black text-[#22d3ee]">2</span>
-                      <span className="text-xs sm:text-sm font-semibold text-foreground">Outline</span>
-                      <span className="hidden sm:inline text-[10px] text-muted-foreground">— article structure</span>
-                    </div>
-                    <ChevronRight className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform", expandedSteps[2] && "rotate-90")} />
-                  </button>
+                  <div className="mb-3.5">
+                    <StepHeader
+                      number={2}
+                      label="Outline"
+                      description="Structure your article outline and headings"
+                      icon={List}
+                      status={activeStep > 2 ? "completed" : activeStep === 2 ? "active" : "locked"}
+                      isExpanded={!!expandedSteps[2]}
+                      onToggle={() => setExpandedSteps(prev => ({ ...prev, 2: !prev[2] }))}
+                    />
+                  </div>
                   
                   <AnimatePresence>
                     {expandedSteps[2] && (
@@ -1355,17 +1030,17 @@ export default function ArticleDetailPage() {
                   transition={{ duration: 0.5, delay: 0.2 }}
                   className={cn("transition-all duration-700 relative", activeStep >= 3 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}
                 >
-                  <button
-                    onClick={() => setExpandedSteps(prev => ({ ...prev, 3: !prev[3] }))}
-                    className="w-full flex items-center justify-between gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-border bg-card/50 px-2.5 sm:px-3 py-2 sm:py-2.5 hover:bg-card transition-all mb-3"
-                  >
-                    <div className="flex items-center gap-1.5 sm:gap-2.5">
-                      <span className="flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center rounded-full bg-[#6366f1]/20 text-[8px] sm:text-[9px] font-black text-[#818cf8]">3</span>
-                      <span className="text-xs sm:text-sm font-semibold text-foreground">Draft</span>
-                      <span className="hidden sm:inline text-[10px] text-muted-foreground">— review & edit your article</span>
-                    </div>
-                    <ChevronRight className={cn("h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground transition-transform", expandedSteps[3] && "rotate-90")} />
-                  </button>
+                  <div className="mb-3.5">
+                    <StepHeader
+                      number={3}
+                      label="Draft & Optimize"
+                      description="Review, score, and refine your article"
+                      icon={PenLine}
+                      status={article.optimization ? "completed" : activeStep === 3 ? "active" : "locked"}
+                      isExpanded={!!expandedSteps[3]}
+                      onToggle={() => setExpandedSteps(prev => ({ ...prev, 3: !prev[3] }))}
+                    />
+                  </div>
                   
                   <AnimatePresence>
                     {expandedSteps[3] && (
@@ -1386,7 +1061,6 @@ export default function ArticleDetailPage() {
                               setArticle((p) => (p ? { ...p, featuredImage: img } : p))
                             }
                             onOptimize={handleOptimize}
-                            onGenerateSocial={handleGenerateSocial}
                             onPublish={() => setShowWordPressPublish(true)}
                             loading={optLoading}
                             done={!!article.optimization}
@@ -1395,7 +1069,8 @@ export default function ArticleDetailPage() {
                             streaming={draftLoading || autoPilotRunning}
                             onUpgradeRequired={handleUpgradeRequired}
                             brief={article.brief}
-                            socialLoading={socialLoading}
+                            onContentDirty={() => { draftDirtyRef.current = true; }}
+                            lsiKeywords={article.optimization?.lsiKeywords}
                           />
                         ) : (
                           <GenerationProgress 
@@ -1411,61 +1086,80 @@ export default function ArticleDetailPage() {
               )}
 
               {/* Step 3.5: SEO & SERP Preview */}
-              {article.optimization && (
+              {article.draft?.content && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.5, delay: 0.15 }}
-                  className="mb-6"
+                  className="mb-6 border-t border-border/60 pt-6"
                 >
-                  <div className="mb-4 pt-6">
+                  <div className="mb-4">
                     <h2 className="text-lg font-bold tracking-tight text-foreground">SEO & SERP Preview</h2>
                     <p className="mt-1 text-xs text-muted-foreground">Fine-tune how your article appears in search results.</p>
                   </div>
                   <div className="grid gap-6 md:grid-cols-2">
                     <SERPMetaEditor
-                      title={metaTitle || article.optimization.suggestedTitle || article.keyword}
-                      description={metaDescription || article.optimization.suggestedMetaDescription || ""}
+                      title={metaTitle || article.optimization?.suggestedTitle || article.keyword}
+                      description={metaDescription || article.optimization?.suggestedMetaDescription || extractedDescription}
                       onTitleChange={setMetaTitle}
                       onDescriptionChange={setMetaDescription}
                     />
                     <SERPPreviewCard
-                      title={metaTitle || article.optimization.suggestedTitle || article.keyword}
-                      description={metaDescription || article.optimization.suggestedMetaDescription || ""}
+                      title={metaTitle || article.optimization?.suggestedTitle || article.keyword}
+                      description={metaDescription || article.optimization?.suggestedMetaDescription || extractedDescription}
                       url={article.siteDomain || "yoursite.com"}
+                      featuredImage={article.featuredImage?.url || null}
+                      keyword={article.keyword}
                     />
+                  </div>
+
+                  {/* Keyword presence indicators */}
+                  <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-1.5">
+                      <span className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        (metaTitle || article.optimization?.suggestedTitle || article.keyword)
+                          .toLowerCase()
+                          .includes(article.keyword.toLowerCase())
+                          ? "bg-emerald-500"
+                          : "bg-amber-500"
+                      )} />
+                      Keyword in title
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        (metaDescription || article.optimization?.suggestedMetaDescription || extractedDescription)
+                          .toLowerCase()
+                          .includes(article.keyword.toLowerCase())
+                          ? "bg-emerald-500"
+                          : "bg-amber-500"
+                      )} />
+                      Keyword in description
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        (metaTitle || article.optimization?.suggestedTitle || article.keyword).length <= 60
+                          ? "bg-emerald-500"
+                          : "bg-amber-500"
+                      )} />
+                      Title length: {(metaTitle || article.optimization?.suggestedTitle || article.keyword).length}/60
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className={cn(
+                        "h-1.5 w-1.5 rounded-full",
+                        (metaDescription || article.optimization?.suggestedMetaDescription || extractedDescription).length <= 160
+                          ? "bg-emerald-500"
+                          : "bg-amber-500"
+                      )} />
+                      Desc length: {(metaDescription || article.optimization.suggestedMetaDescription || extractedDescription).length}/160
+                    </span>
                   </div>
                 </motion.div>
               )}
 
-              {/* Step 4: Social Media & Publishing */}
-              {(article.socialMedia || activeStep >= 4) && (
-                <motion.div
-                  key="step-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className={cn("transition-all duration-700 relative", activeStep >= 4 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-10")}
-                >
-                  <div className="absolute -top-8 left-8 bottom-full w-px bg-gradient-to-b from-teal/50 to-transparent -z-10" />
-                  <div className="mb-4 pt-6 border-t border-white/5">
-                    <h2 className="text-lg font-bold tracking-tight text-foreground">Social Media & Publishing</h2>
-                    <p className="mt-1 text-xs text-muted-foreground">Generate social posts and publish to WordPress.</p>
-                  </div>
-                  
-                  <div className="space-y-6">
-                    {/* Social Media Section */}
-                    <SocialPanel
-                      socialMedia={article.socialMedia}
-                      articleId={article.articleId}
-                      keyword={article.keyword}
-                      content={article.draft?.content || ''}
-                      onGenerate={handleGenerateSocial}
-                      isGenerating={socialLoading}
-                    />
-                  </div>
-                </motion.div>
-              )}
+
             </AnimatePresence>
           </div>
         </main>
@@ -1479,10 +1173,11 @@ export default function ArticleDetailPage() {
         targetWordCount={article.settings?.targetWordCount || 2000}
         thinkingText={thinkingText}
         onCancel={() => {
+          autoPilotAbortRef.current?.abort();
           setAutoPilotRunning(false);
           setAutoPilotPhase(null);
           setEtaSeconds(null);
-          toast.info("Auto-Pilot paused.");
+          toast.info("Auto-Pilot cancelled.");
         }}
         phasesCompleted={{
           brief: !!article.brief,
@@ -1499,9 +1194,9 @@ export default function ArticleDetailPage() {
           <div className="hidden sm:flex items-center gap-2 text-[11px] text-muted-foreground">
             <span className={cn(
               "h-1.5 w-1.5 rounded-full",
-              activeStep === 4 ? "bg-[#22d3ee] animate-pulse" : "bg-muted"
+              activeStep === 3 ? "bg-emerald-500 animate-pulse" : "bg-muted"
             )} />
-            Step {activeStep} of 4
+            Step {activeStep} of 3
           </div>
 
           {/* Right: context CTAs */}
@@ -1517,18 +1212,24 @@ export default function ArticleDetailPage() {
             )}
             {isAdmin && (
               <button
-                onClick={handlePublishToBlog}
-                disabled={blogPublishing || blogPublished}
+                onClick={() => {
+                  const aiTitle = metaTitle || article.optimization?.suggestedTitle || article.keyword;
+                  const desc = metaDescription || article.optimization?.suggestedMetaDescription || extractedDescription;
+                  setBlogTitle(aiTitle);
+                  setBlogDescription(desc);
+                  setBlogTagsInput(article.articleType || "");
+                  setBlogSlug(aiTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
+                  setShowBlogPublish(true);
+                }}
+                disabled={blogPublished}
                 className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg sm:rounded-xl border border-teal/30 bg-teal/10 px-3 py-2 sm:px-5 sm:py-2.5 text-[11px] sm:text-xs font-bold text-teal shadow-lg shadow-teal/10 hover:bg-teal/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                {blogPublishing ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : blogPublished ? (
+                {blogPublished ? (
                   <CheckCircle2 className="h-3.5 w-3.5" />
                 ) : (
                   <Sparkles className="h-3.5 w-3.5" />
                 )}
-                {blogPublishing ? "Publishing..." : blogPublished ? "Published" : "Publish to Blog"}
+                {blogPublished ? "Published" : "Publish to Blog"}
               </button>
             )}
             <button
@@ -1568,10 +1269,7 @@ export default function ArticleDetailPage() {
 
       {/* WordPress Publish Modal (global) */}
       {showWordPressPublish && article && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-          onClick={() => setShowWordPressPublish(false)}
-        >
+        <FocusTrap onClose={() => setShowWordPressPublish(false)}>
           <div
             className="w-full max-w-2xl rounded-xl sm:rounded-2xl border border-white/10 bg-surface-1 p-4 sm:p-6 max-h-[90vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
@@ -1589,23 +1287,177 @@ export default function ArticleDetailPage() {
                 onClick={() => setShowWordPressPublish(false)}
                 className="text-xl sm:text-2xl shrink-0 p-1 hover:bg-white/5 rounded transition-colors"
                 style={{ color: "var(--text-3)" }}
+                aria-label="Close publish dialog"
               >
                 ×
               </button>
             </div>
             <WordPressPublishPanel
               articleId={article.articleId}
-              title={article.keyword}
+              title={metaTitle || article.optimization?.suggestedTitle || article.keyword}
               content={article.draft?.content || ""}
               sites={wordPressSites}
-              featuredImageUrl={(article as any).featuredImage?.url || undefined}
+              featuredImageUrl={article.featuredImage?.url || undefined}
               onPublishSuccess={() => {
                 toast.success("Published to WordPress!");
                 setShowWordPressPublish(false);
               }}
             />
           </div>
-        </div>
+        </FocusTrap>
+      )}
+
+      {/* ── Publish to Blog Dialog ─────────────────────────────── */}
+      {showBlogPublish && article && (
+        <FocusTrap onClose={() => !blogPublishing && setShowBlogPublish(false)}>
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => !blogPublishing && setShowBlogPublish(false)}
+          >
+            <div
+              className="w-full max-w-lg rounded-xl border border-border bg-card p-5 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Publish to Blog</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">Configure your article for the Pubwize blog.</p>
+                </div>
+                <button
+                  onClick={() => setShowBlogPublish(false)}
+                  disabled={blogPublishing}
+                  className="text-lg leading-none text-muted-foreground hover:text-foreground disabled:opacity-50 p-1"
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Title */}
+              <div className="space-y-1.5 mb-4">
+                <label className="text-xs font-semibold text-foreground/80">Article Title</label>
+                <input
+                  value={blogTitle}
+                  onChange={(e) => setBlogTitle(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  placeholder="Article title"
+                />
+              </div>
+
+              {/* Slug */}
+              <div className="space-y-1.5 mb-4">
+                <label className="text-xs font-semibold text-foreground/80">URL Slug</label>
+                <div className="flex items-center gap-2 rounded-lg border border-border bg-muted px-3 py-2 text-sm text-muted-foreground">
+                  <span className="shrink-0">pubwize.com/blog/</span>
+                  <input
+                    value={blogSlug}
+                    onChange={(e) => setBlogSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ""))}
+                    className="flex-1 bg-transparent text-foreground outline-none min-w-0"
+                  />
+                </div>
+              </div>
+
+              {/* Excerpt */}
+              <div className="space-y-1.5 mb-4">
+                <label className="text-xs font-semibold text-foreground/80">Meta Description / Excerpt</label>
+                <textarea
+                  value={blogDescription}
+                  onChange={(e) => setBlogDescription(e.target.value)}
+                  rows={2}
+                  className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"
+                  placeholder="Brief description for search results and blog cards"
+                />
+                <div className={cn(
+                  "text-[10px] text-right",
+                  blogDescription.length > 160 ? "text-red-500" : blogDescription.length > 140 ? "text-amber-500" : "text-muted-foreground"
+                )}>
+                  {blogDescription.length}/160
+                </div>
+              </div>
+
+              {/* Tags */}
+              <div className="space-y-1.5 mb-4">
+                <label className="text-xs font-semibold text-foreground/80">Tags (comma-separated)</label>
+                <input
+                  value={blogTagsInput}
+                  onChange={(e) => setBlogTagsInput(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-2 focus:ring-blue-500/40"
+                  placeholder="SEO, Content Marketing, AI Writing"
+                />
+              </div>
+
+              {/* Stats row */}
+              <div className="flex items-center gap-4 mb-5 text-xs text-muted-foreground">
+                <span>{wordCount.toLocaleString()} words</span>
+                <span className="text-muted-foreground/30">·</span>
+                <span>
+                  {article.featuredImage?.url ? (
+                    <span className="text-emerald-500">Featured image ✓</span>
+                  ) : (
+                    <span className="text-amber-500">No featured image</span>
+                  )}
+                </span>
+                {article.optimization?.seoScore && (
+                  <>
+                    <span className="text-muted-foreground/30">·</span>
+                    <span className={cn(
+                      article.optimization.seoScore >= 80 ? "text-emerald-500" :
+                      article.optimization.seoScore >= 60 ? "text-amber-500" : "text-red-500"
+                    )}>
+                      SEO {Math.round(article.optimization.seoScore)}
+                    </span>
+                  </>
+                )}
+              </div>
+
+              {/* Publish / Result */}
+              {blogPublished ? (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-4">
+                  <div className="flex items-center gap-2 text-emerald-500 font-semibold text-sm mb-2">
+                    <CheckCircle2 className="h-4 w-4" />
+                    Published successfully!
+                  </div>
+                  <a
+                    href={blogPublishedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 text-sm text-blue-500 hover:text-blue-400 underline underline-offset-2"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    {blogPublishedUrl}
+                  </a>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handlePublishToBlog}
+                    disabled={blogPublishing || !blogSlug}
+                    className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-teal text-obsidian font-bold text-sm px-4 py-2.5 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    {blogPublishing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Publishing…
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4" />
+                        Publish Now
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowBlogPublish(false)}
+                    disabled={blogPublishing}
+                    className="px-4 py-2.5 text-xs text-muted-foreground hover:text-foreground disabled:opacity-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </FocusTrap>
       )}
     </div>
   );

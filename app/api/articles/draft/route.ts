@@ -43,6 +43,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const targetWordCount = bodyWordCount || settings?.targetWordCount || 2000;
   const optimizations = asOptimizations(article!.optimizations);
   const lsiKeywords = optimizations?.lsiKeywords || [];
+  // Include existing SEO suggestions so regenerated drafts apply them automatically
+  const seoSuggestions: string[] | null = optimizations?.suggestions?.length
+    ? optimizations.suggestions
+    : null;
 
   const site = await prisma.site.findUnique({ where: { id: article!.siteId } });
   const siteBrandVoice = (site as { brandVoice: any } | null)?.brandVoice || null;
@@ -63,16 +67,14 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   // Provide real, non-hallucinated URLs the model is allowed to cite.
   let externalSources: Array<{ title: string; url: string; snippet?: string }> | null = null;
-  if (user.planTier === "pro") {
-    try {
-      const serp = await fetchSerpContext(article!.keyword, site?.targetCountry ?? "us");
-      externalSources = serp.topResults
-        .filter(r => r.title && r.link)
-        .slice(0, 10)
-        .map(r => ({ title: r.title, url: r.link, snippet: r.snippet }));
-    } catch {
-      // non-fatal
-    }
+  try {
+    const serp = await fetchSerpContext(article!.keyword, site?.targetCountry ?? "us");
+    externalSources = serp.topResults
+      .filter(r => r.title && r.link)
+      .slice(0, 10)
+      .map(r => ({ title: r.title, url: r.link, snippet: r.snippet }));
+  } catch {
+    // non-fatal (SERP context is a best-effort enhancement)
   }
 
   const internalLinkArticles = await prisma.article.findMany({
@@ -104,6 +106,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
             siteBrandVoice,
             internalLinkArticles,
             externalSources,
+            seoSuggestions,
           })
         );
 

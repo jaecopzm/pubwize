@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Copy, Download, Check, List, Loader2, FileCode, Sparkles, Zap, Edit3, Eye, CheckCircle2, Share2 } from "lucide-react";
+import { Copy, Download, Check, List, Loader2, FileCode, Sparkles, Zap, Edit3, Eye, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
@@ -12,6 +12,8 @@ import { UnsplashSearch } from "@/components/unsplash-search";
 import { RichEditor, type RichEditorRef } from "./rich-editor";
 import { WordCountRing } from "./word-count-ring";
 import { SEOCommandCenter } from "./seo-command-center";
+import { RepurposeButton } from "@/components/articles/repurpose-button";
+import { analyzePatterns } from "@/lib/ai-pattern-detector";
 import type { DraftData } from "@/lib/types";
 import { getAuthHeaders } from "@/lib/hooks/use-auth";
 
@@ -81,7 +83,6 @@ export function DraftPanel({
     siteDomain,
     onGenerate,
     onOptimize,
-    onGenerateSocial,
     onPublish,
     loading,
     done,
@@ -90,9 +91,10 @@ export function DraftPanel({
     streaming = false,
     onUpgradeRequired,
     brief,
-    socialLoading,
     featuredImageUrl,
     onFeaturedImageChange,
+    onContentDirty,
+    lsiKeywords,
 }: {
     draft: DraftData;
     keyword: string;
@@ -100,7 +102,6 @@ export function DraftPanel({
     siteDomain?: string;
     onGenerate?: () => void;
     onOptimize: () => void;
-    onGenerateSocial?: () => void;
     onPublish?: () => void;
     loading: boolean;
     done: boolean;
@@ -109,9 +110,10 @@ export function DraftPanel({
     streaming?: boolean;
     onUpgradeRequired?: (reason: string) => void;
     brief?: any;
-    socialLoading?: boolean;
     featuredImageUrl?: string | null;
     onFeaturedImageChange?: (img: { url: string; photographer?: string; photographerUrl?: string; unsplashId?: string } | null) => void;
+    onContentDirty?: () => void;
+    lsiKeywords?: string[];
 }) {
     const [content, setContent] = useState(draft.content);
     const [isSaving, setIsSaving] = useState(false);
@@ -153,12 +155,26 @@ export function DraftPanel({
 
     // ── Sync external draft content when streaming from parent page ─
     const lastDraftContentRef = useRef<string>("");
+    const contentInitializedRef = useRef(false);
     useEffect(() => {
         if (streaming && draft.content !== undefined && draft.content !== lastDraftContentRef.current) {
             lastDraftContentRef.current = draft.content;
             setContent(draft.content);
         }
     }, [streaming, draft.content]);
+
+    // ── Track user edits (non-streaming content changes) ─────────
+    const userEditRef = useRef(false);
+    useEffect(() => {
+        if (!contentInitializedRef.current) {
+            contentInitializedRef.current = true;
+            return;
+        }
+        if (!streaming && !userEditRef.current) {
+            userEditRef.current = true;
+            onContentDirty?.();
+        }
+    }, [content, streaming]);
 
     // ── Sync featured image from parent (e.g. refresh) ───────────────
     useEffect(() => {
@@ -198,7 +214,9 @@ export function DraftPanel({
         const abort = new AbortController();
         streamAbortRef.current = abort;
         setIsStreaming(true);
+        // Clear content immediately so old draft doesn't show while streaming
         setStreamContent("");
+        setContent("");
 
         try {
 
@@ -240,6 +258,15 @@ export function DraftPanel({
                     try {
                         const payload = JSON.parse(dataStr);
                         if (payload.error) throw new Error(payload.error);
+
+                        // Server is retrying — reset accumulator so we don't double content
+                        if (payload.retry !== undefined) {
+                            accumulatedContent = "";
+                            setStreamContent("");
+                            lastUpdateTime = 0;
+                            continue;
+                        }
+
                         if (payload.chunk) {
                             accumulatedContent += payload.chunk;
                             const now = performance.now();
@@ -309,6 +336,12 @@ export function DraftPanel({
     const currentWordCount = displayContent.split(/\s+/).filter(Boolean).length;
     const isAnyStreaming = isStreaming || streaming;
 
+    // AI pattern analysis (client-side heuristic)
+    const patternResult = useMemo(() => {
+        if (!displayContent || displayContent.length < 100) return null;
+        return analyzePatterns(displayContent);
+    }, [displayContent]);
+
     return (
         <motion.div 
             initial={{ opacity: 0, y: 10 }}
@@ -320,39 +353,39 @@ export function DraftPanel({
                 keyword={keyword}
                 targetWordCount={targetWordCount ?? 2000}
                 onUpdate={setContent}
+                lsiKeywords={lsiKeywords}
             />
 
             {/* Stats Bar */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-2">
+            <div className="flex items-center gap-3 overflow-x-auto pb-2">
                 {/* Word Count Ring */}
                 <div className="shrink-0 p-0.5 rounded-full border border-border bg-card shadow-sm">
-                    <WordCountRing current={currentWordCount} target={targetWordCount ?? 2000} size={48} streaming={isAnyStreaming} />
+                    <WordCountRing current={currentWordCount} target={targetWordCount ?? 2000} size={52} streaming={isAnyStreaming} />
                 </div>
-                <div className="flex-1 grid grid-cols-3 gap-2 min-w-0">
+                <div className="flex-1 grid grid-cols-3 gap-3 min-w-0">
                     {/* Words */}
-                    <div className="relative overflow-hidden rounded-lg border border-indigo-500/20 dark:border-indigo-400/20 bg-indigo-500/5 dark:bg-indigo-400/5 p-2 sm:p-3 shadow-sm">
+                    <div className="relative overflow-hidden rounded-lg border border-indigo-500/20 dark:border-indigo-400/20 bg-indigo-500/5 dark:bg-indigo-400/5 p-3 shadow-sm">
                         {isAnyStreaming && <div className="absolute inset-0 bg-indigo-500/10 animate-pulse" />}
-                        <div className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5 sm:mb-1 relative z-10">Words</div>
-                        <div className="text-sm sm:text-base font-bold text-foreground relative z-10 tabular-nums leading-none">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 relative z-10">Words</div>
+                        <div className="text-lg font-bold text-foreground relative z-10 tabular-nums leading-none">
                             {currentWordCount.toLocaleString()}
-                            <span className="text-[8px] sm:text-[9px] text-muted-foreground ml-0.5 sm:ml-1 font-semibold">/ {targetWordCount}</span>
+                            <span className="text-[10px] text-muted-foreground ml-1 font-semibold">/ {targetWordCount}</span>
                         </div>
                     </div>
-                    {/* Read time */}
-                    <div className="relative overflow-hidden rounded-lg border border-cyan-500/20 dark:border-cyan-400/20 bg-cyan-500/5 dark:bg-cyan-400/5 p-2 sm:p-3 shadow-sm">
-                        {isAnyStreaming && <div className="absolute inset-0 bg-cyan-500/10 animate-pulse" />}
-                        <div className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5 sm:mb-1 relative z-10">Read</div>
-                        <div className="text-sm sm:text-base font-bold text-cyan-600 dark:text-cyan-400 relative z-10 leading-none">
-                            {Math.ceil(currentWordCount / 200)}
-                            <span className="text-[8px] sm:text-[9px] text-cyan-600/50 dark:text-cyan-400/50 ml-0.5 sm:ml-1 font-semibold uppercase">min</span>
-                        </div>
-                    </div>
-                    {/* Headings */}
-                    <div className="rounded-lg border border-purple-500/20 dark:border-purple-400/20 bg-purple-500/5 dark:bg-purple-400/5 p-2 sm:p-3 shadow-sm">
-                        <div className="text-[8px] sm:text-[9px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5 sm:mb-1">Sections</div>
-                        <div className="text-sm sm:text-base font-bold text-purple-600 dark:text-purple-400 leading-none">
+                    {/* Sections */}
+                    <div className="relative overflow-hidden rounded-lg border border-purple-500/20 dark:border-purple-400/20 bg-purple-500/5 dark:bg-purple-400/5 p-3 shadow-sm">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 relative z-10">Sections</div>
+                        <div className="text-lg font-bold text-purple-600 dark:text-purple-400 relative z-10 leading-none">
                             {headings.length}
-                            <span className="text-[8px] sm:text-[9px] text-purple-600/50 dark:text-purple-400/50 ml-0.5 sm:ml-1 font-semibold uppercase">tags</span>
+                            <span className="text-[10px] text-purple-600/50 dark:text-purple-400/50 ml-1 font-semibold">tags</span>
+                        </div>
+                    </div>
+                    {/* Human Score (AI pattern detector) — always visible */}
+                    <div className="relative overflow-hidden rounded-lg border border-orange-500/20 dark:border-orange-400/20 bg-orange-500/5 dark:bg-orange-400/5 p-3 shadow-sm">
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1 relative z-10">Human</div>
+                        <div className={cn("text-lg font-bold leading-none", patternResult !== null ? (patternResult.overallScore >= 70 ? "text-emerald-600 dark:text-emerald-400" : patternResult.overallScore >= 50 ? "text-amber-600 dark:text-amber-400" : "text-rose-600 dark:text-rose-400") : "text-muted-foreground")}>
+                            {patternResult !== null ? patternResult.overallScore : "—"}
+                            <span className="text-[10px] font-semibold ml-1">{patternResult !== null ? "%" : ""}</span>
                         </div>
                     </div>
                 </div>
@@ -362,73 +395,85 @@ export function DraftPanel({
             <div className="grid gap-4 lg:grid-cols-12 w-full max-w-full">
                 <div className="lg:col-span-12 space-y-4 w-full max-w-full overflow-x-hidden">
                     {/* Toolbar Row */}
-                    <div className="flex items-center gap-2 sticky top-0 z-20 backdrop-blur-xl bg-card/80 p-1 sm:p-2 rounded-lg border border-border shadow-sm w-full max-w-full overflow-x-auto">
-                        <div className="flex items-center gap-1 p-0.5 rounded-lg bg-muted border border-border shrink-0 min-w-0">
+                    <div className="flex items-center gap-2 sticky top-0 z-20 backdrop-blur-xl bg-card/80 p-2 rounded-lg border border-border shadow-sm w-full max-w-full overflow-x-auto">
+                        {/* Edit / Preview toggle */}
+                        <div className="flex items-center gap-0.5 p-0.5 rounded-lg bg-muted border border-border shrink-0">
                             <button
                                 onClick={() => setViewMode("edit")}
                                 className={cn(
-                                    "flex items-center gap-1 px-2 py-0.5 sm:py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap",
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap",
                                     viewMode === "edit" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                <Edit3 className="h-3 w-3" />
+                                <Edit3 className="h-3.5 w-3.5" />
                                 Edit
                             </button>
                             <button
                                 onClick={() => setViewMode("preview")}
                                 className={cn(
-                                    "flex items-center gap-1 px-2 py-0.5 sm:py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all whitespace-nowrap",
+                                    "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap",
                                     viewMode === "preview" ? "bg-primary text-primary-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
-                                <Eye className="h-3 w-3" />
+                                <Eye className="h-3.5 w-3.5" />
                                 Preview
                             </button>
                         </div>
-                        
-                        <div className="flex items-center gap-1 shrink-0 ml-auto">
+
+                        <div className="h-5 w-px bg-border shrink-0" />
+
+                        {/* Structure / Media */}
+                        <div className="flex items-center gap-1.5 shrink-0">
                             <button
                                 onClick={() => setShowStructure(!showStructure)}
                                 className={cn(
-                                    "flex items-center gap-1 sm:gap-1.5 rounded-lg border px-2 sm:px-2.5 py-0.5 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all shrink-0",
+                                    "flex items-center gap-1.5 rounded-lg border px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider transition-all shrink-0",
                                     showStructure
                                         ? "border-primary/50 bg-primary/10 text-primary"
                                         : "border-border text-muted-foreground hover:bg-accent hover:text-foreground"
                                 )}
                             >
-                                <List className="h-3 w-3" />
+                                <List className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">Structure</span>
                             </button>
                             <button
                                 onClick={() => setShowImageSearch(true)}
-                                className="flex items-center gap-1 sm:gap-1.5 rounded-lg border border-cyan-500/20 dark:border-cyan-400/20 bg-cyan-500/10 dark:bg-cyan-400/10 px-2 sm:px-2.5 py-0.5 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 dark:hover:bg-cyan-400/20 transition-all active:scale-95 shrink-0"
+                                className="flex items-center gap-1.5 rounded-lg border border-cyan-500/20 dark:border-cyan-400/20 bg-cyan-500/10 dark:bg-cyan-400/10 px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 dark:hover:bg-cyan-400/20 transition-all active:scale-95 shrink-0"
                             >
-                                <Download className="h-3 w-3" />
+                                <Download className="h-3.5 w-3.5" />
                                 <span className="hidden sm:inline">Media</span>
                             </button>
                         </div>
 
-                        <div className="h-4 w-px bg-border mx-1 hidden md:block" />
+                        <div className="flex-1" />
 
-                        <div className="flex items-center gap-1.5 sm:gap-2 ml-auto shrink-0">
+                        <div className="h-5 w-px bg-border shrink-0" />
+
+                        {/* Save / Repurpose */}
+                        <div className="flex items-center gap-2 shrink-0">
                             {isSaving ? (
-                                <span className="hidden md:flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-primary shrink-0">
-                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-primary shrink-0">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
                                     Saving
                                 </span>
                             ) : lastSaved ? (
-                                <span className="hidden md:flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 shrink-0">
-                                    <CheckCircle2 className="h-3 w-3" />
+                                <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 shrink-0">
+                                    <CheckCircle2 className="h-3.5 w-3.5" />
                                     Saved
                                 </span>
                             ) : null}
+                            <RepurposeButton
+                                articleId={articleId}
+                                articleTitle={keyword}
+                                disabled={!content || content.length < 100}
+                            />
                             <button
                                 onClick={() => handleSaveContent()}
                                 disabled={isSaving}
-                                className="flex items-center gap-1 sm:gap-1.5 rounded-lg bg-primary text-primary-foreground px-2.5 sm:px-3 py-0.5 sm:py-1.5 text-[10px] font-bold uppercase tracking-wider hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-95 shadow-sm shrink-0"
+                                className="flex items-center gap-1.5 rounded-lg bg-primary text-primary-foreground px-4 py-1.5 text-[11px] font-bold uppercase tracking-wider hover:bg-primary/90 disabled:opacity-50 transition-all active:scale-95 shadow-sm shrink-0"
                             >
-                                <Check className="h-3 w-3" />
-                                <span className="hidden sm:inline">Save</span>
+                                <Check className="h-3.5 w-3.5" />
+                                Save
                             </button>
                         </div>
                     </div>
@@ -441,81 +486,29 @@ export function DraftPanel({
                         </p>
                     </div>
 
-                    {/* Featured Image & Quick Actions */}
-                    <div className="grid sm:grid-cols-2 gap-3">
-                        {/* Featured Image */}
-                        <div className="rounded-lg border border-border bg-card p-2 sm:p-3 shadow-sm">
-                            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-                                <h4 className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Featured Image</h4>
-                                <button
-                                    onClick={() => setShowFeaturedImageSearch(true)}
-                                    className="p-1 rounded-md bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
-                                >
-                                    <Edit3 className="h-3 w-3" />
-                                </button>
-                            </div>
-                            {featuredImage ? (
-                                <div className="relative aspect-video rounded-md overflow-hidden border border-border group cursor-pointer" onClick={() => setShowFeaturedImageSearch(true)}>
-                                    <img src={featuredImage} alt="Featured" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
-                                </div>
-                            ) : (
-                                <button 
-                                    onClick={() => setShowFeaturedImageSearch(true)}
-                                    className="w-full aspect-video rounded-md border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1.5 hover:bg-muted transition-all"
-                                >
-                                    <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-muted-foreground" />
-                                    <span className="text-[9px] sm:text-[10px] font-semibold text-muted-foreground">Add Image</span>
-                                </button>
-                            )}
+                    {/* Featured Image */}
+                    <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
+                        <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Featured Image</h4>
+                            <button
+                                onClick={() => setShowFeaturedImageSearch(true)}
+                                className="p-1.5 rounded-md bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
+                            >
+                                <Edit3 className="h-3.5 w-3.5" />
+                            </button>
                         </div>
-
-                        {/* Quick Meta */}
-                        {brief && (
-                            <div className="rounded-lg border border-border bg-card p-2 sm:p-3 shadow-sm space-y-2 sm:space-y-3">
-                                <div>
-                                    <div className="flex items-center justify-between mb-1">
-                                        <h4 className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Meta Title</h4>
-                                        <button onClick={() => {
-                                            navigator.clipboard.writeText(`${keyword} - Complete Guide 2026`);
-                                            toast.success("Copied!");
-                                        }} className="p-0.5 sm:p-1 rounded-md hover:bg-muted transition-all">
-                                            <Copy className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
-                                        </button>
-                                    </div>
-                                    <p className="text-[10px] sm:text-[11px] font-medium text-foreground leading-tight line-clamp-1">{keyword} - Complete Guide 2026</p>
-                                </div>
-                                
-                                <div>
-                                    <div className="flex items-center justify-between mb-1">
-                                        <h4 className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Description</h4>
-                                        <button onClick={() => {
-                                            navigator.clipboard.writeText(`Discover everything about ${keyword}. Expert insights and practical tips.`);
-                                            toast.success("Copied!");
-                                        }} className="p-0.5 sm:p-1 rounded-md hover:bg-muted transition-all">
-                                            <Copy className="h-2.5 w-2.5 sm:h-3 sm:w-3 text-muted-foreground" />
-                                        </button>
-                                    </div>
-                                    <p className="text-[9px] sm:text-[10px] text-muted-foreground leading-relaxed line-clamp-2">Discover everything about {keyword}. Expert insights and practical tips.</p>
-                                </div>
-
-                                <div>
-                                    <h4 className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1.5">Keywords</h4>
-                                    <div className="flex flex-wrap gap-1">
-                                        {brief.entities?.slice(0, 6).map((entity: string, i: number) => (
-                                            <button
-                                                key={i}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(entity);
-                                                    toast.success("Copied!");
-                                                }}
-                                                className="px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md bg-muted border border-border text-[8px] sm:text-[9px] font-semibold text-muted-foreground hover:bg-accent hover:text-foreground transition-all"
-                                            >
-                                                {entity}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                        {featuredImage ? (
+                            <div className="relative aspect-video rounded-md overflow-hidden border border-border group cursor-pointer" onClick={() => setShowFeaturedImageSearch(true)}>
+                                <img src={featuredImage} alt="Featured" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                             </div>
+                        ) : (
+                            <button 
+                                onClick={() => setShowFeaturedImageSearch(true)}
+                                className="w-full aspect-video rounded-md border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1.5 hover:bg-muted transition-all"
+                            >
+                                <Download className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-[10px] font-semibold text-muted-foreground">Add Image</span>
+                            </button>
                         )}
                     </div>
 
@@ -576,24 +569,6 @@ export function DraftPanel({
                     </div>
                 </div>
             </div>
-
-            {/* Bottom Final Actions */}
-            {!streaming && onGenerateSocial && (
-                <div className="pt-4">
-                    <button
-                        onClick={onGenerateSocial}
-                        disabled={socialLoading}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-2.5 sm:py-3 rounded-lg bg-indigo-600 dark:bg-indigo-500 text-white font-bold uppercase tracking-wider text-xs hover:bg-indigo-700 dark:hover:bg-indigo-600 transition-all shadow-sm disabled:opacity-50 active:scale-95"
-                    >
-                        {socialLoading ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                            <Share2 className="h-4 w-4" />
-                        )}
-                        {socialLoading ? "Generating..." : "Generate Social"}
-                    </button>
-                </div>
-            )}
 
             {/* Modals are portaled to body, so they stay here */}
             {showFeaturedImageSearch && typeof document !== "undefined" && createPortal(

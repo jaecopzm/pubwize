@@ -7,7 +7,6 @@ interface ApiCallsProps {
   setLoader: (loading: boolean) => void;
   setOutlineLoading: (loading: boolean) => void;
   setOptLoading: (loading: boolean) => void;
-  setSocialLoading: (loading: boolean) => void;
   setArticle: (updater: (prev: any) => any) => void;
   setError: (error: string | null) => void;
 }
@@ -17,7 +16,6 @@ export function useApiCalls({
   setLoader,
   setOutlineLoading,
   setOptLoading,
-  setSocialLoading,
   setArticle,
   setError,
 }: ApiCallsProps) {
@@ -59,25 +57,12 @@ export function useApiCalls({
 
   const handleOptimize = () =>
     callApi("/api/articles/optimize", setOptLoading, (data) => {
-      setArticle((p) => p ? { ...p, optimizations: data.optimizations } : null);
+      setArticle((p) => p ? { ...p, optimization: data.optimizations, socialMedia: data.optimizations?.socialMedia ?? null } : null);
       toast.success("SEO analysis complete!");
-    });
-
-  const handleGenerateSocial = () =>
-    callApi("/api/articles/social", setSocialLoading, (data) => {
-      console.log('[Social] Received data:', data);
-      console.log('[Social] socialMedia:', data.socialMedia);
-      setArticle((p) => {
-        const updated = p ? { ...p, socialMedia: data.socialMedia } : null;
-        console.log('[Social] Updated article.socialMedia:', updated?.socialMedia);
-        return updated;
-      });
-      toast.success("Social media posts generated!");
     });
 
   return {
     handleGenerateOutline,
     handleOptimize,
-    handleGenerateSocial,
   };
 }

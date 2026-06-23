@@ -11,7 +11,7 @@ import { invalidateArticleCache } from '@/lib/cache-invalidation';
 import { asDraft } from '@/lib/prisma-json';
 
 export const dynamic = 'force-dynamic';
-export const maxDuration = 60;
+export const maxDuration = 90;
 
 export const POST = withErrorHandler(async (req: NextRequest) => {
   // 1. Authenticate
@@ -20,12 +20,10 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   const uid = auth.uid!;
 
   // 2. Check usage limits
-  
   const usageCheck = await canPerformAction(uid, 'aiImprovements');
-  
   if (!usageCheck.allowed) {
     return NextResponse.json(
-      { 
+      {
         error: usageCheck.reason || "AI improvement limit reached",
         upgradeRequired: true,
         current: usageCheck.current,
@@ -35,7 +33,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     );
   }
 
-  // 3. Rate limit (30 req/min for AI operations)
+  // 3. Rate limit
   const rateLimit = await checkRateLimitByIdentifier(uid, 30, 60000);
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -54,7 +52,6 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   const { articleId, content, suggestion, keyword } = body;
 
-  // 4. Validate inputs
   const idValidation = validateArticleId(articleId);
   assertValid(idValidation.valid, idValidation.error || 'Invalid article ID');
 
@@ -72,38 +69,50 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
   assertValid(!!article, 'Article not found');
   assertValid(article!.ownerId === uid, "You don't have permission to access this article");
 
-  // 6. Stream AI fixes using Groq
-  const systemPrompt = `You are an SEO expert. Your job is to fix content based on specific SEO suggestions.
+  // Estimate original word count so we can constrain output length
+  const originalWordCount = content
+    .replace(/```[\s\S]*?```/g, '')
+    .replace(/[#*_~`\[\](){}]/g, '')
+    .replace(/<[^>]+>/g, '')
+    .trim()
+    .split(/\s+/)
+    .filter((w: string) => w.length > 0).length;
 
-Requirements:
-- Apply ALL the fixes needed for the suggestions provided
-- Maintain the original markdown formatting and structure
-- Keep the same tone and style
-- Make targeted improvements to address each suggestion
+  // Allow ±15% word count variance — precision edits, not rewrites
+  const minWords = Math.floor(originalWordCount * 0.85);
+  const maxWords = Math.ceil(originalWordCount * 1.15);
 
-Return ONLY the improved content with all fixes applied. No explanations.`;
+  // 6. Build a surgical, structure-preserving prompt
+  const systemPrompt = `You are a surgical SEO editor. Your job is to make TARGETED improvements to existing content based on specific suggestions.
 
-  const userPrompt = `Suggestions to fix:
+CRITICAL RULES — violate any of these and the output is unusable:
+1. PRESERVE STRUCTURE: Keep every heading (##, ###), every section, every list, every blockquote, every markdown element exactly where it is. Do not merge, reorder, or delete any sections.
+2. PRESERVE WORD COUNT: The original content is approximately ${originalWordCount} words. Your output must be ${minWords}–${maxWords} words. Do not add padding or cut meaningful content.
+3. TARGETED EDITS ONLY: Only change the specific phrases, sentences, or words needed to satisfy each suggestion. Leave everything else word-for-word identical.
+4. NO HALLUCINATIONS: Do not invent new facts, statistics, URLs, or brand names that were not in the original.
+5. RETURN ONLY MARKDOWN: Return the complete improved article as clean Markdown. No preamble, no "Here's the improved version:", no explanation.`;
+
+  const userPrompt = `SEO suggestions to apply (make ONLY these targeted changes):
 ${suggestion}
-${keyword ? `\nTarget Keyword: ${keyword}` : ""}
+${keyword ? `\nTarget keyword: "${keyword}"` : ''}
 
-Current Content:
+Original article (${originalWordCount} words — output must stay within ${minWords}–${maxWords} words):
 ${content}
 
-Fix this content based on the suggestions above.`;
+Apply the suggestions above with surgical precision. Return the full improved article.`;
 
   const { readable, writable } = new TransformStream();
   const writer = writable.getWriter();
   const encoder = new TextEncoder();
-  let fixedContent = "";
+  let fixedContent = '';
 
   (async () => {
     try {
       const generator = aiUserContext.run(uid, () => generateAIStream({
         systemPrompt,
         userPrompt,
-        temperature: 0.7,
-        maxTokens: 8000,
+        temperature: 0.3, // Low temperature = precise, non-hallucinating edits
+        maxTokens: Math.min(Math.ceil(originalWordCount * 2.2), 8000),
         taskType: 'draft',
       }));
 
@@ -112,20 +121,26 @@ Fix this content based on the suggestions above.`;
         await writer.write(encoder.encode(`data: ${JSON.stringify({ chunk })}\n\n`));
       }
 
-      // Update the article with fixed content
-      const { prisma } = await import('@/lib/prisma');
+      // Strip accidental code fences if the model wrapped output
+      let normalized = fixedContent.trim();
+      if (normalized.startsWith('```markdown')) {
+        normalized = normalized.replace(/^```markdown\s*\n/, '').replace(/\n```$/, '').trim();
+      } else if (normalized.startsWith('```')) {
+        normalized = normalized.replace(/^```[a-zA-Z]*\s*\n/, '').replace(/\n```$/, '').trim();
+      }
+
+      // Persist to DB
+      const { prisma: db } = await import('@/lib/prisma');
       const existingDraft = asDraft(article?.draft) || {};
-      await prisma.article.update({
+      await db.article.update({
         where: { id: articleId },
-        data: { draft: { ...existingDraft, content: fixedContent } },
+        data: { draft: { ...existingDraft, content: normalized } },
       });
 
-      // Increment usage counter
       await incrementUsage(uid, 'aiImprovements');
-
       await invalidateArticleCache(articleId, uid);
 
-      await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true })}\n\n`));
+      await writer.write(encoder.encode(`data: ${JSON.stringify({ done: true, finalContent: normalized })}\n\n`));
     } catch (err) {
       logger.error('AI fix streaming failed', err);
       await writer.write(

@@ -134,13 +134,13 @@ export async function* generateDraftStream(params: {
   siteBrandVoice?: any;
   internalLinkArticles?: any[];
   externalSources?: ExternalSource[] | null;
+  seoSuggestions?: string[] | null;
 }): AsyncGenerator<string> {
   const targetWords = params.targetWordCount || 2500;
   
-  // Cap at 7000 as requested to avoid TPM/RPM limits while remaining dense.
-  const streamMaxTokens = Math.min(Math.ceil(targetWords * 3), 7000);
+  // Tighter budget: ~1.8 tokens per word cap at 6000 to prevent runaway generation.
+  const streamMaxTokens = Math.min(Math.ceil(targetWords * 1.8), 6000);
 
-  // Yield from stream. If a length finish occurs, the consumer will receive truncated content.
   yield* generateAIStream({
     systemPrompt: getDraftSystemPrompt({
       keyword: params.keyword,
@@ -150,7 +150,8 @@ export async function* generateDraftStream(params: {
     }),
     userPrompt: getDraftUserPrompt({
       ...params,
-      targetWords
+      targetWords,
+      seoSuggestions: params.seoSuggestions,
     }),
     temperature: 0.5,
     maxTokens: streamMaxTokens,
