@@ -7,10 +7,6 @@
     {
       "path": "/api/cron/cleanup-deleted-accounts",
       "schedule": "0 2 * * *"
-    },
-    {
-      "path": "/api/cron/publish-scheduled",
-      "schedule": "*/15 * * * *"
     }
   ]
 }
