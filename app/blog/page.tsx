@@ -134,7 +134,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                       <div className="flex items-center justify-between">
                         <div className="flex gap-2 flex-wrap">
                           {featuredPost.tags.slice(0, 3).map((t) => (
-                            <Link key={t} href={`/blog?tag=${t}`} onClick={e => e.stopPropagation()} className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(99,102,241,0.25)] bg-[rgba(99,102,241,0.1)] px-3 py-1 text-xs font-semibold text-[#818cf8] hover:bg-[rgba(99,102,241,0.2)] transition-colors">{t}</Link>
+                            <Link key={t} href={`/blog?tag=${t}`} className="inline-flex items-center gap-1.5 rounded-full border border-[rgba(99,102,241,0.25)] bg-[rgba(99,102,241,0.1)] px-3 py-1 text-xs font-semibold text-[#818cf8] hover:bg-[rgba(99,102,241,0.2)] transition-colors">{t}</Link>
                           ))}
                         </div>
                         <div className="flex items-center gap-2 text-sm font-semibold text-[#818cf8] group-hover:gap-3 transition-all">
@@ -183,7 +183,7 @@ export default async function BlogPage({ searchParams }: { searchParams: Promise
                           <div className="flex items-center justify-between">
                             <div className="flex gap-1.5 flex-wrap">
                               {post.tags.slice(0, 2).map((t) => (
-                                <Link key={t} href={`/blog?tag=${t}`} onClick={e => e.stopPropagation()} className="text-[10px] font-mono font-bold uppercase tracking-wider bg-muted px-2 py-1 rounded-md text-muted-foreground hover:text-[#818cf8] transition-colors">
+                                <Link key={t} href={`/blog?tag=${t}`} className="text-[10px] font-mono font-bold uppercase tracking-wider bg-muted px-2 py-1 rounded-md text-muted-foreground hover:text-[#818cf8] transition-colors">
                                   {t}
                                 </Link>
                               ))}
