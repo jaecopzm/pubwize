@@ -28,5 +28,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
     data: { blogSlug: null, blogPublishedAt: null },
   });
 
+  try { const { invalidateBlogCache } = await import("@/lib/blog-cache"); await invalidateBlogCache(); } catch {}
+
   return NextResponse.json({ success: true });
 });

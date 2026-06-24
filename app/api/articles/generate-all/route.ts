@@ -96,7 +96,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
               brief: brief as any,
               intent: brief.intent,
               articleType: brief.articleType,
-              status: "brief_generated",
+              status: "brief",
             },
           });
           await writer.write(send({ briefDone: brief }));
@@ -115,7 +115,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           outline = item.__done;
           await prisma.article.update({
             where: { id: articleId },
-            data: { outline: outline as any, status: "outline_generated" },
+            data: { outline: outline as any, status: "outline" },
           });
           await writer.write(send({ outlineDone: outline }));
         }
@@ -157,7 +157,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
         where: { id: articleId },
         data: {
           draft: { content: draftContent, format: "markdown" },
-          status: "draft_generated",
+          status: "draft",
         },
       });
 

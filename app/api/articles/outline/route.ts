@@ -48,7 +48,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
 
   await prisma.article.update({
     where: { id: articleId },
-    data: { outline: outline as any, status: "outline_generated" },
+    data: { outline: outline as any, status: "outline" },
   });
 
   await invalidateArticleCache(articleId, uid);

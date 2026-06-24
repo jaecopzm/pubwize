@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText, Globe, TrendingUp, Clock, Plus, Search,
   ArrowRight, Sparkles, Zap, Copy, ChevronRight,
-  Share2, ListTodo, BarChart3, AlertTriangle, CheckCircle2,
+  BarChart3, AlertTriangle, CheckCircle2,
   PenLine, Layers
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -115,7 +115,7 @@ function ArticleRow({
 
   return (
     <div
-      className="group flex items-center gap-2 sm:gap-3 rounded-lg sm:rounded-xl border border-border bg-card px-3 sm:px-4 py-2.5 sm:py-3 transition-all duration-200 hover:border-[#6366f1]/30 hover:bg-[#6366f1]/5 cursor-pointer active:scale-[0.99]"
+      className="group flex items-center gap-2 sm:gap-3 rounded-lg border border-border bg-card px-3 sm:px-4 py-2.5 sm:py-3 transition-all duration-200 hover:border-[#6366f1]/30 hover:bg-[#6366f1]/5 cursor-pointer active:scale-[0.99]"
       onClick={onOpen}
     >
       {/* Status dot + icon */}
@@ -166,22 +166,22 @@ function DashboardSkeleton() {
           <Skeleton className="h-3 sm:h-4 w-64 sm:w-80" />
         </div>
         <div className="flex gap-2 sm:gap-3">
-          <Skeleton className="h-9 sm:h-10 w-24 sm:w-28 rounded-lg sm:rounded-xl" />
-          <Skeleton className="h-9 sm:h-10 w-28 sm:w-36 rounded-lg sm:rounded-xl" />
+          <Skeleton className="h-9 sm:h-10 w-24 sm:w-28 rounded-lg" />
+          <Skeleton className="h-9 sm:h-10 w-28 sm:w-36 rounded-lg" />
         </div>
       </div>
       <div className="grid gap-2 sm:gap-3 grid-cols-2 lg:grid-cols-4">
-        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 sm:h-36 rounded-lg sm:rounded-xl" />)}
+        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-28 sm:h-36 rounded-lg" />)}
       </div>
       <div className="grid gap-4 sm:gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-          <Skeleton className="h-44 sm:h-52 rounded-lg sm:rounded-xl" />
+          <Skeleton className="h-44 sm:h-52 rounded-lg" />
           <Skeleton className="h-5 sm:h-6 w-32 sm:w-40" />
-          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-lg sm:rounded-xl" />)}
+          {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-14 sm:h-16 rounded-lg" />)}
         </div>
         <div className="space-y-3 sm:space-y-4">
-          <Skeleton className="h-44 sm:h-52 rounded-lg sm:rounded-xl" />
-          <Skeleton className="h-28 sm:h-36 rounded-lg sm:rounded-xl" />
+          <Skeleton className="h-44 sm:h-52 rounded-lg" />
+          <Skeleton className="h-28 sm:h-36 rounded-lg" />
         </div>
       </div>
     </div>
@@ -319,7 +319,7 @@ export default function DashboardOverviewPage() {
         <div>
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight">
             {getGreeting()},{" "}
-            <span className="bg-gradient-to-r from-[#6366f1] to-[#22d3ee] bg-clip-text text-transparent">
+            <span style={{ color: "#6366f1" }}>
               {userName}
             </span>
           </h1>
@@ -331,7 +331,7 @@ export default function DashboardOverviewPage() {
         <div className="flex gap-2 flex-shrink-0">
           <button
             onClick={() => router.push("/dashboard/research")}
-            className="flex items-center gap-1 sm:gap-1.5 rounded-lg sm:rounded-xl border border-border bg-card px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-muted-foreground transition-all hover:border-[#6366f1]/40 hover:text-foreground hover:shadow-md active:scale-[0.97]"
+            className="flex items-center gap-1 sm:gap-1.5 rounded-lg border border-border bg-card px-3 sm:px-4 py-2 sm:py-2.5 text-xs sm:text-sm font-semibold text-muted-foreground transition-all hover:border-[#6366f1]/40 hover:text-foreground hover:shadow-md active:scale-[0.97]"
           >
             <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> <span className="hidden sm:inline">Research</span>
           </button>
@@ -344,7 +344,7 @@ export default function DashboardOverviewPage() {
                 router.push("/dashboard/articles/new");
               }
             }}
-            className="relative flex items-center gap-1 sm:gap-1.5 overflow-hidden rounded-lg sm:rounded-xl bg-gradient-to-r from-[#6366f1] to-[#818cf8] px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-[#6366f1]/25 transition-all hover:shadow-[#6366f1]/40 hover:scale-[1.02] active:scale-[0.97]"
+            className="relative flex items-center gap-1 sm:gap-1.5 overflow-hidden rounded-lg bg-[#6366f1] px-3 sm:px-5 py-2 sm:py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-[#6366f1]/25 transition-all hover:bg-[#5558e3] hover:shadow-[#6366f1]/40 hover:scale-[1.02] active:scale-[0.97]"
           >
             <Plus className="h-3.5 w-3.5 sm:h-4 sm:w-4" /> New Article
           </button>
@@ -366,7 +366,7 @@ export default function DashboardOverviewPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.1 }}
-                className="rounded-xl border border-border bg-card p-4 relative overflow-hidden"
+                className="rounded-lg border border-border bg-card p-4 relative overflow-hidden"
               >
                 <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/5 to-transparent" />
                 <div className="flex items-center justify-between mb-3">
@@ -381,7 +381,7 @@ export default function DashboardOverviewPage() {
           <>
             <KPICard label="Total Articles" value={stats.totalArticles} icon={<FileText className="h-5 w-5" />} accentColor="#6366f1" sparklineData={sparklineCounts} trend={stats.articlesThisMonth > 0 ? Math.round((stats.articlesThisMonth / Math.max(stats.totalArticles - stats.articlesThisMonth, 1)) * 100) : undefined} trendLabel="vs prev" onClick={() => router.push("/dashboard/articles")} />
             <KPICard label="This Month" value={articlesUsed} suffix={`/ ${totalLimit}`} icon={<Zap className="h-5 w-5" />} accentColor="#22d3ee" sparklineData={sparklineCounts} onClick={() => router.push("/dashboard/settings?tab=billing")} />
-            <KPICard label="Connected Sites" value={stats.totalSites} icon={<Globe className="h-5 w-5" />} accentColor="#a78bfa" onClick={() => router.push("/dashboard/sites")} />
+            <KPICard label="Connected Sites" value={stats.totalSites} icon={<Globe className="h-5 w-5" />} accentColor="#6366f1" onClick={() => router.push("/dashboard/sites")} />
             <KPICard label="Optimized" value={articlesByStatus.optimized} icon={<TrendingUp className="h-5 w-5" />} accentColor="#10b981" sparklineData={sparklineCounts} onClick={() => router.push("/dashboard/articles?status=optimized")} />
           </>
         )}
@@ -392,7 +392,7 @@ export default function DashboardOverviewPage() {
         <div className="lg:col-span-2 space-y-4 sm:space-y-5 min-w-0">
 
           {/* Area Chart */}
-          <div className="group relative overflow-hidden rounded-lg sm:rounded-xl border border-border bg-card p-4 sm:p-5 transition-all hover:border-[#6366f1]/30 hover:shadow-xl">
+          <div className="group relative overflow-hidden rounded-lg border border-border bg-card p-4 sm:p-5 transition-all hover:border-[#6366f1]/30 hover:shadow-xl">
             <div className="absolute inset-0 bg-gradient-to-br from-[#6366f1]/5 via-transparent to-[#22d3ee]/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-3 sm:mb-4">
@@ -417,7 +417,7 @@ export default function DashboardOverviewPage() {
               const cfg = STATUS_CONFIG[s];
               return (
                 <button key={s} onClick={() => router.push(`/dashboard/articles?status=${s}`)}
-                  className="group flex flex-col gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border p-2.5 sm:p-3 text-left transition-all hover:scale-[1.03] active:scale-[0.97]"
+                  className="group flex flex-col gap-1.5 sm:gap-2 rounded-lg border p-2.5 sm:p-3 text-left transition-all hover:scale-[1.03] active:scale-[0.97]"
                   style={{ backgroundColor: `${cfg.color}10`, borderColor: `${cfg.color}20`, color: cfg.color }}>
                   <div className="flex items-center justify-between">{cfg.icon}<ArrowRight className="h-2.5 w-2.5 sm:h-3 sm:w-3 opacity-0 group-hover:opacity-100 transition-opacity" /></div>
                   <p className="text-xl sm:text-2xl font-black">{articlesByStatus[s]}</p>
@@ -437,7 +437,7 @@ export default function DashboardOverviewPage() {
             </div>
             <div className="space-y-2">
               {recentArticles.length === 0 ? (
-                <div className="rounded-lg sm:rounded-xl border border-dashed border-border p-8 sm:p-10 text-center">
+                <div className="rounded-lg border border-dashed border-border p-8 sm:p-10 text-center">
                   <Sparkles className="mx-auto h-6 w-6 sm:h-7 sm:w-7 mb-2 sm:mb-3 text-muted-foreground opacity-30" />
                   <p className="text-xs sm:text-sm text-muted-foreground">No articles yet.</p>
                   <button onClick={() => router.push("/dashboard/articles/new")} className="mt-2 sm:mt-3 text-[10px] sm:text-xs font-bold text-[#818cf8] hover:underline">Create your first article →</button>
@@ -455,7 +455,7 @@ export default function DashboardOverviewPage() {
         <div className="space-y-4 sm:space-y-5 min-w-0">
 
           {/* Usage Donut */}
-          <div className="rounded-lg sm:rounded-xl border border-border bg-card p-4 sm:p-5 card-premium">
+          <div className="rounded-lg border border-border bg-card p-4 sm:p-5 card-premium">
             <h3 className="font-bold text-xs sm:text-sm mb-3 sm:mb-4 flex items-center gap-2 text-foreground"><Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#818cf8]" /> Monthly Quota</h3>
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="relative h-16 w-16 sm:h-20 sm:w-20 shrink-0">
@@ -478,7 +478,7 @@ export default function DashboardOverviewPage() {
           </div>
 
           {/* Needs Action */}
-          <div className="rounded-lg sm:rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 sm:p-5">
+          <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 sm:p-5">
             <h3 className="font-bold text-xs sm:text-sm mb-2 sm:mb-3 flex items-center gap-2 text-foreground"><AlertTriangle className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" /> Needs Action</h3>
             {staleArticles.length === 0 ? (
               <div className="flex items-center gap-2 text-[10px] sm:text-xs text-muted-foreground"><CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />All articles are progressing!</div>
@@ -486,7 +486,7 @@ export default function DashboardOverviewPage() {
               <div className="space-y-2">
                 {staleArticles.map((a: any) => (
                   <button key={a.id} onClick={() => router.push(`/dashboard/articles/${a.id}`)}
-                    className="flex w-full items-center justify-between rounded-lg sm:rounded-xl border border-amber-500/20 bg-card px-2.5 sm:px-3 py-2 text-left transition-all hover:border-amber-500/40 hover:bg-amber-500/5 active:scale-[0.98]">
+                    className="flex w-full items-center justify-between rounded-lg border border-amber-500/20 bg-card px-2.5 sm:px-3 py-2 text-left transition-all hover:border-amber-500/40 hover:bg-amber-500/5 active:scale-[0.98]">
                     <div className="min-w-0"><p className="truncate text-[10px] sm:text-xs font-semibold text-foreground">{a.keyword}</p><p className="text-[9px] sm:text-[10px] text-amber-500/80">Stalled at {a.status}</p></div>
                     <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-amber-500/60" />
                   </button>
@@ -495,24 +495,21 @@ export default function DashboardOverviewPage() {
             )}
           </div>
 
-          {/* Repurposing */}
-          <div className="rounded-lg sm:rounded-xl border border-[#6366f1]/20 bg-[#6366f1]/5 p-4 sm:p-5">
-            <div className="flex items-center gap-2 mb-2 sm:mb-3"><Share2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#818cf8]" /><h3 className="font-bold text-xs sm:text-sm text-foreground">Needs Repurposing</h3></div>
-            {allArticles.filter((a: any) => (a.status === "optimized" || a.status === "draft_generated") && !a.socialAssets).length === 0 ? (
-              <p className="text-[10px] sm:text-xs text-muted-foreground italic">All articles are repurposed 🎉</p>
+          {/* Ready to Publish */}
+          <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4 sm:p-5">
+            <div className="flex items-center gap-2 mb-2 sm:mb-3"><CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" /><h3 className="font-bold text-xs sm:text-sm text-foreground">Ready to Publish</h3></div>
+            {articlesByStatus.optimized === 0 ? (
+              <p className="text-[10px] sm:text-xs text-muted-foreground italic">No articles ready for publishing yet.</p>
             ) : (
-              allArticles.filter((a: any) => (a.status === "optimized" || a.status === "draft_generated") && !a.socialAssets).slice(0, 2).map((art: any, i: number) => (
-                <button key={i} onClick={() => router.push(`/dashboard/articles/${art.id}`)}
-                  className="flex w-full items-center justify-between rounded-lg sm:rounded-xl border border-border bg-card px-2.5 sm:px-3 py-2 mb-2 text-left transition-all hover:border-[#6366f1]/30 active:scale-[0.98]">
-                  <div className="min-w-0"><p className="truncate text-[10px] sm:text-xs font-semibold text-foreground">{art.keyword}</p><p className="text-[9px] sm:text-[10px] text-muted-foreground">No social assets</p></div>
-                  <ChevronRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0 text-muted-foreground" />
-                </button>
-              ))
+              <div className="flex items-center gap-2 text-[10px] sm:text-xs text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {articlesByStatus.optimized} optimized article{articlesByStatus.optimized !== 1 ? 's' : ''} ready to publish
+              </div>
             )}
           </div>
 
           {/* Pro Tips Carousel */}
-          <div className="rounded-lg sm:rounded-xl border border-border bg-card p-4 sm:p-5 card-premium overflow-hidden">
+          <div className="rounded-lg border border-border bg-card p-4 sm:p-5 card-premium overflow-hidden">
             <h3 className="font-bold text-xs sm:text-sm mb-2 sm:mb-3 flex items-center gap-2 text-foreground"><Sparkles className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-[#818cf8]" /> Pro Tip</h3>
             <div className="min-h-[60px] sm:min-h-[48px]">
               <p key={tipIdx} className="text-[11px] sm:text-xs text-muted-foreground leading-relaxed animate-in fade-in slide-in-from-bottom-2 duration-500">{tips[tipIdx]}</p>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { useTheme } from "next-themes";
+import { useUser } from "@clerk/nextjs";
 import { PricingCards } from "@/components/pricing";
 
 /* ──────────────────────────────────────────────
@@ -396,11 +397,70 @@ function StripeIcon({ size = 32 }: { size?: number }) {
   );
 }
 
+function GroqIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#10a37f"/>
+      <text x="14" y="19" textAnchor="middle" fill="white" fontSize="15" fontWeight="700" fontFamily="system-ui">G</text>
+    </svg>
+  );
+}
+function SerperIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#3b82f6"/>
+      <circle cx="13" cy="13" r="5" stroke="white" strokeWidth="2" fill="none"/>
+      <line x1="16.5" y1="16.5" x2="20" y2="20" stroke="white" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function UnsplashIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#6b7280"/>
+      <rect x="8" y="15" width="12" height="5" rx="1" fill="white"/>
+      <rect x="10" y="8" width="8" height="7" rx="1" fill="white"/>
+    </svg>
+  );
+}
+function UpstashIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#eab308"/>
+      <path d="M10 8l4 6-4 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      <path d="M15 8l4 6-4 6" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" opacity="0.5"/>
+    </svg>
+  );
+}
+function ResendIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#111"/>
+      <rect x="6" y="10" width="16" height="8" rx="2" fill="white"/>
+      <path d="M6 11l8 5 8-5" stroke="#111" strokeWidth="1.5" fill="none"/>
+    </svg>
+  );
+}
+function ClerkIcon({ size = 28 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 28 28" fill="none">
+      <rect width="28" height="28" rx="6" fill="#6366f1"/>
+      <circle cx="14" cy="11" r="4" fill="white"/>
+      <ellipse cx="14" cy="20" rx="6" ry="3" fill="white" opacity="0.6"/>
+    </svg>
+  );
+}
+
 const integrationLogos = [
   { name: "WordPress", icon: WordPressIcon, color: "#21759b" },
-  { name: "WordPress", icon: WordPressIcon, color: "#21759b" },
-  { name: "WordPress", icon: WordPressIcon, color: "#21759b" },
-  { name: "WordPress", icon: WordPressIcon, color: "#21759b" },
+  { name: "Google Gemini", icon: GoogleIcon, color: "#4285F4" },
+  { name: "Groq", icon: GroqIcon, color: "#10a37f" },
+  { name: "Serper", icon: SerperIcon, color: "#3b82f6" },
+  { name: "OpenAI", icon: OpenAIIcon, color: "#000" },
+  { name: "Unsplash", icon: UnsplashIcon, color: "#6b7280" },
+  { name: "Upstash", icon: UpstashIcon, color: "#eab308" },
+  { name: "Resend", icon: ResendIcon, color: "#111" },
+  { name: "Clerk", icon: ClerkIcon, color: "#6366f1" },
 ];
 
 function LogoMarquee() {
@@ -412,7 +472,7 @@ function LogoMarquee() {
         </span>
       </div>
       <div className="marquee-track">
-        {integrationLogos.map((logo, i) => {
+        {[...integrationLogos, ...integrationLogos].map((logo, i) => {
           const Icon = logo.icon;
           return (
             <div key={`${logo.name}-${i}`} style={{
@@ -451,6 +511,7 @@ const faqs = [
   { q: "Does it work with my WordPress site?", a: "Yes. Connect any WordPress site via our secure integration. Articles are pushed with images, meta descriptions, categories, tags, and proper formatting — zero copy-paste." },
   { q: "What AI models does Pubwize use?", a: "Pubwize uses a combination of frontier AI models optimized for different stages of the content pipeline — research, outlining, drafting, and optimization. We continuously upgrade to the latest models." },
   { q: "Can I maintain my brand voice?", a: "On the Pro plan and above, you can set custom brand voice guidelines, tone preferences, and writing style rules that the AI follows for every article." },
+  { q: "What if I change my mind? Can I cancel?", a: "Absolutely. You can cancel anytime from your dashboard — no forms, no calls, no questions asked. Your subscription stops immediately and you keep access until the end of your billing period. If you're on a paid plan and not satisfied, email us within 14 days for a full refund." },
 ];
 
 /* Logo */
@@ -516,6 +577,7 @@ const testimonials = [];
 export default function LandingPage() {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
+  const { user, isLoaded } = useUser();
   const [mounted, setMounted] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
@@ -617,7 +679,7 @@ export default function LandingPage() {
         .btn-primary {
           position:relative; overflow:hidden;
           display:inline-flex; align-items:center; gap:8px;
-          padding:14px 28px; border-radius:14px; border:none; cursor:pointer;
+          padding:14px 28px; border-radius:8px; border:none; cursor:pointer;
           font-size:15px; font-weight:700; font-family:var(--font-jakarta),sans-serif; letter-spacing:-0.01em;
           background:#6366f1;
           color:#fff; transition:transform 0.2s,box-shadow 0.2s,background 0.2s;
@@ -633,7 +695,7 @@ export default function LandingPage() {
 
         .btn-ghost {
           display:inline-flex; align-items:center; gap:8px;
-          padding:14px 28px; border-radius:14px; cursor:pointer;
+          padding:14px 28px; border-radius:8px; cursor:pointer;
           font-size:15px; font-weight:600; font-family:var(--font-jakarta),sans-serif; letter-spacing:-0.01em;
           background:var(--btn-ghost-bg); border:1px solid var(--btn-ghost-border);
           color:${t.sub}; transition:all 0.2s;
@@ -644,7 +706,7 @@ export default function LandingPage() {
 
         .card {
           background:${t.card}; border:1px solid ${t.border};
-          border-radius:20px; transition:border-color 0.3s, transform 0.3s, box-shadow 0.3s;
+          border-radius:12px; transition:border-color 0.3s, transform 0.3s, box-shadow 0.3s;
           backdrop-filter:blur(4px); cursor:pointer;
         }
         .card:hover { 
@@ -653,6 +715,7 @@ export default function LandingPage() {
           box-shadow:0 28px 90px rgba(99,102,241,0.2), 0 0 0 1px rgba(99,102,241,0.15); 
         }
         .card:active { transform:translateY(-2px) scale(1.01); }
+        .card-hover:hover { border-color:rgba(99,102,241,0.4) !important; }
 
         .nav-link {
           font-size:14px; font-weight:500; color:${t.sub}; text-decoration:none;
@@ -709,7 +772,7 @@ export default function LandingPage() {
         .email-input {
           flex: 1; min-width: 0;
           background: var(--btn-ghost-bg); border: 1px solid var(--btn-ghost-border);
-          border-radius: 12px; color: ${t.text}; font-size: 15px;
+          border-radius: 8px; color: ${t.text}; font-size: 15px;
           font-family: var(--font-jakarta), sans-serif;
           padding: 14px 18px; outline: none; transition: all 0.3s;
         }
@@ -775,7 +838,7 @@ export default function LandingPage() {
           .h2 { font-size: 24px !important; }
           table { font-size: 12px !important; }
           table th, table td { padding: 10px 8px !important; }
-          .card { padding: 16px !important; border-radius: 16px !important; }
+          .card { padding: 16px !important; border-radius: 10px !important; }
           .btn-primary, .btn-ghost { padding: 10px 16px !important; font-size: 13px !important; min-height: 40px !important; justify-content: center !important; }
           .demo-input { font-size: 13px !important; padding: 10px 14px !important; }
         }
@@ -834,12 +897,18 @@ export default function LandingPage() {
                 {theme === "dark" ? <IconSun size={18} /> : <IconMoon size={18} />}
               </button>
             )}
-            <button onClick={() => router.push("/sign-in")} className="nav-link desktop-only" style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 4px", marginLeft: 4 }}>
-              Sign in
+            <button onClick={() => router.push(isLoaded && user ? "/dashboard" : "/sign-in")} className="nav-link desktop-only" style={{ background: "none", border: "none", cursor: "pointer", padding: "8px 4px", marginLeft: 4 }}>
+              {isLoaded && user ? "Dashboard" : "Sign in"}
             </button>
-            <button onClick={() => router.push("/sign-up")} className="btn-primary desktop-only" style={{ padding: "10px 20px", fontSize: 14, boxShadow: "0 0 24px rgba(99,102,241,0.3)" }}>
-              Get started free
-            </button>
+            {isLoaded && user ? (
+              <button onClick={() => router.push("/dashboard")} className="btn-primary desktop-only" style={{ padding: "10px 20px", fontSize: 14 }}>
+                Go to Dashboard
+              </button>
+            ) : (
+              <button onClick={() => router.push("/sign-up")} className="btn-primary desktop-only" style={{ padding: "10px 20px", fontSize: 14, boxShadow: "0 0 24px rgba(99,102,241,0.3)" }}>
+                Get started free
+              </button>
+            )}
             {/* Mobile hamburger */}
             <button
               onClick={() => setMobileOpen((v) => !v)}
@@ -995,26 +1064,41 @@ export default function LandingPage() {
                 Blog
               </a>
               <div style={{ height: 1, background: t.border, margin: "8px 0" }} />
-              <button
-                onClick={() => {
-                  router.push("/sign-in");
-                  setMobileOpen(false);
-                }}
-                className="btn-ghost"
-                style={{ width: "100%", justifyContent: "center" }}
-              >
-                Sign in
-              </button>
-              <button
-                onClick={() => {
-                  router.push("/sign-up");
-                  setMobileOpen(false);
-                }}
-                className="btn-primary"
-                style={{ width: "100%", justifyContent: "center" }}
-              >
-                Get started free
-              </button>
+              {isLoaded && user ? (
+                <button
+                  onClick={() => {
+                    router.push("/dashboard");
+                    setMobileOpen(false);
+                  }}
+                  className="btn-primary"
+                  style={{ width: "100%", justifyContent: "center" }}
+                >
+                  Go to Dashboard
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={() => {
+                      router.push("/sign-in");
+                      setMobileOpen(false);
+                    }}
+                    className="btn-ghost"
+                    style={{ width: "100%", justifyContent: "center" }}
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    onClick={() => {
+                      router.push("/sign-up");
+                      setMobileOpen(false);
+                    }}
+                    className="btn-primary"
+                    style={{ width: "100%", justifyContent: "center" }}
+                  >
+                    Get started free
+                  </button>
+                </>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
@@ -1115,6 +1199,17 @@ export default function LandingPage() {
                   <IconCheck size={11} color={t.accentG} />{item}
                 </span>
               ))}
+            </div>
+            <div style={{ marginTop: 16, display: "flex", justifyContent: "center" }}>
+              <span style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                padding: "4px 12px", borderRadius: 6, fontSize: 11, fontWeight: 600,
+                background: `${t.cyan}12`, border: `1px solid ${t.cyan}28`,
+                color: t.cyan, letterSpacing: "0.02em",
+              }}>
+                <IconSparkle size={11} />
+                Brand new — we're shipping updates weekly
+              </span>
             </div>
           </motion.div>
 
@@ -1648,6 +1743,46 @@ export default function LandingPage() {
           <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
             {faqs.map((faq) => (
               <FAQItem key={faq.q} q={faq.q} a={faq.a} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ BLOG PREVIEW ═══════════════════════════════ */}
+      <section style={{ padding: "clamp(48px,6vw,72px) 0", borderTop: `1px solid ${t.border}` }}>
+        <div className="section">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            style={{ textAlign: "center", marginBottom: 40 }}
+          >
+            <div className="label" style={{ marginBottom: 12 }}>Latest from the Blog</div>
+            <h2 className="h2" style={{ fontSize: "clamp(24px,3vw,32px)" }}>SEO insights & guides</h2>
+          </motion.div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 260px),1fr))", gap: 20, maxWidth: 900, margin: "0 auto" }}>
+            {[
+              { title: "How to Rank a New Article in 30 Days", slug: "rank-new-article-30-days", date: "Mar 5" },
+              { title: "Why AI-Generated Content Ranks (When Done Right)", slug: "ai-content-that-ranks", date: "Mar 10" },
+              { title: "Pillar & Cluster Strategy: How to Dominate a Niche with AI", slug: "pillar-cluster-strategy", date: "Mar 16" },
+            ].map((post) => (
+              <Link
+                key={post.slug}
+                href={`/blog/${post.slug}`}
+                style={{
+                  display: "block", textDecoration: "none",
+                  padding: "24px", borderRadius: 8,
+                  background: t.card, border: `1px solid ${t.border}`,
+                  transition: "border-color 0.3s",
+                }}
+                className="card-hover"
+              >
+                <div style={{ fontSize: 11, color: t.muted, marginBottom: 8, fontWeight: 500 }}>{post.date}</div>
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: t.text, lineHeight: 1.4, letterSpacing: "-0.01em" }}>{post.title}</h3>
+                <div style={{ marginTop: 12, display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: t.accentG, fontWeight: 600 }}>
+                  Read more <IconArrowRight size={11} />
+                </div>
+              </Link>
             ))}
           </div>
         </div>

@@ -46,7 +46,6 @@ const STATUS_CONFIG: Record<string, {
   outline:   { label: "Outline",   color: "#22d3ee", bg: "bg-[#22d3ee]/10", border: "border-[#22d3ee]/20", icon: <Layers className="h-3 w-3" />,       progress: 50  },
   draft:     { label: "Draft",     color: "#f59e0b", bg: "bg-amber-500/10",  border: "border-amber-500/20", icon: <PenLine className="h-3 w-3" />,      progress: 75  },
   optimized: { label: "Optimized", color: "#10b981", bg: "bg-emerald-500/10",border: "border-emerald-500/20",icon:<CheckCircle2 className="h-3 w-3" />, progress: 100 },
-  draft_generated: { label: "Draft", color: "#f59e0b", bg: "bg-amber-500/10", border: "border-amber-500/20", icon: <PenLine className="h-3 w-3" />, progress: 75 },
 };
 
 function getStatus(s: string) {
@@ -157,7 +156,7 @@ function ArticleGridCard({
         </div>
       </div>
       <div className="px-3 sm:px-4 pb-3 sm:pb-4" onClick={(e) => e.stopPropagation()}>
-        <RepurposeButton articleId={article.id} articleTitle={article.keyword} disabled={!["draft_generated", "optimized"].includes(article.status)} />
+        <RepurposeButton articleId={article.id} articleTitle={article.keyword} disabled={!["draft", "optimized"].includes(article.status)} />
       </div>
     </div>
   );
@@ -263,7 +262,7 @@ export default function ArticlesPage() {
 
   const filteredArticles = articles
     .filter(a => a.keyword.toLowerCase().includes(searchQuery.toLowerCase()))
-    .filter(a => filterStatus === "all" || a.status === filterStatus || (filterStatus === "draft" && a.status === "draft_generated"))
+    .filter(a => filterStatus === "all" || a.status === filterStatus)
     .sort((a, b) => {
       switch (sortBy) {
         case "recent": return (b.updatedAt || b.createdAt).getTime() - (a.updatedAt || a.createdAt).getTime();
@@ -278,7 +277,7 @@ export default function ArticlesPage() {
     all: articles.length,
     brief: articles.filter(a => a.status === "brief").length,
     outline: articles.filter(a => a.status === "outline").length,
-    draft: articles.filter(a => a.status === "draft" || a.status === "draft_generated").length,
+    draft: articles.filter(a => a.status === "draft").length,
     optimized: articles.filter(a => a.status === "optimized").length,
   };
 

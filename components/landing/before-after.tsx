@@ -35,7 +35,7 @@ export function BeforeAfter() {
                 <span className="text-[10px] font-bold text-teal">Save {item.before - item.after}m</span>
               </div>
               
-              <div className="relative h-9 bg-white/5 rounded-xl border border-white/5 overflow-hidden flex items-center">
+              <div className="relative h-9 bg-white/5 rounded-lg border border-white/5 overflow-hidden flex items-center">
                 <motion.div
                   initial={{ width: 0 }}
                   whileInView={{ width: "100%" }}
@@ -68,8 +68,8 @@ export function BeforeAfter() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-           <div className="p-5 rounded-2xl border border-white/5 bg-white/[0.02] space-y-3">
-              <div className="h-8 w-8 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20">
+           <div className="p-5 rounded-lg border border-white/5 bg-white/[0.02] space-y-3">
+              <div className="h-8 w-8 rounded-lg bg-red-500/10 flex items-center justify-center border border-red-500/20">
                 <AlertCircle className="h-4 w-4 text-red-500/60" />
               </div>
               <h3 className="text-sm font-black text-foreground">Traditional</h3>
@@ -83,9 +83,9 @@ export function BeforeAfter() {
               </ul>
            </div>
 
-           <div className="p-5 rounded-2xl border border-gold/30 bg-gold/5 space-y-3 relative overflow-hidden">
+           <div className="p-5 rounded-lg border border-gold/30 bg-gold/5 space-y-3 relative overflow-hidden">
               <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-24 h-24 bg-gold/10 blur-[40px] pointer-events-none animate-pulse" />
-              <div className="h-8 w-8 rounded-xl bg-gold/20 flex items-center justify-center border border-gold/30 shadow-lg shadow-gold/20">
+              <div className="h-8 w-8 rounded-lg bg-gold/20 flex items-center justify-center border border-gold/30 shadow-lg shadow-gold/20">
                 <TrendingUp className="h-4 w-4 text-gold" />
               </div>
               <h3 className="text-sm font-black text-foreground">Pubwize</h3>

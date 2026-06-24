@@ -160,7 +160,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
           where: { id: articleId },
           data: {
             draft: { content: finalContent, format: "markdown" },
-            status: "draft_generated",
+            status: "draft",
             settings: { ...settings, targetWordCount },
           },
         });

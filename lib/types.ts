@@ -146,9 +146,8 @@ export interface SocialMediaData {
 
 export type ArticleStatus =
   | "draft"
-  | "brief_generated"
-  | "outline_generated"
-  | "draft_generated"
+  | "brief"
+  | "outline"
   | "optimized";
 
 export interface ArticleSettings {

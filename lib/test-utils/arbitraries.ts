@@ -26,9 +26,9 @@ export function arbitraryFirestoreTimestamp(): fc.Arbitrary<FirestoreTimestamp> 
 export function arbitraryArticleStatus(): fc.Arbitrary<ArticleStatus> {
   return fc.constantFrom(
     'draft',
-    'brief_generated',
-    'outline_generated',
-    'draft_generated',
+    'brief',
+    'outline',
+    'draft',
     'optimized'
   );
 }

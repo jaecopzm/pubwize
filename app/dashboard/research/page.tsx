@@ -330,15 +330,16 @@ export default function ResearchPage() {
     const chipClass = (type: string) =>
         cn("badge-lilac", {
             "bg-primary/10 text-primary border-primary/20": type === "suggested",
-            "bg-teal/10 text-teal border-teal/20": type === "question",
+            "bg-teal/10 text-teal border-teal/20": type === "question" || type === "commercial",
             "bg-lilac/10 text-lilac border-lilac/20": type === "related",
         });
 
     const chipDot = (type: string) => ({
         suggested: "bg-primary",
         question: "bg-teal",
+        commercial: "bg-teal",
         related: "bg-lilac",
-    }[type as "suggested" | "question" | "related"]);
+    }[type as "suggested" | "question" | "commercial" | "related"]);
 
     const getDifficultyColor = (difficulty: number) => {
         if (difficulty < 30) return "text-teal";
@@ -898,7 +899,7 @@ export default function ResearchPage() {
                                         <div
                                             key={idx}
                                             className={cn(
-                                                "card-premium p-3.5 sm:p-5 flex flex-col gap-2.5 sm:gap-3.5 cursor-pointer group animate-in fade-in slide-in-from-bottom-4 relative transition-all",
+                                                "card-premium p-2.5 sm:p-3 flex flex-col gap-1.5 sm:gap-2 cursor-pointer group animate-in fade-in slide-in-from-bottom-4 relative transition-all",
                                                 idx < 10 ? `delay-${idx * 50}` : '',
                                                 isSelected && "ring-2 ring-gold/50 shadow-lg shadow-gold/20"
                                             )}
@@ -931,7 +932,7 @@ export default function ResearchPage() {
                                                 )}
                                             </button>
 
-                                            <div className="flex items-center justify-between mt-6">
+                                            <div className="flex items-center justify-between mt-5">
                                                 <span className={cn("font-mono-dm text-[9px] font-bold uppercase tracking-wider rounded-md px-2 py-1 border flex items-center gap-1.5", chipClass(idea.type))}>
                                                     <span className={cn("w-1.5 h-1.5 rounded-full", chipDot(idea.type))} />
                                                     {idea.type}
@@ -942,37 +943,37 @@ export default function ResearchPage() {
                                                 </div>
                                             </div>
 
-                                            <p className="text-[13px] sm:text-base font-semibold text-foreground leading-snug flex-1 min-h-[2.8rem] sm:min-h-[3rem]">{idea.keyword}</p>
+                                            <p className="text-xs sm:text-sm font-semibold text-foreground leading-snug flex-1">{idea.keyword}</p>
 
                                             {/* ── Metrics ── */}
-                                            <div className="grid grid-cols-3 gap-2 pt-2.5 sm:pt-3 border-t border-border">
+                                            <div className="grid grid-cols-3 gap-1.5 pt-1.5 sm:pt-2 border-t border-border">
                                                 <div className="flex flex-col gap-1">
                                                     <span className="font-mono-dm text-[9px] uppercase tracking-wider text-muted-foreground">Vol</span>
-                                                    <span className="text-sm font-bold text-foreground">{(idea.volume / 1000).toFixed(1)}k</span>
+                                                    <span className="text-xs font-semibold text-foreground">{(idea.volume / 1000).toFixed(1)}k</span>
                                                 </div>
                                                 <div className="flex flex-col gap-1">
                                                     <span className="font-mono-dm text-[9px] uppercase tracking-wider text-muted-foreground">Diff</span>
-                                                    <span className={cn("text-sm font-bold flex items-center gap-1", getDifficultyColor(idea.difficulty))}>
+                                                    <span className={cn("text-xs font-semibold flex items-center gap-1", getDifficultyColor(idea.difficulty))}>
                                                         <span className={cn("w-1.5 h-1.5 rounded-full", getDifficultyColor(idea.difficulty).replace('text-', 'bg-'))} />
                                                         {idea.difficulty}
                                                     </span>
                                                 </div>
                                                 <div className="flex flex-col gap-1">
                                                     <span className="font-mono-dm text-[9px] uppercase tracking-wider text-muted-foreground">CPC</span>
-                                                    <span className="text-sm font-bold text-foreground">${idea.cpc}</span>
+                                                    <span className="text-xs font-semibold text-foreground">${idea.cpc}</span>
                                                 </div>
                                             </div>
 
                                             <button
-                                                className="w-full flex items-center justify-center gap-2 bg-muted border border-border rounded-xl py-2.5 text-xs font-bold text-muted-foreground group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:text-primary transition-all touch-manipulation"
+                                                className="w-full flex items-center justify-center gap-1.5 bg-muted border border-border rounded-lg py-1.5 text-[10px] font-bold text-muted-foreground group-hover:bg-primary/10 group-hover:border-primary/30 group-hover:text-primary transition-all touch-manipulation"
                                                 onClick={(e) => {
                                                     e.stopPropagation();
                                                     window.location.href = `/dashboard/articles/new?keyword=${encodeURIComponent(idea.keyword)}`;
                                                 }}
                                             >
-                                                <Plus size={12} />
+                                                <Plus size={10} />
                                                 Generate
-                                                <ArrowUpRight size={11} className="transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                                                <ArrowUpRight size={9} />
                                             </button>
                                         </div>
                                     );

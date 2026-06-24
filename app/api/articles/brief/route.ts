@@ -100,7 +100,7 @@ export const POST = withErrorHandler(async (req: NextRequest) => {
       ownerId: uid,
       siteId,
       keyword,
-      status: "brief_generated",
+      status: "brief",
       intent: brief.intent,
       articleType: brief.articleType,
       brief: brief as any,

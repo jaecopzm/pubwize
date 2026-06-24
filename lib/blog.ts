@@ -15,6 +15,7 @@ export interface PostMeta {
   tags: string[];
   readingTime: string;
   coverImage?: string;
+  views?: number;
 }
 
 export interface Post extends PostMeta {
@@ -67,16 +68,37 @@ function getMdxPost(slug: string): Post | null {
 
 export interface DbPostMeta extends PostMeta {
   _source: "db";
+  id: string;
 }
 
 export interface DbPost extends Post {
   _source: "db";
+  id: string;
 }
 
 function draftText(article: { draft: unknown }): string {
   if (!article.draft) return "";
-  const d = article.draft as { content?: string };
-  return d.content || "";
+  try {
+    const d = article.draft as { content?: string };
+    const content = d.content || "";
+    return content.replace(/\[IMAGE_SUGGESTION:[^\]]*\]/g, "");
+  } catch {
+    return "";
+  }
+}
+
+function generateExcerpt(content: string, maxLength = 200): string {
+  const cleaned = content
+    .replace(/^#+\s+/gm, "") // Remove markdown headers
+    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Extract link text
+    .replace(/[*_~`]/g, "") // Remove markdown formatting
+    .trim();
+  
+  if (cleaned.length <= maxLength) return cleaned;
+  
+  const truncated = cleaned.slice(0, maxLength);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return lastSpace > 0 ? truncated.slice(0, lastSpace) + "..." : truncated + "...";
 }
 
 export async function getAllDbPosts(): Promise<DbPostMeta[]> {
@@ -84,6 +106,7 @@ export async function getAllDbPosts(): Promise<DbPostMeta[]> {
     const articles = await prisma.article.findMany({
       where: { blogPublishedAt: { not: null } },
       select: {
+        id: true,
         blogSlug: true,
         keyword: true,
         metaTitle: true,
@@ -92,6 +115,7 @@ export async function getAllDbPosts(): Promise<DbPostMeta[]> {
         blogTags: true,
         draft: true,
         featuredImage: true,
+        views: true,
         owner: { select: { displayName: true } },
       },
       orderBy: { blogPublishedAt: "desc" },
@@ -99,16 +123,19 @@ export async function getAllDbPosts(): Promise<DbPostMeta[]> {
 
     return articles.map((a) => {
       const content = draftText(a);
+      const excerpt = a.metaDescription || (content ? generateExcerpt(content) : "");
       return {
-        _source: "db",
+        _source: "db" as const,
+        id: a.id,
         slug: a.blogSlug!,
         title: a.metaTitle || a.keyword,
-        description: a.metaDescription || content.slice(0, 200).replace(/#+\s*/g, "").trim() || "",
+        description: excerpt,
         date: a.blogPublishedAt!.toISOString(),
         author: a.owner.displayName || "Pubwize Team",
         tags: a.blogTags ? a.blogTags.split(",").filter(Boolean) : [],
-        readingTime: content ? readingTime(content).text : "< 1 min read",
+        readingTime: content ? readingTime(content).text : "1 min read",
         coverImage: (a.featuredImage as { url?: string } | null)?.url,
+        views: a.views,
       };
     });
   } catch {
@@ -121,6 +148,7 @@ export async function getDbPost(slug: string): Promise<DbPost | null> {
     const article = await prisma.article.findUnique({
       where: { blogSlug: slug },
       select: {
+        id: true,
         blogSlug: true,
         keyword: true,
         metaTitle: true,
@@ -129,6 +157,7 @@ export async function getDbPost(slug: string): Promise<DbPost | null> {
         blogTags: true,
         draft: true,
         featuredImage: true,
+        views: true,
         owner: { select: { displayName: true } },
       },
     });
@@ -136,16 +165,19 @@ export async function getDbPost(slug: string): Promise<DbPost | null> {
     if (!article || !article.blogPublishedAt) return null;
 
     const content = draftText(article);
+    const excerpt = article.metaDescription || (content ? generateExcerpt(content) : "");
     return {
-      _source: "db",
+      _source: "db" as const,
+      id: article.id,
       slug: article.blogSlug!,
       title: article.metaTitle || article.keyword,
-      description: article.metaDescription || content.slice(0, 200).replace(/#+\s*/g, "").trim() || "",
+      description: excerpt,
       date: article.blogPublishedAt.toISOString(),
       author: article.owner.displayName || "Pubwize Team",
       tags: article.blogTags ? article.blogTags.split(",").filter(Boolean) : [],
-      readingTime: content ? readingTime(content).text : "< 1 min read",
+      readingTime: content ? readingTime(content).text : "1 min read",
       coverImage: (article.featuredImage as { url?: string } | null)?.url,
+      views: article.views,
       content,
     };
   } catch {

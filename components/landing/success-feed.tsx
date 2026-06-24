@@ -32,7 +32,7 @@ export function SuccessFeed() {
           initial={{ opacity: 0, x: -50, scale: 0.9 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: -20, scale: 0.95 }}
-          className="flex items-center gap-4 p-4 rounded-2xl border border-white/10 bg-surface-1/60 backdrop-blur-2xl shadow-2xl overflow-hidden relative min-w-[320px]"
+          className="flex items-center gap-4 p-4 rounded-lg border border-white/10 bg-surface-1/60 backdrop-blur-2xl shadow-2xl overflow-hidden relative min-w-[320px]"
         >
           {/* Animated Glow Line */}
           <motion.div
@@ -42,7 +42,7 @@ export function SuccessFeed() {
             className="absolute bottom-0 left-0 h-[2px] w-full bg-gradient-to-r from-transparent via-gold/50 to-transparent"
           />
 
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/5 border border-white/10 shadow-inner">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white/5 border border-white/10 shadow-inner">
             <User className="h-5 w-5 text-muted-foreground/40" />
           </div>
 

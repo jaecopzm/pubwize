@@ -42,9 +42,9 @@ export function HeroDemo() {
   return (
     <div className="relative w-full max-w-4xl mx-auto mt-12 sm:mt-16 group">
       {/* Decorative Glow */}
-      <div className="absolute -inset-4 bg-gradient-to-r from-gold/10 via-lilac/5 to-teal/10 rounded-[2rem] blur-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-1000" />
+      <div className="absolute -inset-4 bg-gradient-to-r from-gold/10 via-lilac/5 to-teal/10 rounded-lg blur-2xl opacity-50 group-hover:opacity-100 transition-opacity duration-1000" />
       
-      <div className="relative rounded-[2rem] border border-white/10 bg-surface-1/60 backdrop-blur-2xl shadow-2xl overflow-hidden">
+      <div className="relative rounded-lg border border-white/10 bg-surface-1/60 backdrop-blur-2xl shadow-2xl overflow-hidden">
         {/* Browser Top Bar */}
         <div className="flex items-center gap-2 px-6 py-4 border-b border-white/5 bg-white/5">
           <div className="flex gap-1.5">
@@ -67,7 +67,7 @@ export function HeroDemo() {
                   <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gold">
                     <Sparkles className="h-4 w-4" />
                   </div>
-                  <div className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-sm font-medium text-foreground min-h-[46px] flex items-center">
+                  <div className="w-full bg-white/5 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-sm font-medium text-foreground min-h-[46px] flex items-center">
                     {keyword}
                     <motion.span
                       animate={{ opacity: [0, 1, 0] }}
@@ -88,7 +88,7 @@ export function HeroDemo() {
                       scale: step === i ? 1.02 : 1,
                     }}
                     className={cn(
-                      "flex items-center gap-3 p-3 rounded-xl border transition-all duration-500",
+                      "flex items-center gap-3 p-3 rounded-lg border transition-all duration-500",
                       step === i ? "bg-white/5 border-white/10 shadow-lg" : "border-transparent"
                     )}
                   >
@@ -127,7 +127,7 @@ export function HeroDemo() {
                   exit={{ opacity: 0 }}
                   className="h-full flex flex-col items-center justify-center text-center space-y-4"
                 >
-                  <div className="w-16 h-16 rounded-2xl bg-gold/5 border border-gold/10 flex items-center justify-center animate-pulse">
+                  <div className="w-16 h-16 rounded-lg bg-gold/5 border border-gold/10 flex items-center justify-center animate-pulse">
                     <Search className="h-8 w-8 text-gold/40" />
                   </div>
                   <p className="text-sm text-muted-foreground max-w-[200px]">Waiting for your next big idea...</p>
@@ -152,15 +152,15 @@ export function HeroDemo() {
                     <div className="h-2.5 w-4/6 bg-white/5 rounded-full" />
                   </div>
                   <div className="grid grid-cols-3 gap-2 mt-6">
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                    <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                       <div className="text-[9px] text-muted-foreground uppercase font-black mb-1">Volume</div>
                       <div className="text-base font-black text-foreground">12.5k</div>
                     </div>
-                    <div className="p-3 bg-teal/10 rounded-xl border border-teal/20">
+                    <div className="p-3 bg-teal/10 rounded-lg border border-teal/20">
                       <div className="text-[9px] text-teal uppercase font-black mb-1">Difficulty</div>
                       <div className="text-base font-black text-teal">Easy</div>
                     </div>
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                    <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                       <div className="text-[9px] text-muted-foreground uppercase font-black mb-1">CPC</div>
                       <div className="text-base font-black text-foreground">$2.40</div>
                     </div>
@@ -184,7 +184,7 @@ export function HeroDemo() {
                   exit={{ opacity: 0 }}
                   className="space-y-4"
                 >
-                  <div className="p-4 rounded-xl border border-white/10 bg-white/5 shadow-inner">
+                  <div className="p-4 rounded-lg border border-white/10 bg-white/5 shadow-inner">
                     <div className="flex items-center gap-2 mb-4">
                       <Layout className="h-3.5 w-3.5 text-lilac" />
                       <h4 className="text-xs font-black text-foreground">Article Structure</h4>
@@ -214,7 +214,7 @@ export function HeroDemo() {
                     <motion.div
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      className="p-4 rounded-xl border border-gold/20 bg-gradient-to-br from-gold/10 to-gold/5"
+                      className="p-4 rounded-lg border border-gold/20 bg-gradient-to-br from-gold/10 to-gold/5"
                     >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -244,7 +244,7 @@ export function HeroDemo() {
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="p-4 rounded-xl border border-teal/20 bg-teal/5"
+                      className="p-4 rounded-lg border border-teal/20 bg-teal/5"
                     >
                       <div className="flex items-center gap-2 mb-3">
                         <CheckCircle2 className="h-4 w-4 text-teal" />

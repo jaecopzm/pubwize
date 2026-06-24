@@ -119,7 +119,7 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
           onClick={() => setBillingCycle('monthly')}
           style={{
             padding: "10px 24px",
-            borderRadius: "10px",
+            borderRadius: "8px",
             fontSize: "14px",
             fontWeight: 600,
             border: "none",
@@ -136,7 +136,7 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
           style={{
             position: "relative",
             padding: "10px 24px",
-            borderRadius: "10px",
+            borderRadius: "8px",
             fontSize: "14px",
             fontWeight: 600,
             border: "none",
@@ -179,7 +179,7 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
               transition={{ delay: index * 0.1 }}
               style={{
                 position: "relative",
-                borderRadius: "20px",
+                borderRadius: "12px",
                 border: plan.popular ? "1px solid rgba(99,102,241,0.5)" : "1px solid var(--border)",
                 padding: "32px",
                 background: plan.popular ? "linear-gradient(135deg, rgba(99,102,241,0.08), rgba(34,211,238,0.05))" : "var(--card)",
@@ -247,7 +247,7 @@ export function CompactPricingCards({ currentPlan = 'free', onSelectPlan, custom
                 style={{
                   width: "100%",
                   padding: "14px 20px",
-                  borderRadius: "12px",
+                  borderRadius: "8px",
                   fontWeight: 700,
                   fontSize: "15px",
                   marginBottom: "24px",

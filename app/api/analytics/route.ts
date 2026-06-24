@@ -24,9 +24,9 @@ export const GET = withRateLimit(async (req: NextRequest) => {
     ]);
 
     const statusBreakdown = {
-      brief: articles.filter((a) => a.status === "brief_generated").length,
-      outline: articles.filter((a) => a.status === "outline_generated").length,
-      draft: articles.filter((a) => a.status === "draft_generated").length,
+      brief: articles.filter((a) => a.status === "brief").length,
+      outline: articles.filter((a) => a.status === "outline").length,
+      draft: articles.filter((a) => a.status === "draft").length,
       optimized: articles.filter((a) => a.status === "optimized").length,
     };
 

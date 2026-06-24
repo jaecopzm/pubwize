@@ -7,8 +7,32 @@ import Placeholder from "@tiptap/extension-placeholder";
 import CharacterCount from "@tiptap/extension-character-count";
 import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
-import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
-import { Loader2, Sparkles, ChevronDown, Minus, Plus, RefreshCw, AlignLeft, Type, Highlighter, Wand2 } from "lucide-react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle, useCallback } from "react";
+import { createPortal } from "react-dom";
+import {
+  Loader2,
+  Sparkles,
+  ChevronDown,
+  Minus,
+  Plus,
+  RefreshCw,
+  AlignLeft,
+  Type,
+  Highlighter,
+  Wand2,
+  Undo2,
+  Redo2,
+  Bold,
+  Italic,
+  Heading1,
+  Heading2,
+  Heading3,
+  List,
+  ListOrdered,
+  Link2,
+  Quote,
+  Code2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { BubbleMenu } from "@tiptap/react/menus";
@@ -196,30 +220,6 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
     editor?.setEditable(!readonly && !streaming);
   }, [readonly, streaming, editor]);
 
-  // Track text selection to show/hide floating toolbar
-  useEffect(() => {
-    const onSelectionChange = () => {
-      const sel = window.getSelection();
-      if (!sel || sel.isCollapsed || sel.toString().trim().length < 2) {
-        setHasSelection(false);
-        setFloatingPos(null);
-        return;
-      }
-      const range = sel.getRangeAt(0);
-      const rect = range.getBoundingClientRect();
-      const wrapper = wrapperRef.current;
-      if (!wrapper) return;
-      const wRect = wrapper.getBoundingClientRect();
-      setFloatingPos({
-        top: rect.top - wRect.top - 48, // 48px above selection
-        left: Math.max(0, rect.left - wRect.left + rect.width / 2 - 110), // centred, clamped
-      });
-      setHasSelection(true);
-    };
-    document.addEventListener("selectionchange", onSelectionChange);
-    return () => document.removeEventListener("selectionchange", onSelectionChange);
-  }, []);
-
   const handleAIAction = async (action: AIAction) => {
     if (!editor || aiAction) return;
 
@@ -331,10 +331,22 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
     }
   };
 
+  const handleLinkPrompt = () => {
+    if (!editor) return;
+    if (editor.isActive("link")) {
+      editor.chain().focus().unsetLink().run();
+      return;
+    }
+    const url = window.prompt("Enter link URL:");
+    if (url) {
+      editor.chain().focus().setLink({ href: url }).run();
+    }
+  };
+
   return (
     <div className={cn("rich-editor-wrapper relative", heatmapOn && "heatmap-on")} ref={wrapperRef}>
       {/* Toolbar row: Heatmap toggle */}
-      <div className="flex items-center justify-end gap-2 mb-4">
+      <div className="flex items-center justify-end gap-2 mb-3">
         <button
           onClick={() => setHeatmapOn(!heatmapOn)}
           className={cn(
@@ -350,57 +362,7 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
         </button>
       </div>
 
-      {/* Glassmorphism Bubble Menu — appears on text selection */}
-      {editor && (
-        <BubbleMenu
-          editor={editor}
-          className="bubble-menu-v2 flex items-center gap-1.5 p-1.5 bg-black/60 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-[0_32px_64px_-16px_rgba(0,0,0,0.6)]"
-        >
-          <div className="flex items-center gap-1 pr-1.5 border-r border-white/5 mr-1">
-            <button
-              onClick={() => editor.chain().focus().toggleBold().run()}
-              className={cn(
-                "p-2.5 rounded-xl transition-all hover:bg-white/5",
-                editor.isActive("bold") ? "text-indigo-400 bg-indigo-400/10 shadow-inner" : "text-white/40"
-              )}
-            >
-              <Type className="h-4 w-4" />
-            </button>
-            <button
-              onClick={() => editor.chain().focus().toggleItalic().run()}
-              className={cn(
-                "p-2.5 rounded-xl transition-all hover:bg-white/5",
-                editor.isActive("italic") ? "text-indigo-400 bg-indigo-400/10 shadow-inner" : "text-white/40"
-              )}
-            >
-              <AlignLeft className="h-4 w-4" />
-            </button>
-          </div>
 
-          <div className="flex items-center gap-1">
-            {AI_ACTIONS.map((action) => (
-              <button
-                key={action.id}
-                onMouseDown={(e) => { e.preventDefault(); handleAIAction(action.id); }}
-                disabled={!!aiAction}
-                className={cn(
-                  "flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.15em] transition-all",
-                  aiAction === action.id 
-                    ? "bg-indigo-500 text-white shadow-xl shadow-indigo-500/30" 
-                    : "text-white/40 hover:bg-white/5 hover:text-white"
-                )}
-              >
-                {aiAction === action.id ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                )}
-                <span className="hidden sm:inline">{action.label}</span>
-              </button>
-            ))}
-          </div>
-        </BubbleMenu>
-      )}
 
       {/* Streaming overlay */}
       <AnimatePresence>
@@ -416,13 +378,41 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
 
       <EditorContent editor={editor} />
 
+      {/* Floating Formatting Toolbar — fixed, centered over editor column */}
+      {editor && !readonly && !streaming && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed bottom-4 z-50 flex items-center gap-0.5 p-1 bg-card/95 backdrop-blur-md border border-border/80 rounded-xl shadow-2xl shadow-black/30 overflow-x-auto scrollbar-hide -translate-x-1/2 transition-[left] duration-200"
+          style={{ left: "calc(var(--sidebar-left-w, 0px) + (100vw - var(--sidebar-left-w, 0px) - 320px) / 2)" }}
+        >
+            <ToolbarButton onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} icon={Undo2} title="Undo (Ctrl+Z)" />
+            <ToolbarButton onClick={() => editor.chain().focus().redo().run()} disabled={!editor.can().redo()} icon={Redo2} title="Redo" />
+            <ToolbarSeparator />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive("bold")} icon={Bold} title="Bold" />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive("italic")} icon={Italic} title="Italic" />
+            <ToolbarSeparator />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()} active={editor.isActive("heading", { level: 1 })} icon={Heading1} title="Heading 1" />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()} active={editor.isActive("heading", { level: 2 })} icon={Heading2} title="Heading 2" />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()} active={editor.isActive("heading", { level: 3 })} icon={Heading3} title="Heading 3" />
+            <ToolbarSeparator />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleBulletList().run()} active={editor.isActive("bulletList")} icon={List} title="Bullet List" />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleOrderedList().run()} active={editor.isActive("orderedList")} icon={ListOrdered} title="Numbered List" />
+            <ToolbarSeparator />
+            <ToolbarButton onClick={handleLinkPrompt} active={editor.isActive("link")} icon={Link2} title="Insert Link" />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleBlockquote().run()} active={editor.isActive("blockquote")} icon={Quote} title="Blockquote" />
+            <ToolbarButton onClick={() => editor.chain().focus().toggleCodeBlock().run()} active={editor.isActive("codeBlock")} icon={Code2} title="Code Block" />
+            <ToolbarButton onClick={() => editor.chain().focus().setHorizontalRule().run()} icon={Minus} title="Insert Horizontal Rule" />
+        </div>,
+        document.body
+      )}
+
       <style>{`
-        .rich-editor-content {
+        .ProseMirror.rich-editor-content {
           min-height: 400px;
+          padding-bottom: 72px !important;
           outline: none;
-          color: hsl(var(--foreground));
-          font-size: 0.9375rem;
-          line-height: 1.7;
+          color: hsl(var(--foreground)) !important;
+          font-size: 0.85rem !important;
+          line-height: 1.55 !important;
           font-family: inherit;
           padding: 0;
           border-radius: 0;
@@ -432,19 +422,19 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
         }
 
         @media (min-width: 640px) {
-          .rich-editor-content {
+          .ProseMirror.rich-editor-content {
             min-height: 500px;
-            font-size: 1rem;
+            font-size: 0.9rem !important;
           }
         }
 
-        .rich-editor-content:focus {
+        .ProseMirror.rich-editor-content:focus {
           background: transparent;
           border: none;
           box-shadow: none;
         }
 
-        .rich-editor-content.is-editor-empty:first-child::before {
+        .ProseMirror.rich-editor-content.is-editor-empty:first-child::before {
           content: attr(data-placeholder);
           float: left;
           color: hsl(var(--muted-foreground));
@@ -454,65 +444,65 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
           font-style: italic;
         }
 
-        .rich-editor-content h1 {
-          font-size: 1.5rem;
+        .ProseMirror.rich-editor-content h1 {
+          font-size: 1.3rem !important;
           font-weight: 700;
-          letter-spacing: -0.02em;
-          margin: 1.5rem 0 1rem;
-          color: hsl(var(--foreground));
-          line-height: 1.2;
+          letter-spacing: -0.015em;
+          margin: 1.1rem 0 0.5rem !important;
+          color: hsl(var(--foreground)) !important;
+          line-height: 1.25 !important;
         }
         
         @media (min-width: 640px) {
-          .rich-editor-content h1 {
-            font-size: 2rem;
+          .ProseMirror.rich-editor-content h1 {
+            font-size: 1.5rem !important;
           }
         }
         
         @media (min-width: 768px) {
-          .rich-editor-content h1 {
-            font-size: 2.5rem;
+          .ProseMirror.rich-editor-content h1 {
+            font-size: 1.85rem !important;
           }
         }
         
-        .rich-editor-content h2 {
-          font-size: 1.25rem;
+        .ProseMirror.rich-editor-content h2 {
+          font-size: 1.1rem !important;
           font-weight: 700;
-          letter-spacing: -0.02em;
-          margin: 1.25rem 0 0.75rem;
-          color: hsl(var(--foreground));
-          line-height: 1.3;
+          letter-spacing: -0.015em;
+          margin: 0.9rem 0 0.4rem !important;
+          color: hsl(var(--foreground)) !important;
+          line-height: 1.3 !important;
         }
         
         @media (min-width: 640px) {
-          .rich-editor-content h2 {
-            font-size: 1.5rem;
+          .ProseMirror.rich-editor-content h2 {
+            font-size: 1.25rem !important;
           }
         }
         
         @media (min-width: 768px) {
-          .rich-editor-content h2 {
-            font-size: 1.875rem;
+          .ProseMirror.rich-editor-content h2 {
+            font-size: 1.4rem !important;
           }
         }
         
-        .rich-editor-content h3 {
-          font-size: 1.125rem;
+        .ProseMirror.rich-editor-content h3 {
+          font-size: 1rem !important;
           font-weight: 600;
           letter-spacing: -0.01em;
-          margin: 1rem 0 0.5rem;
-          color: hsl(var(--foreground));
+          margin: 0.7rem 0 0.3rem !important;
+          color: hsl(var(--foreground)) !important;
         }
         
         @media (min-width: 640px) {
-          .rich-editor-content h3 {
-            font-size: 1.25rem;
+          .ProseMirror.rich-editor-content h3 {
+            font-size: 1.1rem !important;
           }
         }
         
-        .rich-editor-content p {
-          margin-bottom: 1rem;
-          color: hsl(var(--foreground));
+        .ProseMirror.rich-editor-content p {
+          margin-bottom: 0.5rem !important;
+          color: hsl(var(--foreground)) !important;
         }
         
         .rich-editor-content strong {
@@ -586,3 +576,39 @@ export const RichEditor = forwardRef<RichEditorRef, RichEditorProps>(({
     </div>
   );
 });
+
+// ── Toolbar Subcomponents ──────────────────────────────────────────
+function ToolbarButton({
+  onClick,
+  active = false,
+  disabled = false,
+  icon: Icon,
+  title,
+}: {
+  onClick: () => void;
+  active?: boolean;
+  disabled?: boolean;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className={cn(
+        "p-1.5 rounded-lg transition-all active:scale-95 shrink-0",
+        active
+          ? "bg-primary text-primary-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-muted hover:text-foreground disabled:opacity-30 disabled:hover:bg-transparent"
+      )}
+    >
+      <Icon className="h-3.5 w-3.5" />
+    </button>
+  );
+}
+
+function ToolbarSeparator() {
+  return <div className="h-4 w-px bg-border/80 mx-1 shrink-0" />;
+}

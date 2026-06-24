@@ -71,7 +71,7 @@ model Article {
   site        Site      @relation(fields: [siteId], references: [id], onDelete: Cascade)
 
   keyword     String
-  status      String    @default("draft") // draft | brief_generated | outline_generated | draft_generated | optimized
+  status      String    @default("draft") // draft | brief | outline | optimized
   intent      String?
   articleType String?
 
@@ -101,6 +101,7 @@ model Article {
   blogPublishedAt DateTime?
   blogSlug        String?   @unique
   blogTags        String?
+  views           Int       @default(0)
 
   // Template
   templateId      String?

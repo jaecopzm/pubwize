@@ -1,6 +1,8 @@
 import { notFound } from "next/navigation";
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { getAllPosts, getPost } from "@/lib/blog";
+import { getPost } from "@/lib/blog";
+import { getCachedPosts } from "@/lib/blog-cache";
+import { getRelatedPosts } from "@/lib/blog-related";
 import { markdownToHtml } from "@/lib/wordpress/markdown";
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -8,6 +10,8 @@ import { ArrowLeft, Calendar, Clock, User, Share2 } from "lucide-react";
 import { ReadingProgress } from "@/components/blog/reading-progress";
 import { TableOfContents } from "@/components/blog/table-of-contents";
 import { CopyLinkButton } from "@/components/blog/copy-link-button";
+import { ViewTracker } from "@/components/blog/view-tracker";
+import { NewsletterSignup } from "@/components/blog/newsletter-signup";
 import type { DbPost } from "@/lib/blog";
 
 interface Props {
@@ -15,17 +19,37 @@ interface Props {
 }
 
 export async function generateStaticParams() {
-  return (await getAllPosts()).map((p) => ({ slug: p.slug }));
+  return (await getCachedPosts()).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPost(slug);
   if (!post) return {};
+  
+  const url = `https://pubwize.com/blog/${slug}`;
+  const ogImage = `https://pubwize.com/api/og?title=${encodeURIComponent(post.title)}${post.tags[0] ? `&tag=${encodeURIComponent(post.tags[0])}` : ""}&rt=${encodeURIComponent(post.readingTime)}`;
+
   return {
     title: `${post.title} — Pubwize Blog`,
     description: post.description,
-    openGraph: { title: post.title, description: post.description, type: "article", publishedTime: post.date },
+    alternates: { canonical: url },
+    openGraph: {
+      title: post.title,
+      description: post.description,
+      type: "article",
+      publishedTime: post.date,
+      authors: [post.author],
+      url,
+      images: [{ url: ogImage, width: 1200, height: 630, alt: post.title }],
+      siteName: "Pubwize",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.description,
+      images: [ogImage],
+    },
   };
 }
 
@@ -34,14 +58,46 @@ export default async function BlogPostPage({ params }: Props) {
   const post = await getPost(slug);
   if (!post) notFound();
 
-  const allPosts = await getAllPosts();
-  const currentIndex = allPosts.findIndex(p => p.slug === slug);
-  const relatedPosts = allPosts.filter((p, i) => i !== currentIndex).slice(0, 2);
+  const allPosts = await getCachedPosts();
+  const relatedPosts = getRelatedPosts(post, allPosts, 3);
 
   const isDbPost = "_source" in post && (post as DbPost)._source === "db";
+  const articleId = isDbPost ? (post as DbPost).id : null;
+  const ogImage = `https://pubwize.com/api/og?title=${encodeURIComponent(post.title)}${post.tags[0] ? `&tag=${encodeURIComponent(post.tags[0])}` : ""}&rt=${encodeURIComponent(post.readingTime)}`;
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: post.title,
+    description: post.description,
+    image: post.coverImage || ogImage,
+    datePublished: post.date,
+    dateModified: post.date,
+    author: {
+      "@type": "Person",
+      name: post.author,
+    },
+    publisher: {
+      "@type": "Organization",
+      name: "Pubwize",
+      logo: {
+        "@type": "ImageObject",
+        url: "https://pubwize.com/pubwize-icon.png",
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": `https://pubwize.com/blog/${slug}`,
+    },
+  };
 
   return (
     <main className="min-h-screen aurora-bg noise-overlay">
+      {articleId && <ViewTracker articleId={articleId} />}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
       <ReadingProgress />
       
       {/* Back Navigation */}
@@ -93,9 +149,21 @@ export default async function BlogPostPage({ params }: Props) {
           {/* Tags */}
           <div className="flex gap-2 flex-wrap">
             {post.tags.map((tag) => (
-              <span key={tag} className="badge-gold text-xs">{tag}</span>
+              <Link key={tag} href={`/blog?tag=${tag}`} className="badge-gold text-xs hover:opacity-80 transition-opacity">{tag}</Link>
             ))}
           </div>
+
+          {/* Featured Image */}
+          {post.coverImage && (
+            <div className="mt-8 -mx-6 sm:-mx-8 lg:-mx-12">
+              <img
+                src={post.coverImage}
+                alt={post.title}
+                className="w-full h-64 sm:h-80 lg:h-96 object-cover rounded-xl"
+                loading="eager"
+              />
+            </div>
+          )}
         </div>
 
         {/* Divider */}
@@ -115,7 +183,7 @@ export default async function BlogPostPage({ params }: Props) {
           prose-blockquote:border-l-4 prose-blockquote:border-gold prose-blockquote:bg-gold/5 prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:rounded-r-xl prose-blockquote:not-italic prose-blockquote:text-foreground/90
         ">
           {isDbPost ? (
-            <div dangerouslySetInnerHTML={{ __html: markdownToHtml(post.content) }} />
+            <div dangerouslySetInnerHTML={{ __html: markdownToHtml(post.content.replace(/\[IMAGE_SUGGESTION:[^\]]*\]/g, "")) }} />
           ) : (
             <MDXRemote source={post.content} />
           )}
@@ -137,6 +205,9 @@ export default async function BlogPostPage({ params }: Props) {
           </div>
           <CopyLinkButton />
         </div>
+
+        {/* Newsletter */}
+        <NewsletterSignup />
       </article>
 
       {/* Related Posts */}

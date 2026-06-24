@@ -108,7 +108,7 @@ export function KPICard({
     <button
       onClick={onClick}
       className={cn(
-        "group relative flex flex-col gap-2 sm:gap-3 overflow-hidden rounded-lg sm:rounded-xl border p-3 sm:p-4 text-left",
+        "group relative flex flex-col gap-2 sm:gap-3 overflow-hidden rounded-lg border p-3 sm:p-4 text-left",
         "transition-all duration-300",
         "hover:scale-[1.025] hover:shadow-xl",
         "active:scale-[0.98]",

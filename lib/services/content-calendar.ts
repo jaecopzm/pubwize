@@ -42,7 +42,7 @@ export async function scheduleArticle(
   if (!article) throw new Error("Article not found");
   if (article.ownerId !== userId) throw new Error("Unauthorized: You do not own this article");
 
-  const validStatuses: ArticleStatus[] = ["draft_generated", "optimized"];
+  const validStatuses: ArticleStatus[] = ["draft", "optimized"];
   if (!validStatuses.includes(article.status as ArticleStatus)) {
     throw new Error("Cannot schedule article: Article must be in draft or later status");
   }
@@ -70,7 +70,7 @@ export async function getUnscheduledArticles(
     where: {
       ownerId: userId,
       scheduledDate: null,
-      status: { in: ["draft_generated", "optimized"] },
+      status: { in: ["draft", "optimized"] },
     },
   });
 

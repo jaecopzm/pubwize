@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, Lightbulb } from "lucide-react";
 import { getPhases, getRandomTip, getEstimatedTime } from "@/lib/generation-steps";
 import { cn } from "@/lib/utils";
 
@@ -138,7 +138,8 @@ export function GenerationLoader({ step, message, keyword }: GenerationLoaderPro
 
       {/* Tip Banner */}
       {currentTip && (
-        <div className="mt-6 p-3 rounded-lg border border-border/50 bg-muted/30 text-left w-full">
+        <div className="mt-6 p-3 rounded-lg border border-border/50 bg-muted/30 text-left w-full flex items-start gap-2">
+          <Lightbulb className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
           <p className="text-[11px] leading-relaxed text-muted-foreground">
             {currentTip}
           </p>

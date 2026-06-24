@@ -487,27 +487,27 @@ export function DraftPanel({
                     </div>
 
                     {/* Featured Image */}
-                    <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
-                        <div className="flex items-center justify-between mb-2">
+                    <div className="rounded-lg border border-border bg-card p-2 shadow-sm">
+                        <div className="flex items-center justify-between mb-1.5">
                             <h4 className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Featured Image</h4>
                             <button
                                 onClick={() => setShowFeaturedImageSearch(true)}
-                                className="p-1.5 rounded-md bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
+                                className="p-1 rounded-md bg-muted hover:bg-accent text-muted-foreground hover:text-foreground transition-all"
                             >
-                                <Edit3 className="h-3.5 w-3.5" />
+                                <Edit3 className="h-3 w-3" />
                             </button>
                         </div>
                         {featuredImage ? (
-                            <div className="relative aspect-video rounded-md overflow-hidden border border-border group cursor-pointer" onClick={() => setShowFeaturedImageSearch(true)}>
+                            <div className="relative h-28 rounded-md overflow-hidden border border-border group cursor-pointer" onClick={() => setShowFeaturedImageSearch(true)}>
                                 <img src={featuredImage} alt="Featured" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105" />
                             </div>
                         ) : (
                             <button 
                                 onClick={() => setShowFeaturedImageSearch(true)}
-                                className="w-full aspect-video rounded-md border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1.5 hover:bg-muted transition-all"
+                                className="w-full h-20 rounded-md border-2 border-dashed border-border bg-muted/50 flex flex-col items-center justify-center gap-1 hover:bg-muted transition-all"
                             >
-                                <Download className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-[10px] font-semibold text-muted-foreground">Add Image</span>
+                                <Download className="h-3.5 w-3.5 text-muted-foreground" />
+                                <span className="text-[9px] font-semibold text-muted-foreground">Add Image</span>
                             </button>
                         )}
                     </div>
@@ -535,14 +535,14 @@ export function DraftPanel({
                                 initial={{ opacity: 0, scale: 0.98 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 style={{ color: 'hsl(var(--foreground))' }}
-                                className="max-w-none text-sm sm:text-base leading-relaxed
-                                         [&_h1]:text-xl [&_h1]:sm:text-2xl [&_h1]:md:text-3xl [&_h1]:font-bold [&_h1]:mb-4 [&_h1]:mt-6
-                                         [&_h2]:text-lg [&_h2]:sm:text-xl [&_h2]:md:text-2xl [&_h2]:font-bold [&_h2]:mb-3 [&_h2]:mt-5
-                                         [&_h3]:text-base [&_h3]:sm:text-lg [&_h3]:md:text-xl [&_h3]:font-bold [&_h3]:mb-2 [&_h3]:mt-4
-                                         [&_p]:mb-4 [&_p]:leading-relaxed
-                                         [&_ul]:mb-4 [&_ul]:pl-6 [&_ul]:list-disc
-                                         [&_ol]:mb-4 [&_ol]:pl-6 [&_ol]:list-decimal
-                                         [&_li]:mb-2
+                                className="max-w-none text-xs sm:text-sm leading-relaxed
+                                         [&_h1]:text-lg [&_h1]:sm:text-xl [&_h1]:md:text-2xl [&_h1]:font-bold [&_h1]:mb-2.5 [&_h1]:mt-4
+                                         [&_h2]:text-base [&_h2]:sm:text-lg [&_h2]:md:text-xl [&_h2]:font-bold [&_h2]:mb-2 [&_h2]:mt-3.5
+                                         [&_h3]:text-sm [&_h3]:sm:text-base [&_h3]:font-bold [&_h3]:mb-1.5 [&_h3]:mt-3
+                                         [&_p]:mb-2.5 [&_p]:leading-relaxed
+                                         [&_ul]:mb-3 [&_ul]:pl-5 [&_ul]:list-disc
+                                         [&_ol]:mb-3 [&_ol]:pl-5 [&_ol]:list-decimal
+                                         [&_li]:mb-1.5
                                          [&_a]:text-primary [&_a]:underline
                                          [&_strong]:font-semibold
                                          [&_code]:text-xs [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded

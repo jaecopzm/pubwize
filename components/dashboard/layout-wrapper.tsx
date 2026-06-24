@@ -144,43 +144,19 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
     router.push("/sign-in");
   };
 
-  /* ── Premium Loading screen ── */
+  /* ── Simple Loading screen ── */
   if (!isLoaded) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="flex flex-col items-center gap-6">
-          {/* Animated spinner with gradient */}
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="absolute inset-0 rounded-full bg-gradient-to-r from-primary/20 to-cyan-500/20 blur-xl animate-pulse" />
-            <div className="relative w-12 h-12 rounded-full border-3 border-transparent bg-gradient-to-r from-primary to-cyan-500 animate-spin"
-              style={{
-                WebkitMask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                WebkitMaskComposite: 'xor',
-                maskComposite: 'exclude',
-                padding: '3px'
-              }}
-            />
+            <div className="w-10 h-10 rounded-full border-2 border-primary border-t-transparent animate-spin" />
           </div>
-          
-          {/* Premium branding */}
-          <div className="flex flex-col items-center gap-2">
-            <span className="text-2xl font-black tracking-tight bg-gradient-to-r from-primary to-cyan-500 bg-clip-text text-transparent" style={{ fontFamily: "'DM Serif Display', serif" }}>
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-xl font-black tracking-tight text-foreground" style={{ fontFamily: "'Syne', sans-serif" }}>
               PubWize
             </span>
             <span className="text-sm text-muted-foreground font-medium">Loading workspace...</span>
-          </div>
-          
-          {/* Animated dots */}
-          <div className="flex gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <div
-                key={i}
-                className="w-2 h-2 rounded-full bg-primary/60"
-                style={{
-                  animation: `bounce 1.4s ease-in-out ${i * 0.16}s infinite`
-                }}
-              />
-            ))}
           </div>
         </div>
       </div>
@@ -242,8 +218,7 @@ export function DashboardLayoutWrapper({ children }: DashboardLayoutWrapperProps
           const isArticleEditor = /^\/dashboard\/articles\/[^/]+$/.test(pathname);
           return (
             <div
-              className="dlw-content"
-              style={isArticleEditor ? { padding: 0 } : undefined}
+              className={cn("dlw-content", isArticleEditor && "dlw-content-flush")}
             >
               {usageData && (
                 <UsageWarningBanner
