@@ -6,13 +6,16 @@ import { getRelatedPosts } from "@/lib/blog-related";
 import { markdownToHtml } from "@/lib/wordpress/markdown";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ArrowLeft, Calendar, Clock, User, Share2 } from "lucide-react";
+import { Calendar, Clock, User, Share2 } from "lucide-react";
 import { ReadingProgress } from "@/components/blog/reading-progress";
 import { TableOfContents } from "@/components/blog/table-of-contents";
 import { CopyLinkButton } from "@/components/blog/copy-link-button";
 import { ViewTracker } from "@/components/blog/view-tracker";
 import { NewsletterSignup } from "@/components/blog/newsletter-signup";
 import type { DbPost } from "@/lib/blog";
+import { BlogDetailNav } from "./blog-detail-nav";
+import { AuthorCard } from "@/components/blog/author-card";
+import { BackToTop } from "@/components/blog/back-to-top";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -100,26 +103,14 @@ export default async function BlogPostPage({ params }: Props) {
       />
       <ReadingProgress />
       
-      {/* Back Navigation */}
-      <div className="border-b border-border/50 bg-card/50 backdrop-blur-sm sticky top-0 z-40">
-        <div className="max-w-4xl mx-auto px-6 py-4">
-          <Link 
-            href="/blog" 
-            className="inline-flex items-center gap-2 text-sm font-semibold text-muted-foreground hover:text-gold transition-colors group"
-          >
-            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-            Back to blog
-          </Link>
-        </div>
-      </div>
-
+      <BlogDetailNav />
       <TableOfContents />
 
       {/* Article Header */}
-      <article className="max-w-4xl mx-auto px-6 py-12 sm:py-16 lg:py-20">
-        <div className="mb-8 sm:mb-12">
+      <article className="max-w-4xl mx-auto px-6 py-8 sm:py-12 lg:py-16">
+        <div className="mb-6 sm:mb-8">
           {/* Meta Info */}
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mb-6">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground mb-4">
             <div className="flex items-center gap-1.5">
               <Calendar className="h-4 w-4" />
               <time>{new Date(post.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</time>
@@ -137,12 +128,12 @@ export default async function BlogPostPage({ params }: Props) {
           </div>
 
           {/* Title */}
-          <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight mb-6 leading-tight">
+          <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight mb-4 leading-tight">
             {post.title}
           </h1>
 
           {/* Description */}
-          <p className="text-xl sm:text-2xl text-muted-foreground leading-relaxed mb-8">
+          <p className="text-lg sm:text-xl text-muted-foreground leading-relaxed mb-6">
             {post.description}
           </p>
 
@@ -155,11 +146,11 @@ export default async function BlogPostPage({ params }: Props) {
 
           {/* Featured Image */}
           {post.coverImage && (
-            <div className="mt-8 -mx-6 sm:-mx-8 lg:-mx-12">
+            <div className="mt-6">
               <img
                 src={post.coverImage}
                 alt={post.title}
-                className="w-full h-64 sm:h-80 lg:h-96 object-cover rounded-xl"
+                className="w-full max-h-[clamp(200px,50vw,480px)] object-cover rounded-xl"
                 loading="eager"
               />
             </div>
@@ -167,7 +158,7 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
 
         {/* Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-12" />
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mb-8" />
 
         {/* Article Content */}
         <div className="prose prose-lg prose-neutral dark:prose-invert max-w-none
@@ -190,46 +181,49 @@ export default async function BlogPostPage({ params }: Props) {
         </div>
 
         {/* Bottom Divider */}
-        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mt-16 mb-12" />
+        <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent mt-10 mb-8" />
 
-        {/* Share Section */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 py-6 px-8 rounded-2xl border border-border bg-card/50">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-lg bg-gold/10 flex items-center justify-center">
+        <div className="space-y-5">
+          {/* Share Section */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 py-5 px-6 rounded-xl border border-border bg-card/50">
+            <div className="flex items-center gap-3">
               <Share2 className="h-5 w-5 text-gold" />
+              <div>
+                <p className="font-semibold text-sm text-foreground">Found this helpful?</p>
+                <p className="text-xs text-muted-foreground">Share it with your team</p>
+              </div>
             </div>
-            <div>
-              <p className="font-semibold text-sm text-foreground">Found this helpful?</p>
-              <p className="text-xs text-muted-foreground">Share it with your team</p>
-            </div>
+            <CopyLinkButton />
           </div>
-          <CopyLinkButton />
-        </div>
 
-        {/* Newsletter */}
-        <NewsletterSignup />
+          {/* Author */}
+          <AuthorCard author={post.author} />
+
+          {/* Newsletter */}
+          <NewsletterSignup />
+        </div>
       </article>
 
       {/* Related Posts */}
       {relatedPosts.length > 0 && (
         <section className="border-t border-border/50 bg-card/30">
-          <div className="max-w-6xl mx-auto px-6 py-12 sm:py-16 lg:py-20">
-            <div className="flex items-center gap-2 mb-8">
-              <div className="h-1 w-8 bg-gradient-to-r from-gold to-teal rounded-full" />
-              <h2 className="font-display text-2xl sm:text-3xl font-bold">Continue Reading</h2>
+          <div className="max-w-4xl mx-auto px-6 py-10 sm:py-12 lg:py-16">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="h-1 w-6 bg-gradient-to-r from-gold to-teal rounded-full" />
+              <h2 className="font-display text-xl sm:text-2xl font-bold">Continue Reading</h2>
             </div>
-            <div className="grid gap-6 sm:gap-8 md:grid-cols-2">
+            <div className="grid gap-5 sm:gap-6 md:grid-cols-2">
               {relatedPosts.map((relatedPost) => (
                 <Link key={relatedPost.slug} href={`/blog/${relatedPost.slug}`} className="group">
-                  <article className="h-full rounded-2xl border border-border bg-card p-6 sm:p-8 transition-all duration-300 hover:border-gold/30 hover:shadow-xl hover:shadow-gold/5 hover:-translate-y-1">
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                  <article className="h-full rounded-xl border border-border bg-card p-5 sm:p-6 transition-all duration-200 hover:border-gold/30 hover:shadow-lg hover:shadow-gold/5 hover:-translate-y-1">
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
                       <Calendar className="h-3 w-3" />
                       <time>{new Date(relatedPost.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</time>
                       <span>·</span>
                       <Clock className="h-3 w-3" />
                       <span>{relatedPost.readingTime}</span>
                     </div>
-                    <h3 className="font-display text-xl sm:text-2xl font-bold mb-3 group-hover:text-gold transition-colors leading-tight">
+                    <h3 className="font-display text-lg sm:text-xl font-bold mb-2 group-hover:text-gold transition-colors leading-tight">
                       {relatedPost.title}
                     </h3>
                     <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
@@ -242,6 +236,8 @@ export default async function BlogPostPage({ params }: Props) {
           </div>
         </section>
       )}
+
+      <BackToTop />
     </main>
   );
 }

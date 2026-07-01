@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
+import { Mail, ArrowRight, Loader2, CheckCircle2 } from "lucide-react";
 
 export function NewsletterSignup() {
   const [email, setEmail] = useState("");
@@ -33,9 +33,7 @@ export function NewsletterSignup() {
   return (
     <div className="rounded-2xl border border-[rgba(99,102,241,0.2)] bg-gradient-to-br from-[rgba(99,102,241,0.05)] to-[rgba(34,211,238,0.05)] p-8">
       <div className="flex items-center gap-2 mb-3">
-        <div className="h-7 w-7 rounded-lg bg-[rgba(99,102,241,0.1)] flex items-center justify-center">
-          <Sparkles className="h-3.5 w-3.5 text-[#818cf8]" />
-        </div>
+        <Mail className="h-4 w-4 text-[#818cf8]" />
         <span className="font-mono text-xs font-bold uppercase tracking-widest text-[#818cf8]">Newsletter</span>
       </div>
 

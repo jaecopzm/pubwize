@@ -138,7 +138,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider appearance={{ baseTheme: dark }}>
-      <html lang="en" suppressHydrationWarning>
+      <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
         <body
         className={`${satoshi.variable} ${jakarta.variable} ${roboto.variable} ${syne.variable} ${jetbrainsMono.variable} font-sans antialiased`}
         style={{ fontFamily: 'var(--font-satoshi), sans-serif' }}

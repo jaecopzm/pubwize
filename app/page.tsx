@@ -285,10 +285,10 @@ function TypingCycle() {
     <AnimatePresence mode="wait">
       <motion.span
         key={heroWords[index]}
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -20 }}
-        transition={{ duration: 0.45 }}
+        exit={{ opacity: 0, y: -12 }}
+        transition={{ duration: 0.3 }}
       >
         <GradText from={t.accent} to={t.cyan}>{heroWords[index]}</GradText>
       </motion.span>
@@ -301,7 +301,7 @@ function FAQItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 8 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       whileHover={{ scale: 1.01 }}
@@ -731,7 +731,7 @@ export default function LandingPage() {
         .nav-link:hover::after { width:100%; }
 
         .section { max-width:1160px; margin:0 auto; padding:0 clamp(16px,4vw,32px); }
-        .section-pad { padding:clamp(72px,10vw,128px) 0; }
+        .section-pad { padding:clamp(56px,7vw,88px) 0; }
         .label {
           font-family:var(--font-jetbrains),monospace; font-size:11px; font-weight:500;
           letter-spacing:0.14em; text-transform:uppercase; color:${t.accentG};
@@ -1113,7 +1113,7 @@ export default function LandingPage() {
         <GridOverlay />
 
         <motion.div className="section" style={{ position: "relative", zIndex: 2, textAlign: "center", y: heroY }}>
-          <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}>
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35 }}>
             <Badge>
               <IconSparkle size={12} />
               Built for the AI era of content
@@ -1122,10 +1122,10 @@ export default function LandingPage() {
 
           <motion.h1
             className="h1"
-            initial={{ opacity: 0, y: 28 }}
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.12 }}
-            style={{ marginTop: 32, marginBottom: 28 }}
+            transition={{ duration: 0.45, delay: 0.08 }}
+            style={{ marginTop: 28, marginBottom: 24 }}
           >
             AI content that<br />
             <TypingCycle />
@@ -1133,19 +1133,19 @@ export default function LandingPage() {
 
           <motion.p
             className="body-lg"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-            style={{ maxWidth: 560, margin: "0 auto 40px" }}
+            transition={{ duration: 0.35, delay: 0.16 }}
+            style={{ maxWidth: 560, margin: "0 auto 32px" }}
           >
             Pubwize is your AI-first content platform. Generate ranked articles, repurpose to social, and publish to WordPress — all in one workflow.
           </motion.p>
 
           <motion.div
             className="hero-actions"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
+            transition={{ duration: 0.35, delay: 0.24 }}
           >
             {emailSubmitted ? (
               <motion.div
@@ -1224,23 +1224,23 @@ export default function LandingPage() {
         <Orb color={t.cyan} size={400} x="80%" y="50%" blur={200} />
         <div className="section" style={{ position: "relative", zIndex: 2 }}>
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ textAlign: "center", marginBottom: 48 }}
+            style={{ textAlign: "center", marginBottom: 32 }}
           >
-            <div className="label" style={{ marginBottom: 16 }}>Try It Live</div>
+            <div className="label" style={{ marginBottom: 12 }}>Try It Live</div>
             <h2 className="h2">See the magic in action</h2>
-            <p className="body-lg" style={{ maxWidth: 480, margin: "12px auto 0" }}>
+            <p className="body-lg" style={{ maxWidth: 480, margin: "10px auto 0" }}>
               Enter any keyword and watch AI generate an SEO-optimized article structure instantly.
             </p>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 32 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.15 }}
             style={{ maxWidth: 680, margin: "0 auto" }}
           >
             <div style={{
@@ -1316,9 +1316,9 @@ export default function LandingPage() {
                         {["Analyzing SERP competitors...", "Extracting keywords...", "Building outline structure..."].map((text, i) => (
                           <motion.div
                             key={text}
-                            initial={{ opacity: 0, x: -20 }}
+                            initial={{ opacity: 0, x: -12 }}
                             animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * 0.3 }}
+                            transition={{ delay: i * 0.2 }}
                             style={{ display: "flex", alignItems: "center", gap: 10 }}
                           >
                             <motion.div
@@ -1358,7 +1358,7 @@ export default function LandingPage() {
       <LogoMarquee />
 
       {/* ══ STATS STRIP ══════════════════════════════════ */}
-      <section id="stats" style={{ padding: "40px 0", borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}`, background: t.surface }}>
+      <section id="stats" style={{ padding: "28px 0", borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}`, background: t.surface }}>
         <div className="section">
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 140px),1fr))", gap: 16, maxWidth: 800, margin: "0 auto" }}>
             {[
@@ -1379,34 +1379,34 @@ export default function LandingPage() {
       </section>
 
       {/* ══ FEATURES ═════════════════════════════════════ */}
-      <section id="features" style={{ padding: "clamp(72px,10vw,128px) 0" }}>
+      <section id="features" style={{ padding: "clamp(56px,7vw,88px) 0" }}>
         <div className="section">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            style={{ textAlign: "center", marginBottom: 64 }}
+            transition={{ duration: 0.4 }}
+            style={{ textAlign: "center", marginBottom: 40 }}
           >
-            <div className="label" style={{ marginBottom: 16 }}>Platform Features</div>
+            <div className="label" style={{ marginBottom: 12 }}>Platform Features</div>
             <h2 className="h2">Everything your content<br />team needs to win</h2>
-            <p className="body-lg" style={{ maxWidth: 520, margin: "16px auto 0" }}>
+            <p className="body-lg" style={{ maxWidth: 520, margin: "12px auto 0" }}>
               From keyword discovery to ranking — a complete content stack built for modern SEO teams.
             </p>
           </motion.div>
 
           {/* Bento grid */}
-          <div className="features-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridAutoRows: "auto", gap: 20 }}>
+          <div className="features-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gridAutoRows: "auto", gap: 16 }}>
             {features.map((f, i) => {
               const Icon = f.icon;
               const isWide = f.size === "wide";
               return (
                 <motion.div
                   key={f.title}
-                  initial={{ opacity: 0, y: 28 }}
+                  initial={{ opacity: 0, y: 16 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ duration: 0.5, delay: i * 0.08 }}
+                  transition={{ duration: 0.35, delay: i * 0.05 }}
                   className={`card${isWide ? " feature-card-wide" : ""}`}
                   style={{ padding: "clamp(24px,3vw,36px)", position: "relative", overflow: "hidden" }}
                 >
@@ -1439,7 +1439,7 @@ export default function LandingPage() {
       </section>
 
       {/* ══ TRUST BADGES ═════════════════════════════════ */}
-      <div style={{ borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}`, background: t.surface, padding: "20px 0" }}>
+      <div style={{ borderTop: `1px solid ${t.border}`, borderBottom: `1px solid ${t.border}`, background: t.surface, padding: "14px 0" }}>
         <div className="section" style={{ display: "flex", justifyContent: "center", flexWrap: "wrap", gap: "12px 32px" }}>
           {[
             { icon: IconShield, label: "SOC 2 Ready", color: t.green },
@@ -1461,15 +1461,15 @@ export default function LandingPage() {
           })}
         </div>
       </div>
-      <section style={{ padding: "clamp(72px,10vw,128px) 0", background: t.surface }}>
+      <section style={{ padding: "clamp(56px,7vw,88px) 0", background: t.surface }}>
         <div className="section">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ textAlign: "center", marginBottom: 72 }}
+            style={{ textAlign: "center", marginBottom: 48 }}
           >
-            <div className="label" style={{ marginBottom: 16 }}>The Workflow</div>
+            <div className="label" style={{ marginBottom: 12 }}>The Workflow</div>
             <h2 className="h2">From keyword to rankings<br />in four steps</h2>
           </motion.div>
 
@@ -1482,11 +1482,11 @@ export default function LandingPage() {
             ].map((step, i) => (
               <motion.div
                 key={step.step}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 14 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
-                transition={{ delay: i * 0.1 }}
-                style={{ padding: "36px 32px", position: "relative" }}
+                transition={{ delay: i * 0.06 }}
+                style={{ padding: "32px 28px", position: "relative" }}
               >
                 {/* Connector line */}
                 {i < 3 && (
@@ -1512,17 +1512,17 @@ export default function LandingPage() {
       </section>
 
       {/* ══ TESTIMONIALS ═════════════════════════════════ */}
-      <section id="testimonials" style={{ padding: "clamp(72px,10vw,128px) 0" }}>
+      <section id="testimonials" style={{ padding: "clamp(56px,7vw,88px) 0" }}>
         <div className="section">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ textAlign: "center", marginBottom: 64 }}
+            style={{ textAlign: "center", marginBottom: 40 }}
           >
-            <div className="label" style={{ marginBottom: 16 }}>What Users Say</div>
+            <div className="label" style={{ marginBottom: 12 }}>What Users Say</div>
             <h2 className="h2">Built for real content teams</h2>
-            <p className="body-lg" style={{ maxWidth: 520, margin: "16px auto 0" }}>
+            <p className="body-lg" style={{ maxWidth: 520, margin: "12px auto 0" }}>
               Join content creators who are scaling their SEO workflows with AI.
             </p>
           </motion.div>
@@ -1532,23 +1532,23 @@ export default function LandingPage() {
       <hr className="grad-divider" />
 
       {/* ══ WHY PUBWIZE (COMPARISON) ══════════════════════ */}
-      <section id="comparison" style={{ padding: "clamp(72px,10vw,128px) 0" }}>
+      <section id="comparison" style={{ padding: "clamp(56px,7vw,88px) 0" }}>
         <div className="section">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ textAlign: "center", marginBottom: 64 }}
+            style={{ textAlign: "center", marginBottom: 40 }}
           >
-            <div className="label" style={{ marginBottom: 16 }}>Why Pubwize</div>
+            <div className="label" style={{ marginBottom: 12 }}>Why Pubwize</div>
             <h2 className="h2">Stop overpaying for<br />mediocre content</h2>
-            <p className="body-lg" style={{ maxWidth: 520, margin: "16px auto 0" }}>
+            <p className="body-lg" style={{ maxWidth: 520, margin: "12px auto 0" }}>
               See how Pubwize stacks up against DIY AI prompting and traditional content agencies.
             </p>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
           >
@@ -1598,7 +1598,7 @@ export default function LandingPage() {
               ].map((option) => (
                 <motion.div
                   key={option.key}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 12 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   className={option.highlight ? "card shine-border" : "card"}
@@ -1649,17 +1649,17 @@ export default function LandingPage() {
       <hr className="grad-divider" />
 
       {/* ══ PRICING ══════════════════════════════════════ */}
-      <section id="pricing" style={{ padding: "clamp(72px,10vw,128px) 0", background: t.surface }} className="pricing-section">
+      <section id="pricing" style={{ padding: "clamp(56px,7vw,88px) 0", background: t.surface }} className="pricing-section">
         <div className="section">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ textAlign: "center", marginBottom: 64 }}
+            style={{ textAlign: "center", marginBottom: 40 }}
           >
-            <div className="label" style={{ marginBottom: 16 }}>Pricing</div>
+            <div className="label" style={{ marginBottom: 12 }}>Pricing</div>
             <h2 className="h2">Simple, transparent pricing</h2>
-            <p className="body-lg" style={{ maxWidth: 440, margin: "12px auto 0" }}>Start free. Scale when you're ready. No hidden fees, no contracts.</p>
+            <p className="body-lg" style={{ maxWidth: 440, margin: "10px auto 0" }}>Start free. Scale when you're ready. No hidden fees, no contracts.</p>
           </motion.div>
 
           <PricingCards
@@ -1693,21 +1693,21 @@ export default function LandingPage() {
       `}</style>
 
       {/* ══ CTA ══════════════════════════════════════════ */}
-      <section style={{ padding: "clamp(72px,10vw,128px) 0", position: "relative", overflow: "hidden" }}>
+      <section style={{ padding: "clamp(56px,7vw,88px) 0", position: "relative", overflow: "hidden" }}>
         <Orb color={t.accent} size={600} x="50%" y="50%" blur={300} />
         <Orb color={t.cyan} size={400} x="70%" y="20%" blur={250} />
         <div className="section" style={{ position: "relative", zIndex: 2, textAlign: "center" }}>
           <motion.div
-            initial={{ opacity: 0, y: 32 }}
+            initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.4 }}
           >
-            <div className="label" style={{ marginBottom: 24 }}>Get started today</div>
-            <h2 className="h2" style={{ maxWidth: 640, margin: "0 auto 20px" }}>
+            <div className="label" style={{ marginBottom: 16 }}>Get started today</div>
+            <h2 className="h2" style={{ maxWidth: 640, margin: "0 auto 16px" }}>
               Ready to scale your content operation?
             </h2>
-            <p className="body-lg" style={{ maxWidth: 480, margin: "0 auto 48px" }}>
+            <p className="body-lg" style={{ maxWidth: 480, margin: "0 auto 32px" }}>
               Start creating SEO-optimized content with AI. No credit card required.
             </p>
             <div style={{ display: "flex", gap: 14, justifyContent: "center", flexWrap: "wrap" }}>
@@ -1715,7 +1715,7 @@ export default function LandingPage() {
                 Start for free — no card needed
               </button>
             </div>
-            <div style={{ display: "flex", gap: 28, justifyContent: "center", marginTop: 28, flexWrap: "wrap" }}>
+            <div style={{ display: "flex", gap: 28, justifyContent: "center", marginTop: 24, flexWrap: "wrap" }}>
               {["5 free articles included", "No credit card", "Cancel anytime"].map((item) => (
                 <div key={item} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 13, color: t.sub }}>
                   <IconCheck size={13} color={t.accentG} />
@@ -1728,19 +1728,19 @@ export default function LandingPage() {
       </section>
 
       {/* ══ FAQ ══════════════════════════════════════════ */}
-      <section id="faq" style={{ padding: "clamp(72px,10vw,128px) 0", background: t.surface }}>
+      <section id="faq" style={{ padding: "clamp(56px,7vw,88px) 0", background: t.surface }}>
         <div className="section">
           <motion.div
-            initial={{ opacity: 0, y: 24 }}
+            initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ textAlign: "center", marginBottom: 56 }}
+            style={{ textAlign: "center", marginBottom: 36 }}
           >
-            <div className="label" style={{ marginBottom: 16 }}>FAQ</div>
+            <div className="label" style={{ marginBottom: 12 }}>FAQ</div>
             <h2 className="h2">Got questions?</h2>
-            <p className="body-lg" style={{ maxWidth: 480, margin: "12px auto 0" }}>Everything you need to know about Pubwize.</p>
+            <p className="body-lg" style={{ maxWidth: 480, margin: "10px auto 0" }}>Everything you need to know about Pubwize.</p>
           </motion.div>
-          <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 12 }}>
+          <div style={{ maxWidth: 720, margin: "0 auto", display: "flex", flexDirection: "column", gap: 10 }}>
             {faqs.map((faq) => (
               <FAQItem key={faq.q} q={faq.q} a={faq.a} />
             ))}
@@ -1749,15 +1749,15 @@ export default function LandingPage() {
       </section>
 
       {/* ══ BLOG PREVIEW ═══════════════════════════════ */}
-      <section style={{ padding: "clamp(48px,6vw,72px) 0", borderTop: `1px solid ${t.border}` }}>
+      <section style={{ padding: "clamp(40px,5vw,56px) 0", borderTop: `1px solid ${t.border}` }}>
         <div className="section">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            style={{ textAlign: "center", marginBottom: 40 }}
+            style={{ textAlign: "center", marginBottom: 28 }}
           >
-            <div className="label" style={{ marginBottom: 12 }}>Latest from the Blog</div>
+            <div className="label" style={{ marginBottom: 10 }}>Latest from the Blog</div>
             <h2 className="h2" style={{ fontSize: "clamp(24px,3vw,32px)" }}>SEO insights & guides</h2>
           </motion.div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%, 260px),1fr))", gap: 20, maxWidth: 900, margin: "0 auto" }}>

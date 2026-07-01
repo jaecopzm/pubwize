@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
-import { Shield, Users, Zap, Mail, BarChart3, Settings } from "lucide-react";
+import { Shield, Users, Zap, Mail, FileText, BarChart3 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ const adminNavItems = [
   { title: "Overview", url: "/admin", icon: BarChart3 },
   { title: "Users", url: "/admin/users", icon: Users },
   { title: "AI Usage", url: "/admin/ai-usage", icon: Zap },
+  { title: "Content", url: "/admin/content", icon: FileText },
   { title: "Email", url: "/admin/email", icon: Mail },
 ];
 
@@ -23,19 +24,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const { user, isLoaded } = useUser();
 
   useEffect(() => {
-    if (isLoaded) {
-      if (!user) {
-        router.replace("/sign-in");
-        return;
-      }
-      
-      if (user.publicMetadata?.admin !== true) {
-        router.replace("/dashboard");
-        return;
-      }
-      
-      setChecking(false);
+    if (!isLoaded) return;
+
+    if (!user) {
+      router.replace("/sign-in");
+      return;
     }
+
+    (async () => {
+      try {
+        const res = await fetch("/api/admin/verify");
+        const data = await res.json();
+        if (data.admin) {
+          setChecking(false);
+        } else {
+          router.replace("/dashboard");
+        }
+      } catch {
+        router.replace("/sign-in");
+      }
+    })();
   }, [user, isLoaded, router]);
 
   if (checking) {
